@@ -1,0 +1,18 @@
+# Arquivos secretos - nunca enviar para o GitHub!
+.env
+
+# Dados dos usuários
+data/users.json
+data/conhecimento.json
+data/evolucao.json
+
+# Logs
+logs/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+
+# VS Code
+.vscode/

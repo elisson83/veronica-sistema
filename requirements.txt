@@ -11,3 +11,4 @@ pandas
 psutil
 reportlab
 fpdf2
+mss

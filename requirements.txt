@@ -9,9 +9,5 @@ duckduckgo-search
 yfinance
 pandas
 psutil
-pyautogui
-pillow
-opencv-python
-mss
 reportlab
 fpdf2

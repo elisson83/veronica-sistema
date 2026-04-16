@@ -1,6 +1,6 @@
 import logging
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from config import TELEGRAM_TOKEN
 from modules.ai_brain import perguntar_ia, gerar_plano_de_estudo, estudar_tema, corrigir_resposta
 from modules.memory import get_usuario, atualizar_nivel, atualizar_nome, carregar_usuarios, salvar_usuarios
@@ -14,7 +14,8 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-AGUARDANDO_NOME = 1
+# Dicionário para controlar quem está aguardando digitar o nome
+aguardando_nome = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
@@ -27,43 +28,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Serei sua assistente pessoal. Como posso te ajudar hoje? 😊",
             parse_mode='Markdown'
         )
-        return ConversationHandler.END
+        return
 
+    aguardando_nome[user_id] = True
     await update.message.reply_text(
         "👋 Olá! Eu sou a *Verônica*!\n\n"
         "Qual é o seu nome? 😊",
         parse_mode='Markdown'
     )
-    return AGUARDANDO_NOME
-
-async def receber_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.message.from_user.id)
-    nome = update.message.text.strip()
-    atualizar_nome(user_id, nome)
-
-    await update.message.reply_text(
-        f"Olá, *{nome}*! 🎉\n\n"
-        "Serei sua assistente pessoal. Estou aqui para te ajudar a aprender, programar e investir!\n\n"
-        "💡 *Comandos disponíveis:*\n"
-        "/plano - Criar um plano de estudo\n"
-        "/estudar - Me pedir para estudar um tema\n"
-        "/conhecimentos - Ver temas que já estudei\n"
-        "/pesquisar - Pesquisar na internet\n"
-        "/noticias - Ver notícias sobre um tema\n"
-        "/corrigir - Me corrigir quando errar\n"
-        "/evolucao - Ver minhas estatísticas\n"
-        "/mercado - Ver mercado geral\n"
-        "/cotacao - Ver cotação de um ativo\n"
-        "/indicadores - Ver indicadores técnicos\n"
-        "/codigo - Me pedir para programar algo\n"
-        "/nivel - Mudar seu nível de aprendizado\n"
-        "/perfil - Ver seu perfil\n"
-        "/limpar - Limpar histórico e nome\n"
-        "/ajuda - Ver todos os comandos\n\n"
-        "O que deseja fazer hoje? 😊",
-        parse_mode='Markdown'
-    )
-    return ConversationHandler.END
 
 async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -133,6 +105,7 @@ async def limpar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         usuarios[user_id]["historico"] = []
         usuarios[user_id]["nome"] = ""
         salvar_usuarios(usuarios)
+    aguardando_nome.pop(user_id, None)
     await update.message.reply_text(
         "🧹 Histórico e nome limpos com sucesso!\n\n"
         "Digite /start para se apresentar novamente! 😊"
@@ -282,8 +255,6 @@ async def codigo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     2. Forneça o código completo e funcional
     3. Explique cada parte importante do código
     4. Dê dicas de como usar e melhorar
-    
-    Use formatação clara com blocos de código.
     """
     resposta = perguntar_ia(prompt, user_id)
     await update.message.reply_text(resposta)
@@ -320,25 +291,31 @@ async def noticias(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
-    pergunta = update.message.text
+    texto = update.message.text
+
+    # Verifica se está aguardando nome
+    if user_id in aguardando_nome and aguardando_nome[user_id]:
+        nome = texto.strip()
+        atualizar_nome(user_id, nome)
+        aguardando_nome.pop(user_id, None)
+        await update.message.reply_text(
+            f"Olá, *{nome}*! 🎉\n\n"
+            "Serei sua assistente pessoal. Estou aqui para te ajudar a aprender, programar e investir!\n\n"
+            "💡 Digite /ajuda para ver todos os comandos!\n\n"
+            "O que deseja fazer hoje? 😊",
+            parse_mode='Markdown'
+        )
+        return
+
+    # Responde normalmente
     await update.message.reply_text("🤔 Pensando...")
-    resposta = perguntar_ia(pergunta, user_id)
+    resposta = perguntar_ia(texto, user_id)
     await update.message.reply_text(resposta)
 
 def iniciar_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={
-            AGUARDANDO_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_nome)]
-        },
-        fallbacks=[CommandHandler("start", start)],
-        per_message=False,
-        allow_reentry=True
-    )
-
-    app.add_handler(conv_handler)
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ajuda", ajuda))
     app.add_handler(CommandHandler("plano", plano))
     app.add_handler(CommandHandler("estudar", estudar))

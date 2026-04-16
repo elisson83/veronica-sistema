@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from config import TELEGRAM_TOKEN, is_autorizado
@@ -11,6 +12,7 @@ from modules.financeiro import get_cotacao, get_indicadores, get_mercado_geral
 from modules.seguranca import get_senha, trocar_senha, liberar_usuario, usuario_liberado, listar_usuarios_liberados
 from modules.controle_pc import get_info_pc, listar_processos, abrir_programa, fechar_programa, desligar_pc, cancelar_desligamento, reiniciar_pc, tirar_screenshot, executar_comando
 from modules.visao import capturar_tela, ler_texto_tela, get_posicao_mouse, mover_mouse, clicar, duplo_clicar, digitar, pressionar_tecla, atalho_teclado, scroll
+from modules.agente import executar_tarefa_autonoma
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -21,6 +23,10 @@ aguardando_nome = {}
 aguardando_senha = {}
 aguardando_nova_senha = {}
 aguardando_confirmacao = {}
+aguardando_tarefa = {}
+
+CONFIRMAR = ["CONFIRMAR", "SIM", "S", "OK", "YES", "Y", "1", "EXECUTAR", "PODE", "VAI", "EXECUTE"]
+CANCELAR = ["CANCELAR", "NAO", "NÃO", "N", "NO", "0", "PARA", "STOP", "CANCELA"]
 
 async def verificar_acesso(update: Update) -> bool:
     user_id = str(update.message.from_user.id)
@@ -30,10 +36,7 @@ async def verificar_acesso(update: Update) -> bool:
     if usuario_liberado(user_id):
         return True
     aguardando_senha[user_id] = True
-    await update.message.reply_text(
-        "🔒 *Acesso Restrito!*\n\nDigite a senha para continuar:",
-        parse_mode='Markdown'
-    )
+    await update.message.reply_text("🔒 *Acesso Restrito!*\n\nDigite a senha para continuar:", parse_mode='Markdown')
     return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -91,24 +94,15 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/trocarsenha - Trocar senha\n"
             "/versenha - Ver senha atual\n\n"
             "💻 *Controle do PC:*\n"
-            "/infopc - Informações do PC\n"
-            "/processos - Ver processos\n"
-            "/abrirprograma - Abrir programa\n"
-            "/fecharprograma - Fechar programa\n"
-            "/screenshot - Tirar screenshot\n"
-            "/desligarpc - Desligar PC\n"
-            "/reiniciarpc - Reiniciar PC\n"
-            "/executar - Executar comando\n\n"
+            "/infopc /processos /abrirprograma\n"
+            "/fecharprograma /screenshot\n"
+            "/desligarpc /reiniciarpc /executar\n\n"
             "👁️ *Visão e Mouse:*\n"
-            "/vertela - Ver a tela atual\n"
-            "/lertela - Ler texto da tela\n"
-            "/mouse - Ver posição do mouse\n"
-            "/mover - Mover mouse\n"
-            "/clicar - Clicar na tela\n"
-            "/digitar - Digitar texto\n"
-            "/tecla - Pressionar tecla\n"
-            "/atalho - Atalho de teclado\n"
-            "/scroll - Rolar a tela\n"
+            "/vertela /lertela /mouse\n"
+            "/mover /clicar /digitar\n"
+            "/tecla /atalho /scroll\n\n"
+            "🤖 *Agente Autônomo:*\n"
+            "/tarefa - Executar tarefa autonomamente\n"
         )
     await update.message.reply_text(
         "🆘 *Comandos da Verônica:*\n\n"
@@ -175,8 +169,7 @@ async def plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tema = ' '.join(context.args)
     nivel_usuario = usuario.get("nivel", "iniciante")
     await update.message.reply_text(f"⏳ Gerando plano sobre *{tema}*...", parse_mode='Markdown')
-    resposta = gerar_plano_de_estudo(tema, nivel_usuario, user_id)
-    await update.message.reply_text(resposta)
+    await update.message.reply_text(gerar_plano_de_estudo(tema, nivel_usuario, user_id))
 
 async def estudar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -187,8 +180,7 @@ async def estudar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     tema = ' '.join(context.args)
     await update.message.reply_text(f"📚 Estudando *{tema}*... 🔍", parse_mode='Markdown')
-    resposta = estudar_tema(tema, user_id)
-    await update.message.reply_text(resposta)
+    await update.message.reply_text(estudar_tema(tema, user_id))
 
 async def conhecimentos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -219,8 +211,7 @@ async def corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if ultima_pergunta and ultima_resp:
             break
     await update.message.reply_text("✏️ Obrigada! Aprendendo...")
-    resposta = corrigir_resposta(ultima_pergunta, ultima_resp, correcao, user_id)
-    await update.message.reply_text(resposta)
+    await update.message.reply_text(corrigir_resposta(ultima_pergunta, ultima_resp, correcao, user_id))
 
 async def mercado(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -280,8 +271,6 @@ async def noticias(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"📰 Buscando: *{query}*...", parse_mode='Markdown')
     await update.message.reply_text(pesquisar_noticias(query), parse_mode='Markdown')
 
-# ─── Controle do PC ─────────────────────────────────────────
-
 async def infopc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_autorizado(update.message.from_user.id):
         await update.message.reply_text("⛔ Apenas o administrador!")
@@ -302,8 +291,7 @@ async def abrirprograma(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("💻 Use:\n/abrirprograma chrome\n/abrirprograma notepad")
         return
-    resposta = abrir_programa(' '.join(context.args))
-    await update.message.reply_text(resposta, parse_mode='Markdown')
+    await update.message.reply_text(abrir_programa(' '.join(context.args)), parse_mode='Markdown')
 
 async def fecharprograma(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_autorizado(update.message.from_user.id):
@@ -354,10 +342,7 @@ async def executar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("💻 Use:\n/executar dir\n/executar ipconfig")
         return
-    await update.message.reply_text(f"⚡ Executando...", parse_mode='Markdown')
     await update.message.reply_text(executar_comando(' '.join(context.args)), parse_mode='Markdown')
-
-# ─── Visão e Mouse ──────────────────────────────────────────
 
 async def vertela(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_autorizado(update.message.from_user.id):
@@ -374,7 +359,7 @@ async def lertela(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_autorizado(update.message.from_user.id):
         await update.message.reply_text("⛔ Apenas o administrador!")
         return
-    await update.message.reply_text("👁️ Lendo texto da tela...")
+    await update.message.reply_text("👁️ Lendo texto...")
     await update.message.reply_text(ler_texto_tela(), parse_mode='Markdown')
 
 async def mouse_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -410,15 +395,14 @@ async def digitar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("⌨️ Use:\n/digitar Olá mundo")
         return
-    texto = ' '.join(context.args)
-    await update.message.reply_text(digitar(texto))
+    await update.message.reply_text(digitar(' '.join(context.args)))
 
 async def tecla_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_autorizado(update.message.from_user.id):
         await update.message.reply_text("⛔ Apenas o administrador!")
         return
     if not context.args:
-        await update.message.reply_text("⌨️ Use:\n/tecla enter\n/tecla esc\n/tecla f5")
+        await update.message.reply_text("⌨️ Use:\n/tecla enter\n/tecla esc")
         return
     await update.message.reply_text(pressionar_tecla(context.args[0]))
 
@@ -427,7 +411,7 @@ async def atalho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⛔ Apenas o administrador!")
         return
     if not context.args:
-        await update.message.reply_text("⌨️ Use:\n/atalho ctrl c\n/atalho alt f4\n/atalho win d")
+        await update.message.reply_text("⌨️ Use:\n/atalho ctrl c\n/atalho alt f4")
         return
     await update.message.reply_text(atalho_teclado(*context.args))
 
@@ -440,10 +424,35 @@ async def scroll_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await update.message.reply_text(scroll(context.args[0]))
 
+async def tarefa(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text(
+            "🤖 *Agente Autônomo*\n\n"
+            "Descreva a tarefa:\n\n"
+            "Exemplos:\n"
+            "/tarefa Abrir o notepad e digitar Olá mundo\n"
+            "/tarefa Abrir o chrome e ir para google.com\n"
+            "/tarefa Tirar um screenshot e salvar"
+        )
+        return
+    descricao = ' '.join(context.args)
+    user_id = str(update.message.from_user.id)
+    aguardando_tarefa[user_id] = descricao
+    await update.message.reply_text(
+        f"🤖 *Tarefa recebida:*\n_{descricao}_\n\n"
+        "⚠️ Posso executar esta tarefa autonomamente.\n\n"
+        "Digite *SIM* para executar ou *NÃO* para cancelar.",
+        parse_mode='Markdown'
+    )
+
 async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
     int_id = update.message.from_user.id
     texto = update.message.text
+    texto_upper = texto.upper().strip()
 
     if user_id in aguardando_nova_senha and aguardando_nova_senha[user_id]:
         nova_senha = texto.strip()
@@ -454,11 +463,35 @@ async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if user_id in aguardando_confirmacao:
         acao = aguardando_confirmacao.pop(user_id)
-        if texto.upper() == "SIM":
+        if texto_upper in CONFIRMAR:
             resposta = desligar_pc() if acao == "desligar" else reiniciar_pc()
             await update.message.reply_text(resposta, parse_mode='Markdown')
         else:
             await update.message.reply_text("✅ Operação cancelada!")
+        return
+
+    if user_id in aguardando_tarefa:
+        if texto_upper in CONFIRMAR:
+            descricao = aguardando_tarefa.pop(user_id)
+            await update.message.reply_text("🤖 Executando tarefa autonomamente...\n\nAcompanhe o progresso:")
+            mensagens = []
+            def callback(msg):
+                mensagens.append(msg)
+            loop = asyncio.get_event_loop()
+            resultados = await loop.run_in_executor(
+                None,
+                lambda: executar_tarefa_autonoma(descricao, callback)
+            )
+            for msg in mensagens:
+                await update.message.reply_text(msg)
+            resultado_final = "\n".join(resultados)
+            await update.message.reply_text(
+                f"✅ *Tarefa concluída!*\n\n{resultado_final[:1000]}",
+                parse_mode='Markdown'
+            )
+        else:
+            aguardando_tarefa.pop(user_id, None)
+            await update.message.reply_text("✅ Tarefa cancelada!")
         return
 
     if user_id in aguardando_senha and aguardando_senha[user_id]:
@@ -528,6 +561,7 @@ def iniciar_bot():
     app.add_handler(CommandHandler("tecla", tecla_cmd))
     app.add_handler(CommandHandler("atalho", atalho_cmd))
     app.add_handler(CommandHandler("scroll", scroll_cmd))
+    app.add_handler(CommandHandler("tarefa", tarefa))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_mensagem))
     print("🤖 Verônica está online!")
     app.run_polling()

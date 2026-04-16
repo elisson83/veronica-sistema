@@ -13,10 +13,18 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 DATA_DIR = ROOT_DIR / "data"
 LOGS_DIR = ROOT_DIR / "logs"
 ASSETS_DIR = ROOT_DIR / "assets"
-
 USERS_FILE = DATA_DIR / "users.json"
 
 NIVEIS_DISPONIVEIS = ["iniciante", "intermediario", "avancado"]
 NIVEL_PADRAO = "iniciante"
 MAX_ETAPAS = 20
 OVERLAY_TIMEOUT = 15
+
+# ─── Usuários autorizados ────────────────────────────────────
+# Apenas estes IDs podem usar a Verônica
+USUARIOS_AUTORIZADOS = [
+    8106101043,  # Elisson
+]
+
+def is_autorizado(user_id: int) -> bool:
+    return user_id in USUARIOS_AUTORIZADOS

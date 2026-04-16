@@ -4,7 +4,19 @@ from datetime import datetime
 
 MEMORY_FILE = Path(__file__).parent.parent / "data" / "users.json"
 
+def inicializar_arquivo():
+    """Cria a pasta data e o arquivo users.json se não existirem"""
+    MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if not MEMORY_FILE.exists():
+        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+            json.dump({
+                "_info": "Arquivo de memória dos usuários da Verônica IA",
+                "_version": "0.1.0",
+                "_usuarios": {}
+            }, f, ensure_ascii=False, indent=2)
+
 def carregar_usuarios():
+    inicializar_arquivo()
     try:
         with open(MEMORY_FILE, "r", encoding="utf-8") as f:
             dados = json.load(f)
@@ -13,6 +25,7 @@ def carregar_usuarios():
         return {}
 
 def salvar_usuarios(usuarios):
+    inicializar_arquivo()
     with open(MEMORY_FILE, "w", encoding="utf-8") as f:
         json.dump({
             "_info": "Arquivo de memória dos usuários da Verônica IA",
@@ -41,7 +54,6 @@ def salvar_mensagem(user_id: str, role: str, conteudo: str):
         "content": conteudo,
         "timestamp": datetime.now().isoformat()
     })
-    # Manter apenas as últimas 20 mensagens
     if len(usuario["historico"]) > 20:
         usuario["historico"] = usuario["historico"][-20:]
     usuarios[user_id] = usuario

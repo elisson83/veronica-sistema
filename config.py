@@ -27,4 +27,4 @@ USUARIOS_AUTORIZADOS = [
 ]
 
 def is_autorizado(user_id: int) -> bool:
-    return user_id in USUARIOS_AUTORIZADOS
+    return user_id in USUARIOS_AUTORIZADOS# Versão 2.0 - Sistema de senha ativo

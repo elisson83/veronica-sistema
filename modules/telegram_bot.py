@@ -13,6 +13,7 @@ from modules.seguranca import get_senha, trocar_senha, liberar_usuario, usuario_
 from modules.controle_pc import get_info_pc, listar_processos, abrir_programa, fechar_programa, desligar_pc, cancelar_desligamento, reiniciar_pc, tirar_screenshot, executar_comando
 from modules.visao import capturar_tela, ler_texto_tela, get_posicao_mouse, mover_mouse, clicar, duplo_clicar, digitar, pressionar_tecla, atalho_teclado, scroll
 from modules.agente import executar_tarefa_autonoma
+from modules.conteudo import criar_ebook, analisar_video_youtube, criar_post_redes_sociais, criar_script_video
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -91,8 +92,7 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_autorizado(int_id):
         admin_cmds = (
             "\n👑 *Admin:*\n"
-            "/trocarsenha - Trocar senha\n"
-            "/versenha - Ver senha atual\n\n"
+            "/trocarsenha /versenha\n\n"
             "💻 *Controle do PC:*\n"
             "/infopc /processos /abrirprograma\n"
             "/fecharprograma /screenshot\n"
@@ -102,7 +102,12 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/mover /clicar /digitar\n"
             "/tecla /atalho /scroll\n\n"
             "🤖 *Agente Autônomo:*\n"
-            "/tarefa - Executar tarefa autonomamente\n"
+            "/tarefa - Executar tarefa autonomamente\n\n"
+            "📚 *Criação de Conteúdo:*\n"
+            "/ebook - Criar e-book em PDF\n"
+            "/analisarvideo - Analisar vídeo YouTube\n"
+            "/post - Criar posts para redes sociais\n"
+            "/script - Criar script de vídeo\n"
         )
     await update.message.reply_text(
         "🆘 *Comandos da Verônica:*\n\n"
@@ -431,11 +436,9 @@ async def tarefa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text(
             "🤖 *Agente Autônomo*\n\n"
-            "Descreva a tarefa:\n\n"
             "Exemplos:\n"
             "/tarefa Abrir o notepad e digitar Olá mundo\n"
-            "/tarefa Abrir o chrome e ir para google.com\n"
-            "/tarefa Tirar um screenshot e salvar"
+            "/tarefa Abrir o chrome e ir para google.com"
         )
         return
     descricao = ' '.join(context.args)
@@ -443,10 +446,95 @@ async def tarefa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     aguardando_tarefa[user_id] = descricao
     await update.message.reply_text(
         f"🤖 *Tarefa recebida:*\n_{descricao}_\n\n"
-        "⚠️ Posso executar esta tarefa autonomamente.\n\n"
         "Digite *SIM* para executar ou *NÃO* para cancelar.",
         parse_mode='Markdown'
     )
+
+# ─── Criação de Conteúdo ────────────────────────────────────
+
+async def ebook_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await verificar_acesso(update):
+        return
+    user_id = str(update.message.from_user.id)
+    if not context.args:
+        await update.message.reply_text(
+            "📚 *Criar E-book*\n\n"
+            "Use assim:\n"
+            "/ebook Como Investir em Ações\n"
+            "/ebook Receitas Fitness\n"
+            "/ebook Como Criar um Negócio Digital"
+        )
+        return
+    tema = ' '.join(context.args)
+    await update.message.reply_text(
+        f"📚 Criando e-book sobre *{tema}*...\n\nAguarde, pode demorar alguns minutos! ⏳",
+        parse_mode='Markdown'
+    )
+    loop = asyncio.get_event_loop()
+    caminho = await loop.run_in_executor(None, lambda: criar_ebook(tema, user_id))
+    if caminho.startswith("❌"):
+        await update.message.reply_text(caminho)
+    else:
+        await update.message.reply_document(
+            document=open(caminho, 'rb'),
+            caption=f"📚 *E-book criado:* {tema}\n\n✅ Pronto para vender!",
+            parse_mode='Markdown'
+        )
+
+async def analisarvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await verificar_acesso(update):
+        return
+    user_id = str(update.message.from_user.id)
+    if not context.args:
+        await update.message.reply_text(
+            "🎥 *Analisar Vídeo YouTube*\n\n"
+            "Use assim:\n"
+            "/analisarvideo https://youtube.com/watch?v=XXXXX"
+        )
+        return
+    url = context.args[0]
+    await update.message.reply_text("🎥 Analisando vídeo... Aguarde! ⏳")
+    loop = asyncio.get_event_loop()
+    analise = await loop.run_in_executor(None, lambda: analisar_video_youtube(url, user_id))
+    await update.message.reply_text(analise)
+
+async def post_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await verificar_acesso(update):
+        return
+    user_id = str(update.message.from_user.id)
+    if not context.args:
+        await update.message.reply_text(
+            "📱 *Criar Posts*\n\n"
+            "Use assim:\n"
+            "/post instagram Dicas de Investimento\n"
+            "/post twitter Motivação\n"
+            "/post linkedin Marketing Digital"
+        )
+        return
+    rede = context.args[0].lower()
+    tema = ' '.join(context.args[1:]) if len(context.args) > 1 else context.args[0]
+    await update.message.reply_text(f"📱 Criando posts para *{rede}*... ⏳", parse_mode='Markdown')
+    loop = asyncio.get_event_loop()
+    posts = await loop.run_in_executor(None, lambda: criar_post_redes_sociais(tema, rede, user_id))
+    await update.message.reply_text(posts)
+
+async def script_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await verificar_acesso(update):
+        return
+    user_id = str(update.message.from_user.id)
+    if not context.args:
+        await update.message.reply_text(
+            "🎬 *Criar Script de Vídeo*\n\n"
+            "Use assim:\n"
+            "/script Como Ganhar Dinheiro Online\n"
+            "/script Dicas de Produtividade"
+        )
+        return
+    tema = ' '.join(context.args)
+    await update.message.reply_text(f"🎬 Criando script sobre *{tema}*... ⏳", parse_mode='Markdown')
+    loop = asyncio.get_event_loop()
+    script = await loop.run_in_executor(None, lambda: criar_script_video(tema, 10, user_id))
+    await update.message.reply_text(script)
 
 async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
@@ -473,20 +561,18 @@ async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if user_id in aguardando_tarefa:
         if texto_upper in CONFIRMAR:
             descricao = aguardando_tarefa.pop(user_id)
-            await update.message.reply_text("🤖 Executando tarefa autonomamente...\n\nAcompanhe o progresso:")
+            await update.message.reply_text("🤖 Executando tarefa autonomamente...")
             mensagens = []
             def callback(msg):
                 mensagens.append(msg)
             loop = asyncio.get_event_loop()
             resultados = await loop.run_in_executor(
-                None,
-                lambda: executar_tarefa_autonoma(descricao, callback)
+                None, lambda: executar_tarefa_autonoma(descricao, callback)
             )
             for msg in mensagens:
                 await update.message.reply_text(msg)
-            resultado_final = "\n".join(resultados)
             await update.message.reply_text(
-                f"✅ *Tarefa concluída!*\n\n{resultado_final[:1000]}",
+                f"✅ *Tarefa concluída!*\n\n{chr(10).join(resultados)[:1000]}",
                 parse_mode='Markdown'
             )
         else:
@@ -495,8 +581,7 @@ async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if user_id in aguardando_senha and aguardando_senha[user_id]:
-        senha_digitada = texto.strip()
-        if senha_digitada == get_senha():
+        if texto.strip() == get_senha():
             liberar_usuario(user_id)
             aguardando_senha.pop(user_id, None)
             aguardando_nome[user_id] = True
@@ -562,6 +647,10 @@ def iniciar_bot():
     app.add_handler(CommandHandler("atalho", atalho_cmd))
     app.add_handler(CommandHandler("scroll", scroll_cmd))
     app.add_handler(CommandHandler("tarefa", tarefa))
+    app.add_handler(CommandHandler("ebook", ebook_cmd))
+    app.add_handler(CommandHandler("analisarvideo", analisarvideo_cmd))
+    app.add_handler(CommandHandler("post", post_cmd))
+    app.add_handler(CommandHandler("script", script_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_mensagem))
     print("🤖 Verônica está online!")
     app.run_polling()

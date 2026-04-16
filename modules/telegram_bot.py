@@ -333,7 +333,9 @@ def iniciar_bot():
         states={
             AGUARDANDO_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_nome)]
         },
-        fallbacks=[CommandHandler("start", start)]
+        fallbacks=[CommandHandler("start", start)],
+        per_message=False,
+        allow_reentry=True
     )
 
     app.add_handler(conv_handler)

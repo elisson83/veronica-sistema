@@ -14,6 +14,7 @@ from modules.controle_pc import get_info_pc, listar_processos, abrir_programa, f
 from modules.visao import capturar_tela, ler_texto_tela, get_posicao_mouse, mover_mouse, clicar, duplo_clicar, digitar, pressionar_tecla, atalho_teclado, scroll
 from modules.agente import executar_tarefa_autonoma
 from modules.conteudo import criar_ebook, analisar_video_youtube, criar_post_redes_sociais, criar_script_video
+from modules.cyber import get_status_kali, ligar_kali, desligar_kali, pausar_kali, executar_comando_kali, scan_rede, info_rede_local, gerar_relatorio_seguranca
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -104,10 +105,10 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🤖 *Agente Autônomo:*\n"
             "/tarefa - Executar tarefa autonomamente\n\n"
             "📚 *Criação de Conteúdo:*\n"
-            "/ebook - Criar e-book em PDF\n"
-            "/analisarvideo - Analisar vídeo YouTube\n"
-            "/post - Criar posts para redes sociais\n"
-            "/script - Criar script de vídeo\n"
+            "/ebook /analisarvideo /post /script\n\n"
+            "🔒 *Cyber Segurança:*\n"
+            "/kalistatus /kaliligar /kalidesligar\n"
+            "/kalicomando /scanrede /inforede /relatorio\n"
         )
     await update.message.reply_text(
         "🆘 *Comandos da Verônica:*\n\n"
@@ -450,26 +451,15 @@ async def tarefa(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-# ─── Criação de Conteúdo ────────────────────────────────────
-
 async def ebook_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
         return
     user_id = str(update.message.from_user.id)
     if not context.args:
-        await update.message.reply_text(
-            "📚 *Criar E-book*\n\n"
-            "Use assim:\n"
-            "/ebook Como Investir em Ações\n"
-            "/ebook Receitas Fitness\n"
-            "/ebook Como Criar um Negócio Digital"
-        )
+        await update.message.reply_text("📚 Use:\n/ebook Como Ganhar Dinheiro Online")
         return
     tema = ' '.join(context.args)
-    await update.message.reply_text(
-        f"📚 Criando e-book sobre *{tema}*...\n\nAguarde, pode demorar alguns minutos! ⏳",
-        parse_mode='Markdown'
-    )
+    await update.message.reply_text(f"📚 Criando e-book sobre *{tema}*... ⏳", parse_mode='Markdown')
     loop = asyncio.get_event_loop()
     caminho = await loop.run_in_executor(None, lambda: criar_ebook(tema, user_id))
     if caminho.startswith("❌"):
@@ -486,14 +476,10 @@ async def analisarvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = str(update.message.from_user.id)
     if not context.args:
-        await update.message.reply_text(
-            "🎥 *Analisar Vídeo YouTube*\n\n"
-            "Use assim:\n"
-            "/analisarvideo https://youtube.com/watch?v=XXXXX"
-        )
+        await update.message.reply_text("🎥 Use:\n/analisarvideo https://youtube.com/watch?v=XXXXX")
         return
     url = context.args[0]
-    await update.message.reply_text("🎥 Analisando vídeo... Aguarde! ⏳")
+    await update.message.reply_text("🎥 Analisando vídeo... ⏳")
     loop = asyncio.get_event_loop()
     analise = await loop.run_in_executor(None, lambda: analisar_video_youtube(url, user_id))
     await update.message.reply_text(analise)
@@ -503,13 +489,7 @@ async def post_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = str(update.message.from_user.id)
     if not context.args:
-        await update.message.reply_text(
-            "📱 *Criar Posts*\n\n"
-            "Use assim:\n"
-            "/post instagram Dicas de Investimento\n"
-            "/post twitter Motivação\n"
-            "/post linkedin Marketing Digital"
-        )
+        await update.message.reply_text("📱 Use:\n/post instagram Marketing Digital")
         return
     rede = context.args[0].lower()
     tema = ' '.join(context.args[1:]) if len(context.args) > 1 else context.args[0]
@@ -523,18 +503,78 @@ async def script_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = str(update.message.from_user.id)
     if not context.args:
-        await update.message.reply_text(
-            "🎬 *Criar Script de Vídeo*\n\n"
-            "Use assim:\n"
-            "/script Como Ganhar Dinheiro Online\n"
-            "/script Dicas de Produtividade"
-        )
+        await update.message.reply_text("🎬 Use:\n/script Como Ganhar Dinheiro Online")
         return
     tema = ' '.join(context.args)
     await update.message.reply_text(f"🎬 Criando script sobre *{tema}*... ⏳", parse_mode='Markdown')
     loop = asyncio.get_event_loop()
     script = await loop.run_in_executor(None, lambda: criar_script_video(tema, 10, user_id))
     await update.message.reply_text(script)
+
+async def kali_status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    await update.message.reply_text(get_status_kali(), parse_mode='Markdown')
+
+async def kali_ligar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    await update.message.reply_text(ligar_kali(), parse_mode='Markdown')
+
+async def kali_desligar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    user_id = str(update.message.from_user.id)
+    aguardando_confirmacao[user_id] = "kali_desligar"
+    await update.message.reply_text("⚠️ *Confirmar desligamento do Kali?*\n\nDigite *SIM* ou *NÃO*", parse_mode='Markdown')
+
+async def kali_comando_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text("💻 Use:\n/kalicomando ifconfig\n/kalicomando whoami")
+        return
+    comando = ' '.join(context.args)
+    await update.message.reply_text(f"⚡ Executando no Kali: `{comando}`...", parse_mode='Markdown')
+    loop = asyncio.get_event_loop()
+    resposta = await loop.run_in_executor(None, lambda: executar_comando_kali(comando))
+    await update.message.reply_text(resposta, parse_mode='Markdown')
+
+async def scan_rede_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text("🔍 Use:\n/scanrede 192.168.1.1\n/scanrede 192.168.1.0/24")
+        return
+    alvo = context.args[0]
+    await update.message.reply_text(f"🔍 Escaneando: *{alvo}*... Aguarde!", parse_mode='Markdown')
+    loop = asyncio.get_event_loop()
+    resposta = await loop.run_in_executor(None, lambda: scan_rede(alvo))
+    await update.message.reply_text(resposta, parse_mode='Markdown')
+
+async def info_rede_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    await update.message.reply_text(info_rede_local(), parse_mode='Markdown')
+
+async def relatorio_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text("📊 Use:\n/relatorio 192.168.1.1")
+        return
+    alvo = context.args[0]
+    await update.message.reply_text(f"📊 Gerando relatório para *{alvo}*... ⏳", parse_mode='Markdown')
+    loop = asyncio.get_event_loop()
+    resposta = await loop.run_in_executor(None, lambda: gerar_relatorio_seguranca(alvo))
+    await update.message.reply_text(resposta)
 
 async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
@@ -552,7 +592,14 @@ async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if user_id in aguardando_confirmacao:
         acao = aguardando_confirmacao.pop(user_id)
         if texto_upper in CONFIRMAR:
-            resposta = desligar_pc() if acao == "desligar" else reiniciar_pc()
+            if acao == "desligar":
+                resposta = desligar_pc()
+            elif acao == "reiniciar":
+                resposta = reiniciar_pc()
+            elif acao == "kali_desligar":
+                resposta = desligar_kali()
+            else:
+                resposta = "✅ Confirmado!"
             await update.message.reply_text(resposta, parse_mode='Markdown')
         else:
             await update.message.reply_text("✅ Operação cancelada!")
@@ -651,6 +698,13 @@ def iniciar_bot():
     app.add_handler(CommandHandler("analisarvideo", analisarvideo_cmd))
     app.add_handler(CommandHandler("post", post_cmd))
     app.add_handler(CommandHandler("script", script_cmd))
+    app.add_handler(CommandHandler("kalistatus", kali_status_cmd))
+    app.add_handler(CommandHandler("kaliligar", kali_ligar_cmd))
+    app.add_handler(CommandHandler("kalidesligar", kali_desligar_cmd))
+    app.add_handler(CommandHandler("kalicomando", kali_comando_cmd))
+    app.add_handler(CommandHandler("scanrede", scan_rede_cmd))
+    app.add_handler(CommandHandler("inforede", info_rede_cmd))
+    app.add_handler(CommandHandler("relatorio", relatorio_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_mensagem))
     print("🤖 Verônica está online!")
     app.run_polling()

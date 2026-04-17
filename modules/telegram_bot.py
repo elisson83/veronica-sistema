@@ -15,6 +15,7 @@ from modules.visao import capturar_tela, ler_texto_tela, get_posicao_mouse, move
 from modules.agente import executar_tarefa_autonoma
 from modules.conteudo import criar_ebook, analisar_video_youtube, criar_post_redes_sociais, criar_script_video
 from modules.cyber import get_status_kali, ligar_kali, desligar_kali, pausar_kali, executar_comando_kali, scan_rede, info_rede_local, gerar_relatorio_seguranca
+from modules.licenca import get_info_licenca
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -93,7 +94,7 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_autorizado(int_id):
         admin_cmds = (
             "\n👑 *Admin:*\n"
-            "/trocarsenha /versenha\n\n"
+            "/trocarsenha /versenha /licenca\n\n"
             "💻 *Controle do PC:*\n"
             "/infopc /processos /abrirprograma\n"
             "/fecharprograma /screenshot\n"
@@ -576,6 +577,12 @@ async def relatorio_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     resposta = await loop.run_in_executor(None, lambda: gerar_relatorio_seguranca(alvo))
     await update.message.reply_text(resposta)
 
+async def licenca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    await update.message.reply_text(get_info_licenca(), parse_mode='Markdown')
+
 async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
     int_id = update.message.from_user.id
@@ -705,6 +712,7 @@ def iniciar_bot():
     app.add_handler(CommandHandler("scanrede", scan_rede_cmd))
     app.add_handler(CommandHandler("inforede", info_rede_cmd))
     app.add_handler(CommandHandler("relatorio", relatorio_cmd))
+    app.add_handler(CommandHandler("licenca", licenca_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_mensagem))
     print("🤖 Verônica está online!")
     app.run_polling()

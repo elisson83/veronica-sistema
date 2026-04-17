@@ -21,22 +21,30 @@ def get_status_kali() -> str:
         elif "VMState=\"poweroff\"" in resultado.stdout:
             return "🔴 *Kali Linux está DESLIGADO*"
         else:
-            return "⚪ *Status do Kali Linux desconhecido*"
+            return f"⚪ *Status desconhecido*\n{resultado.stdout[:200]}"
     except Exception as e:
         return f"❌ Erro ao verificar Kali: {e}"
 
 def ligar_kali() -> str:
     """Liga o Kali Linux"""
     try:
-        subprocess.Popen([VBOXMANAGE, "startvm", KALI_VM_NAME])
-        return "✅ *Kali Linux iniciando...* Aguarde 30 segundos!"
+        resultado = subprocess.run(
+            [VBOXMANAGE, "startvm", KALI_VM_NAME],
+            capture_output=True, text=True, timeout=30
+        )
+        if "successfully started" in resultado.stdout:
+            return "✅ *Kali Linux iniciado com sucesso!*\n\nAguarde 30 segundos para carregar completamente."
+        return f"⚠️ {resultado.stdout or resultado.stderr}"
     except Exception as e:
         return f"❌ Erro ao ligar Kali: {e}"
 
 def desligar_kali() -> str:
     """Desliga o Kali Linux"""
     try:
-        subprocess.run([VBOXMANAGE, "controlvm", KALI_VM_NAME, "poweroff"])
+        resultado = subprocess.run(
+            [VBOXMANAGE, "controlvm", KALI_VM_NAME, "poweroff"],
+            capture_output=True, text=True, timeout=15
+        )
         return "✅ *Kali Linux desligado!*"
     except Exception as e:
         return f"❌ Erro ao desligar Kali: {e}"
@@ -44,7 +52,10 @@ def desligar_kali() -> str:
 def pausar_kali() -> str:
     """Pausa o Kali Linux"""
     try:
-        subprocess.run([VBOXMANAGE, "controlvm", KALI_VM_NAME, "savestate"])
+        resultado = subprocess.run(
+            [VBOXMANAGE, "controlvm", KALI_VM_NAME, "savestate"],
+            capture_output=True, text=True, timeout=15
+        )
         return "✅ *Kali Linux pausado!*"
     except Exception as e:
         return f"❌ Erro ao pausar Kali: {e}"
@@ -53,24 +64,28 @@ def executar_comando_kali(comando: str, usuario: str = "kali", senha: str = "kal
     """Executa um comando no Kali Linux via SSH"""
     try:
         import paramiko
-        
-        # Conecta via SSH
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect('127.0.0.1', port=2222, username=usuario, password=senha, timeout=10)
-        
         stdin, stdout, stderr = ssh.exec_command(comando)
         saida = stdout.read().decode('utf-8', errors='ignore')
         erro = stderr.read().decode('utf-8', errors='ignore')
         ssh.close()
-        
         if saida:
             return f"✅ *Resultado:*\n```\n{saida[:500]}\n```"
         elif erro:
             return f"⚠️ *Aviso:*\n```\n{erro[:300]}\n```"
         return "✅ Comando executado!"
     except Exception as e:
-        return f"❌ Erro SSH: {e}\n\n💡 Certifique-se que o Kali está rodando e o SSH está ativo!"
+        return (
+            f"❌ Erro SSH: {e}\n\n"
+            f"💡 *Para ativar SSH no Kali:*\n"
+            f"1. Ligue o Kali com /kaliligar\n"
+            f"2. Abra o terminal no Kali\n"
+            f"3. Digite: sudo systemctl enable ssh\n"
+            f"4. Digite: sudo systemctl start ssh\n"
+            f"5. Configure o redirecionamento de porta 2222 no VirtualBox"
+        )
 
 def scan_rede(alvo: str) -> str:
     """Faz um scan de rede com nmap"""
@@ -83,17 +98,9 @@ def scan_rede(alvo: str) -> str:
             return f"🔍 *Scan de rede: {alvo}*\n\n```\n{resultado.stdout[:800]}\n```"
         return f"❌ Nmap não encontrou resultados para {alvo}"
     except FileNotFoundError:
-        # Tenta via Kali SSH
         return executar_comando_kali(f"nmap -sV --open -T4 {alvo}")
     except Exception as e:
         return f"❌ Erro no scan: {e}"
-
-def scan_vulnerabilidades(alvo: str) -> str:
-    """Faz um scan de vulnerabilidades"""
-    try:
-        return executar_comando_kali(f"nmap -sV --script vuln {alvo}")
-    except Exception as e:
-        return f"❌ Erro: {e}"
 
 def info_rede_local() -> str:
     """Mostra informações da rede local"""
@@ -114,9 +121,7 @@ def info_rede_local() -> str:
 def gerar_relatorio_seguranca(alvo: str) -> str:
     """Gera um relatório completo de segurança"""
     from modules.ai_brain import perguntar_ia
-    
     scan = scan_rede(alvo)
-    
     prompt = f"""
     Analise os resultados deste scan de segurança e gere um relatório profissional:
     
@@ -130,5 +135,4 @@ def gerar_relatorio_seguranca(alvo: str) -> str:
     4. Recomendações de segurança
     5. Próximos passos
     """
-    
     return perguntar_ia(prompt)

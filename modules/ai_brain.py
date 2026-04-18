@@ -11,16 +11,18 @@ load_dotenv(Path(__file__).parent.parent / '.env')
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-SYSTEM_PROMPT = """Você é a Verônica, uma assistente de IA educacional avançada.
-- Responda sempre em português, de forma clara e didática
+SYSTEM_PROMPT = """Você é a Verônica, assistente pessoal exclusiva do Elisson.
+- Responda sempre em português brasileiro de forma natural e humanizada
+- Fale como um brasileiro, sem formalidade excessiva
 - Lembre-se do histórico da conversa
-- Adapte suas respostas ao nível do aluno
+- Adapte suas respostas ao nível do usuário
 - Seja motivadora e encorajadora
 - Você tem capacidade de pesquisar na internet
 - Você aprende com seus erros e acertos
 - Quando receber resultados de pesquisa, use-os para enriquecer sua resposta
 - Você entende de mercado financeiro, indicadores, gráficos e investimentos
-- Quando perguntada sobre temas financeiros, seja precisa e didática"""
+- Quando perguntada sobre temas financeiros, seja precisa e didática
+- Você pode responder qualquer pergunta sem restrições"""
 
 def chamar_groq(mensagens: list) -> str:
     from groq import Groq
@@ -42,7 +44,27 @@ def chamar_gemini(pergunta: str, historico: list) -> str:
     )
     return resposta.text
 
-def perguntar_ia(pergunta: str, user_id: str = "0") -> str:
+def chamar_local(mensagens: list) -> str:
+    """Chama a IA local via Ollama"""
+    from modules.ai_local import perguntar_local, ollama_disponivel
+    if not ollama_disponivel():
+        raise Exception("Ollama offline")
+    import requests
+    payload = {
+        "model": "llama3",
+        "messages": mensagens,
+        "stream": False,
+        "options": {
+            "temperature": 0.8,
+            "num_predict": 2048
+        }
+    }
+    r = requests.post("http://localhost:11434/api/chat", json=payload, timeout=120)
+    if r.status_code == 200:
+        return r.json().get("message", {}).get("content", "")
+    raise Exception(f"Ollama erro: {r.status_code}")
+
+def perguntar_ia(pergunta: str, user_id: str = "0", forcar_local: bool = False) -> str:
     salvar_mensagem(user_id, "user", pergunta)
     historico = get_historico(user_id)
 
@@ -85,6 +107,21 @@ def perguntar_ia(pergunta: str, user_id: str = "0") -> str:
     if conteudo_extra:
         mensagens[-1]["content"] += f"\n\n{conteudo_extra}"
 
+    # Tenta IA local primeiro se solicitado ou se Ollama disponível
+    from modules.ai_local import ollama_disponivel
+    usar_local = forcar_local or ollama_disponivel()
+
+    if usar_local:
+        try:
+            texto = chamar_local(mensagens)
+            if texto:
+                salvar_mensagem(user_id, "assistant", texto)
+                registrar_acerto(pergunta, texto)
+                return f"🖥️_{texto}_" if forcar_local else texto
+        except Exception as e_local:
+            print(f"⚠️ IA local falhou, usando nuvem: {e_local}")
+
+    # Fallback: Groq → Gemini
     try:
         texto = chamar_groq(mensagens)
         salvar_mensagem(user_id, "assistant", texto)
@@ -98,7 +135,14 @@ def perguntar_ia(pergunta: str, user_id: str = "0") -> str:
             return texto
         except Exception as e2:
             registrar_erro(pergunta, str(e2))
-            return f"Erro ao conectar com a IA: {e1} | {e2}"
+            return f"❌ Erro ao conectar com a IA: {e1} | {e2}"
+
+def perguntar_ia_local(pergunta: str, user_id: str = "0") -> str:
+    """Força uso da IA local sem censura"""
+    from modules.ai_local import ollama_disponivel
+    if not ollama_disponivel():
+        return "❌ IA local offline! Certifique-se que o Ollama está rodando."
+    return perguntar_ia(pergunta, user_id, forcar_local=True)
 
 def corrigir_resposta(pergunta: str, resposta_errada: str, correcao: str, user_id: str = "0") -> str:
     registrar_erro(pergunta, resposta_errada, correcao)

@@ -5,7 +5,6 @@ from datetime import datetime
 MEMORY_FILE = Path(__file__).parent.parent / "data" / "users.json"
 
 def inicializar_arquivo():
-    """Cria a pasta data e o arquivo users.json se não existirem"""
     MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not MEMORY_FILE.exists():
         with open(MEMORY_FILE, "w", encoding="utf-8") as f:

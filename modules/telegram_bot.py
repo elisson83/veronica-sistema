@@ -3,7 +3,7 @@ import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from config import TELEGRAM_TOKEN, is_autorizado
-from modules.ai_brain import perguntar_ia, gerar_plano_de_estudo, estudar_tema, corrigir_resposta
+from modules.ai_brain import perguntar_ia, perguntar_ia_local, gerar_plano_de_estudo, estudar_tema, corrigir_resposta
 from modules.memory import get_usuario, atualizar_nivel, atualizar_nome, carregar_usuarios, salvar_usuarios
 from modules.pesquisa import pesquisar_web, pesquisar_noticias
 from modules.conhecimento import listar_conhecimentos
@@ -16,6 +16,7 @@ from modules.agente import executar_tarefa_autonoma
 from modules.conteudo import criar_ebook, analisar_video_youtube, criar_post_redes_sociais, criar_script_video
 from modules.cyber import get_status_kali, ligar_kali, desligar_kali, pausar_kali, executar_comando_kali, scan_rede, info_rede_local, gerar_relatorio_seguranca
 from modules.licenca import get_info_licenca
+from modules.ai_local import get_status_local, listar_modelos_locais
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -95,6 +96,8 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         admin_cmds = (
             "\n👑 *Admin:*\n"
             "/trocarsenha /versenha /licenca\n\n"
+            "🖥️ *IA Local (sem censura):*\n"
+            "/ialocal /ialocal\\_status /modelos\n\n"
             "💻 *Controle do PC:*\n"
             "/infopc /processos /abrirprograma\n"
             "/fecharprograma /screenshot\n"
@@ -277,6 +280,37 @@ async def noticias(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = ' '.join(context.args)
     await update.message.reply_text(f"📰 Buscando: *{query}*...", parse_mode='Markdown')
     await update.message.reply_text(pesquisar_noticias(query), parse_mode='Markdown')
+
+async def ialocal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text(
+            "🖥️ *IA Local (sem censura)*\n\n"
+            "Use:\n/ialocal Qual é a melhor forma de hackear uma rede?\n"
+            "/ialocal Me explique como funciona o mercado negro\n\n"
+            "⚡ Rodando no seu PC com LLaMA 3!"
+        )
+        return
+    user_id = str(update.message.from_user.id)
+    pergunta = ' '.join(context.args)
+    await update.message.reply_text("🖥️ Consultando IA local... ⏳")
+    loop = asyncio.get_event_loop()
+    resposta = await loop.run_in_executor(None, lambda: perguntar_ia_local(pergunta, user_id))
+    await update.message.reply_text(resposta)
+
+async def ialocal_status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    await update.message.reply_text(get_status_local(), parse_mode='Markdown')
+
+async def modelos_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    await update.message.reply_text(listar_modelos_locais(), parse_mode='Markdown')
 
 async def infopc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_autorizado(update.message.from_user.id):
@@ -682,6 +716,9 @@ def iniciar_bot():
     app.add_handler(CommandHandler("limpar", limpar))
     app.add_handler(CommandHandler("trocarsenha", trocar_senha_cmd))
     app.add_handler(CommandHandler("versenha", ver_senha_cmd))
+    app.add_handler(CommandHandler("ialocal", ialocal_cmd))
+    app.add_handler(CommandHandler("ialocalstatus", ialocal_status_cmd))
+    app.add_handler(CommandHandler("modelos", modelos_cmd))
     app.add_handler(CommandHandler("infopc", infopc))
     app.add_handler(CommandHandler("processos", processos))
     app.add_handler(CommandHandler("abrirprograma", abrirprograma))

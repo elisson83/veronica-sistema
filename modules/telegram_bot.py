@@ -19,6 +19,7 @@ from modules.licenca import get_info_licenca
 from modules.ai_local import get_status_local, listar_modelos_locais
 from modules.memoria_permanente import lembrar_fato, lembrar_preferencia, buscar_memorias, apagar_memorias
 from modules.visao_ia import tirar_e_descrever, ver_e_agir, analisar_imagem_enviada
+from modules.dual_brain import get_status_completo, get_status_resumido, get_melhor_ia
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -52,8 +53,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         usuario = get_usuario(user_id)
         nome_salvo = usuario.get("nome", "")
         if nome_salvo and nome_salvo != "":
+            ia_ativa = get_status_resumido()
             await update.message.reply_text(
-                f"👋 Olá, *{nome_salvo}*! Bem-vindo de volta!\n\nSerei sua assistente pessoal. Como posso te ajudar hoje? 😊",
+                f"👋 Olá, *{nome_salvo}*! Bem-vindo de volta!\n\n"
+                f"⚡ {ia_ativa}\n\n"
+                f"Como posso te ajudar hoje? 😊",
                 parse_mode='Markdown'
             )
             return
@@ -97,7 +101,7 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_autorizado(int_id):
         admin_cmds = (
             "\n👑 *Admin:*\n"
-            "/trocarsenha /versenha /licenca\n\n"
+            "/trocarsenha /versenha /licenca /status\n\n"
             "🖥️ *IA Local (sem censura):*\n"
             "/ialocal /ialocalstatus /modelos\n\n"
             "🧠 *Memória Permanente:*\n"
@@ -132,6 +136,15 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Ou simplesmente me faça qualquer pergunta! 😊",
         parse_mode='Markdown'
     )
+
+async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    await update.message.reply_text("🔍 Verificando sistemas... ⏳")
+    loop = asyncio.get_event_loop()
+    status = await loop.run_in_executor(None, get_status_completo)
+    await update.message.reply_text(status, parse_mode='Markdown')
 
 async def perfil(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -819,6 +832,7 @@ def iniciar_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ajuda", ajuda))
+    app.add_handler(CommandHandler("status", status_cmd))
     app.add_handler(CommandHandler("plano", plano))
     app.add_handler(CommandHandler("estudar", estudar))
     app.add_handler(CommandHandler("conhecimentos", conhecimentos))

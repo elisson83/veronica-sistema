@@ -18,6 +18,7 @@ from modules.cyber import get_status_kali, ligar_kali, desligar_kali, pausar_kal
 from modules.licenca import get_info_licenca
 from modules.ai_local import get_status_local, listar_modelos_locais
 from modules.memoria_permanente import lembrar_fato, lembrar_preferencia, buscar_memorias, apagar_memorias
+from modules.visao_ia import tirar_e_descrever, ver_e_agir, analisar_imagem_enviada
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -101,6 +102,8 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/ialocal /ialocalstatus /modelos\n\n"
             "🧠 *Memória Permanente:*\n"
             "/lembrar /memorias /esquecertudo\n\n"
+            "👁️ *Visão Inteligente:*\n"
+            "/verdescrever /veragir /analisarimagem\n\n"
             "💻 *Controle do PC:*\n"
             "/infopc /processos /abrirprograma\n"
             "/fecharprograma /screenshot\n"
@@ -179,7 +182,7 @@ async def lembrar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "🧠 *Memorizar algo:*\n\n"
             "Use:\n/lembrar Elisson gosta de café\n"
-            "/lembrar Elisson mora em Santa Catarina\n"
+            "/lembrar Elisson mora em Florianópolis\n"
             "/lembrar Objetivo: ganhar dinheiro com IA"
         )
         return
@@ -203,6 +206,65 @@ async def esquecertudo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⚠️ *Apagar TODA a memória permanente?*\n\nIsso não pode ser desfeito!\n\nDigite *SIM* ou *NÃO*",
         parse_mode='Markdown'
     )
+
+async def verdescrever_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    pergunta = ' '.join(context.args) if context.args else "O que você vê nessa tela? Descreva tudo em detalhes."
+    await update.message.reply_text("👁️ Analisando a tela com IA... ⏳")
+    loop = asyncio.get_event_loop()
+    caminho, descricao = await loop.run_in_executor(None, lambda: tirar_e_descrever(pergunta))
+    if caminho:
+        await update.message.reply_photo(
+            photo=open(caminho, 'rb'),
+            caption=f"👁️ *Análise da tela:*\n\n{descricao[:1000]}",
+            parse_mode='Markdown'
+        )
+    else:
+        await update.message.reply_text(descricao)
+
+async def veragir_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text(
+            "👁️ *Ver e Agir:*\n\n"
+            "Use:\n/veragir Abrir o chrome\n"
+            "/veragir Fechar a janela atual\n"
+            "/veragir Clicar no botão OK"
+        )
+        return
+    objetivo = ' '.join(context.args)
+    await update.message.reply_text(f"👁️ Analisando tela para: *{objetivo}*... ⏳", parse_mode='Markdown')
+    loop = asyncio.get_event_loop()
+    resposta = await loop.run_in_executor(None, lambda: ver_e_agir(objetivo))
+    await update.message.reply_text(resposta, parse_mode='Markdown')
+
+async def analisar_imagem_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    if not update.message.photo:
+        await update.message.reply_text(
+            "📸 *Analisar Imagem:*\n\n"
+            "Envie uma imagem com o comando:\n"
+            "/analisarimagem\n\n"
+            "Ou envie a imagem e escreva a pergunta na legenda!"
+        )
+        return
+    await update.message.reply_text("👁️ Analisando imagem... ⏳")
+    foto = update.message.photo[-1]
+    arquivo = await foto.get_file()
+    from pathlib import Path
+    caminho = str(Path("assets") / f"img_{foto.file_id}.jpg")
+    Path("assets").mkdir(exist_ok=True)
+    await arquivo.download_to_drive(caminho)
+    pergunta = update.message.caption or "O que você vê nessa imagem? Descreva em detalhes."
+    loop = asyncio.get_event_loop()
+    descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
+    await update.message.reply_text(f"👁️ *Análise:*\n\n{descricao}", parse_mode='Markdown')
 
 async def plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -734,6 +796,25 @@ async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text("🤔 Pensando...")
     await update.message.reply_text(perguntar_ia(texto, user_id))
 
+async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.message.from_user.id)
+    int_id = update.message.from_user.id
+    if not is_autorizado(int_id) and not usuario_liberado(user_id):
+        return
+    if not update.message.photo:
+        return
+    await update.message.reply_text("👁️ Analisando imagem... ⏳")
+    foto = update.message.photo[-1]
+    arquivo = await foto.get_file()
+    from pathlib import Path
+    caminho = str(Path("assets") / f"img_{foto.file_id}.jpg")
+    Path("assets").mkdir(exist_ok=True)
+    await arquivo.download_to_drive(caminho)
+    pergunta = update.message.caption or "O que você vê nessa imagem? Descreva em detalhes em português."
+    loop = asyncio.get_event_loop()
+    descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
+    await update.message.reply_text(f"👁️ *Análise:*\n\n{descricao}", parse_mode='Markdown')
+
 def iniciar_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -760,6 +841,9 @@ def iniciar_bot():
     app.add_handler(CommandHandler("lembrar", lembrar_cmd))
     app.add_handler(CommandHandler("memorias", memorias_cmd))
     app.add_handler(CommandHandler("esquecertudo", esquecertudo_cmd))
+    app.add_handler(CommandHandler("verdescrever", verdescrever_cmd))
+    app.add_handler(CommandHandler("veragir", veragir_cmd))
+    app.add_handler(CommandHandler("analisarimagem", analisar_imagem_cmd))
     app.add_handler(CommandHandler("infopc", infopc))
     app.add_handler(CommandHandler("processos", processos))
     app.add_handler(CommandHandler("abrirprograma", abrirprograma))
@@ -791,6 +875,7 @@ def iniciar_bot():
     app.add_handler(CommandHandler("inforede", info_rede_cmd))
     app.add_handler(CommandHandler("relatorio", relatorio_cmd))
     app.add_handler(CommandHandler("licenca", licenca_cmd))
+    app.add_handler(MessageHandler(filters.PHOTO, responder_foto))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_mensagem))
     print("🤖 Verônica está online!")
     app.run_polling()

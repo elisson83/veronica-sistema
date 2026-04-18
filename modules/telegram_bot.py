@@ -17,6 +17,7 @@ from modules.conteudo import criar_ebook, analisar_video_youtube, criar_post_red
 from modules.cyber import get_status_kali, ligar_kali, desligar_kali, pausar_kali, executar_comando_kali, scan_rede, info_rede_local, gerar_relatorio_seguranca
 from modules.licenca import get_info_licenca
 from modules.ai_local import get_status_local, listar_modelos_locais
+from modules.memoria_permanente import lembrar_fato, lembrar_preferencia, buscar_memorias, apagar_memorias
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -97,7 +98,9 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "\n👑 *Admin:*\n"
             "/trocarsenha /versenha /licenca\n\n"
             "🖥️ *IA Local (sem censura):*\n"
-            "/ialocal /ialocal\\_status /modelos\n\n"
+            "/ialocal /ialocalstatus /modelos\n\n"
+            "🧠 *Memória Permanente:*\n"
+            "/lembrar /memorias /esquecertudo\n\n"
             "💻 *Controle do PC:*\n"
             "/infopc /processos /abrirprograma\n"
             "/fecharprograma /screenshot\n"
@@ -167,6 +170,39 @@ async def limpar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         salvar_usuarios(usuarios)
     aguardando_nome.pop(user_id, None)
     await update.message.reply_text("🧹 Histórico e nome limpos!\n\nDigite /start para recomeçar! 😊")
+
+async def lembrar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text(
+            "🧠 *Memorizar algo:*\n\n"
+            "Use:\n/lembrar Elisson gosta de café\n"
+            "/lembrar Elisson mora em Santa Catarina\n"
+            "/lembrar Objetivo: ganhar dinheiro com IA"
+        )
+        return
+    fato = ' '.join(context.args)
+    await update.message.reply_text(lembrar_fato(fato, "manual"), parse_mode='Markdown')
+
+async def memorias_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    termo = ' '.join(context.args) if context.args else ""
+    await update.message.reply_text(buscar_memorias(termo), parse_mode='Markdown')
+
+async def esquecertudo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("⛔ Apenas o administrador!")
+        return
+    user_id = str(update.message.from_user.id)
+    aguardando_confirmacao[user_id] = "apagar_memoria"
+    await update.message.reply_text(
+        "⚠️ *Apagar TODA a memória permanente?*\n\nIsso não pode ser desfeito!\n\nDigite *SIM* ou *NÃO*",
+        parse_mode='Markdown'
+    )
 
 async def plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -639,6 +675,8 @@ async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 resposta = reiniciar_pc()
             elif acao == "kali_desligar":
                 resposta = desligar_kali()
+            elif acao == "apagar_memoria":
+                resposta = apagar_memorias()
             else:
                 resposta = "✅ Confirmado!"
             await update.message.reply_text(resposta, parse_mode='Markdown')
@@ -719,6 +757,9 @@ def iniciar_bot():
     app.add_handler(CommandHandler("ialocal", ialocal_cmd))
     app.add_handler(CommandHandler("ialocalstatus", ialocal_status_cmd))
     app.add_handler(CommandHandler("modelos", modelos_cmd))
+    app.add_handler(CommandHandler("lembrar", lembrar_cmd))
+    app.add_handler(CommandHandler("memorias", memorias_cmd))
+    app.add_handler(CommandHandler("esquecertudo", esquecertudo_cmd))
     app.add_handler(CommandHandler("infopc", infopc))
     app.add_handler(CommandHandler("processos", processos))
     app.add_handler(CommandHandler("abrirprograma", abrirprograma))

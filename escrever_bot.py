@@ -1,4 +1,4 @@
-import logging
+codigo = '''import logging
 import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
@@ -52,7 +52,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         nome_salvo = usuario.get("nome", "")
         if nome_salvo and nome_salvo != "":
             ia_ativa = get_status_resumido()
-            await update.message.reply_text(f"Ola, {nome_salvo}! Bem-vindo de volta!\n\n{ia_ativa}\n\nComo posso te ajudar hoje?")
+            await update.message.reply_text(f"Ola, {nome_salvo}! Bem-vindo de volta!\\n\\n{ia_ativa}\\n\\nComo posso te ajudar hoje?")
             return
         aguardando_nome[user_id] = True
         await update.message.reply_text("Ola! Eu sou a Veronica! Qual e o seu nome?")
@@ -81,7 +81,7 @@ async def ver_senha_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     senha = get_senha()
     usuarios = listar_usuarios_liberados()
-    await update.message.reply_text(f"Senha atual: {senha}\nUsuarios liberados: {len(usuarios)}")
+    await update.message.reply_text(f"Senha atual: {senha}\\nUsuarios liberados: {len(usuarios)}")
 
 async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -89,8 +89,8 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     int_id = update.message.from_user.id
     admin_cmds = ""
     if is_autorizado(int_id):
-        admin_cmds = "\n/trocarsenha /versenha /licenca /status\n/ialocal /ialocalstatus /modelos\n/lembrar /memorias /esquecertudo\n/verdescrever /veragir /analisarimagem\n/mkpost /mkcalendario /mkestrategia /mkcopy /mkconcorrente /mktendencias /mkposts\n/infopc /processos /abrirprograma /fecharprograma /screenshot\n/desligarpc /reiniciarpc /executar\n/vertela /lertela /mouse /mover /clicar /digitar /tecla /atalho /scroll\n/tarefa /ebook /analisarvideo /post /script\n/kalistatus /kaliligar /kalidesligar /kalicomando /scanrede /inforede /relatorio"
-    await update.message.reply_text(f"Comandos da Veronica:\n/plano /estudar /conhecimentos\n/pesquisar /noticias /codigo\n/mercado /cotacao /indicadores\n/corrigir /evolucao /nivel /perfil /limpar{admin_cmds}\n\nOu me faca qualquer pergunta!")
+        admin_cmds = "\\n/trocarsenha /versenha /licenca /status\\n/ialocal /ialocalstatus /modelos\\n/lembrar /memorias /esquecertudo\\n/verdescrever /veragir /analisarimagem\\n/mkpost /mkcalendario /mkestrategia /mkcopy /mkconcorrente /mktendencias /mkposts\\n/infopc /processos /abrirprograma /fecharprograma /screenshot\\n/desligarpc /reiniciarpc /executar\\n/vertela /lertela /mouse /mover /clicar /digitar /tecla /atalho /scroll\\n/tarefa /ebook /analisarvideo /post /script\\n/kalistatus /kaliligar /kalidesligar /kalicomando /scanrede /inforede /relatorio"
+    await update.message.reply_text(f"Comandos da Veronica:\\n/plano /estudar /conhecimentos\\n/pesquisar /noticias /codigo\\n/mercado /cotacao /indicadores\\n/corrigir /evolucao /nivel /perfil /limpar{admin_cmds}\\n\\nOu me faca qualquer pergunta!")
 
 async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_autorizado(update.message.from_user.id):
@@ -107,7 +107,7 @@ async def perfil(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
     usuario = get_usuario(user_id)
     total_mensagens = len(usuario.get("historico", []))
-    await update.message.reply_text(f"Perfil:\nNome: {usuario.get('nome','?')}\nNivel: {usuario.get('nivel','iniciante')}\nMensagens: {total_mensagens}\nMembro desde: {usuario.get('criado_em','?')[:10]}")
+    await update.message.reply_text(f"Perfil:\\nNome: {usuario.get('nome','?')}\\nNivel: {usuario.get('nivel','iniciante')}\\nMensagens: {total_mensagens}\\nMembro desde: {usuario.get('criado_em','?')[:10]}")
 
 async def nivel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -169,7 +169,7 @@ async def verdescrever_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     loop = asyncio.get_event_loop()
     caminho, descricao = await loop.run_in_executor(None, lambda: tirar_e_descrever(pergunta))
     if caminho:
-        await update.message.reply_photo(photo=open(caminho, "rb"), caption=f"Analise da tela:\n\n{descricao[:1000]}")
+        await update.message.reply_photo(photo=open(caminho, "rb"), caption=f"Analise da tela:\\n\\n{descricao[:1000]}")
     else:
         await update.message.reply_text(descricao)
 
@@ -203,7 +203,7 @@ async def analisar_imagem_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
     pergunta = update.message.caption or "O que voce ve nessa imagem? Descreva em detalhes."
     loop = asyncio.get_event_loop()
     descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
-    await update.message.reply_text(f"Analise:\n\n{descricao}")
+    await update.message.reply_text(f"Analise:\\n\\n{descricao}")
 
 async def mkpost_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -606,7 +606,7 @@ async def tarefa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     descricao = " ".join(context.args)
     user_id = str(update.message.from_user.id)
     aguardando_tarefa[user_id] = descricao
-    await update.message.reply_text(f"Tarefa recebida: {descricao}\n\nDigite SIM para executar ou NAO para cancelar.")
+    await update.message.reply_text(f"Tarefa recebida: {descricao}\\n\\nDigite SIM para executar ou NAO para cancelar.")
 
 async def ebook_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await verificar_acesso(update):
@@ -777,7 +777,7 @@ async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
             resultados = await loop.run_in_executor(None, lambda: executar_tarefa_autonoma(descricao, callback))
             for msg in mensagens:
                 await update.message.reply_text(msg)
-            await update.message.reply_text(f"Tarefa concluida!\n\n{chr(10).join(resultados)[:1000]}")
+            await update.message.reply_text(f"Tarefa concluida!\\n\\n{chr(10).join(resultados)[:1000]}")
         else:
             aguardando_tarefa.pop(user_id, None)
             await update.message.reply_text("Tarefa cancelada!")
@@ -825,7 +825,7 @@ async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pergunta = update.message.caption or "O que voce ve nessa imagem? Descreva em detalhes em portugues."
     loop = asyncio.get_event_loop()
     descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
-    await update.message.reply_text(f"Analise:\n\n{descricao}")
+    await update.message.reply_text(f"Analise:\\n\\n{descricao}")
 
 def iniciar_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
@@ -899,3 +899,8 @@ def iniciar_bot():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_mensagem))
     print("Veronica esta online!")
     app.run_polling()
+'''
+
+with open("modules/telegram_bot.py", "w", encoding="utf-8") as f:
+    f.write(codigo)
+print("Arquivo criado com sucesso!")

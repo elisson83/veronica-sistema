@@ -86,33 +86,59 @@ def abrir_programa(programa: str) -> str:
 
 def fechar_programa(programa: str) -> str:
     try:
-        os.system(f"taskkill /f /im {programa}.exe")
+        subprocess.run(f"taskkill /f /im {programa}.exe", shell=True)
         return f"✅ *{programa}* fechado!"
     except Exception as e:
         return f"❌ Erro ao fechar {programa}: {e}"
 
 def desligar_pc(minutos: int = 0) -> str:
     try:
-        if minutos > 0:
-            os.system(f"shutdown /s /t {minutos * 60}")
-            return f"⚠️ PC será desligado em *{minutos} minutos*!"
+        segundos = minutos * 60 if minutos > 0 else 30
+        resultado = subprocess.run(
+            ["shutdown", "/s", "/t", str(segundos)],
+            capture_output=True,
+            text=True
+        )
+        if resultado.returncode == 0:
+            return f"⚠️ PC será desligado em *{segundos} segundos*!\nDigite /cancelardesligamento para cancelar."
         else:
-            os.system("shutdown /s /t 30")
-            return "⚠️ PC será desligado em *30 segundos*!\nDigite /cancelardesligamento para cancelar."
+            # Tenta via powershell como fallback
+            subprocess.Popen(
+                ["powershell", "-Command", f"Stop-Computer -Force"],
+                shell=False
+            )
+            return "⚠️ Comando de desligamento enviado via PowerShell!"
     except Exception as e:
-        return f"❌ Erro: {e}"
+        return f"❌ Erro ao desligar: {e}"
 
 def cancelar_desligamento() -> str:
     try:
-        os.system("shutdown /a")
-        return "✅ Desligamento cancelado!"
+        resultado = subprocess.run(
+            ["shutdown", "/a"],
+            capture_output=True,
+            text=True
+        )
+        if resultado.returncode == 0:
+            return "✅ Desligamento cancelado!"
+        return "⚠️ Nenhum desligamento agendado ou já cancelado!"
     except Exception as e:
         return f"❌ Erro: {e}"
 
 def reiniciar_pc() -> str:
     try:
-        os.system("shutdown /r /t 30")
-        return "⚠️ PC será reiniciado em *30 segundos*!\nDigite /cancelardesligamento para cancelar."
+        resultado = subprocess.run(
+            ["shutdown", "/r", "/t", "30"],
+            capture_output=True,
+            text=True
+        )
+        if resultado.returncode == 0:
+            return "⚠️ PC será reiniciado em *30 segundos*!\nDigite /cancelardesligamento para cancelar."
+        else:
+            subprocess.Popen(
+                ["powershell", "-Command", "Restart-Computer -Force"],
+                shell=False
+            )
+            return "⚠️ Comando de reinicialização enviado via PowerShell!"
     except Exception as e:
         return f"❌ Erro: {e}"
 

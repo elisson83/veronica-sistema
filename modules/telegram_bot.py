@@ -21,7 +21,7 @@ from modules.memoria_permanente import lembrar_fato, lembrar_preferencia, buscar
 from modules.visao_ia import tirar_e_descrever, ver_e_agir, analisar_imagem_enviada
 from modules.dual_brain import get_status_completo, get_status_resumido, get_melhor_ia
 from modules.marketing import criar_post_otimizado, criar_calendario_editorial, criar_estrategia_completa, criar_copy_vendas, analisar_concorrente, get_tendencias, listar_posts
-from modules.visao_geradora import gerar_imagem, gerar_logo, gerar_banner_post, gerar_capa_ebook, gerar_imagem_inteligente
+from modules.visao_geradora import gerar_imagem, gerar_logo, gerar_banner_post, gerar_capa_ebook, gerar_imagem_inteligente, transformar_foto_anime
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
@@ -816,6 +816,32 @@ async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if not update.message.photo:
         return
+    legenda = update.message.caption or ""
+    legenda_lower = legenda.lower().strip()
+    estilos_validos = ["anime", "cartoon", "pixar", "sketch", "watercolor"]
+    palavras_transformar = ["anime", "cartoon", "pixar", "sketch", "watercolor", "desenho", "transforma", "converte", "estilo"]
+    if any(p in legenda_lower for p in palavras_transformar):
+        estilo = "anime"
+        for e in estilos_validos:
+            if e in legenda_lower:
+                estilo = e
+                break
+        if "desenho" in legenda_lower or "cartoon" in legenda_lower:
+            estilo = "cartoon"
+        await update.message.reply_text(f"Transformando foto em {estilo}... aguarde!")
+        foto = update.message.photo[-1]
+        arquivo = await foto.get_file()
+        from pathlib import Path
+        caminho = str(Path("assets") / f"original_{foto.file_id}.jpg")
+        Path("assets").mkdir(exist_ok=True)
+        await arquivo.download_to_drive(caminho)
+        loop = asyncio.get_event_loop()
+        caminho_result, ia_usada = await loop.run_in_executor(None, lambda: transformar_foto_anime(caminho, estilo))
+        if str(caminho_result).startswith("ERRO"):
+            await update.message.reply_text(caminho_result)
+        else:
+            await update.message.reply_photo(photo=open(caminho_result, "rb"), caption=f"Foto transformada em {estilo}!")
+        return
     await update.message.reply_text("Analisando imagem...")
     foto = update.message.photo[-1]
     arquivo = await foto.get_file()
@@ -823,11 +849,10 @@ async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caminho = str(Path("assets") / f"img_{foto.file_id}.jpg")
     Path("assets").mkdir(exist_ok=True)
     await arquivo.download_to_drive(caminho)
-    pergunta = update.message.caption or "O que voce ve nessa imagem? Descreva em detalhes em portugues."
+    pergunta = legenda or "O que voce ve nessa imagem? Descreva em detalhes em portugues."
     loop = asyncio.get_event_loop()
     descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
     await update.message.reply_text(f"Analise:\n\n{descricao}")
-
 
 async def gerarimg_cmd(update, context):
     if not is_autorizado(update.message.from_user.id):
@@ -900,6 +925,44 @@ async def gerarcapa_cmd(update, context):
     else:
         await update.message.reply_photo(photo=open(caminho, "rb"), caption=f"Capa ebook: {titulo[:100]}")
 
+
+async def animefoto_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not update.message.photo and not update.message.reply_to_message:
+        await update.message.reply_text(
+            "Envie uma foto com o comando /animefoto na legenda!\n\n"
+            "Ou responda uma foto com /animefoto\n\n"
+            "Estilos disponiveis:\n"
+            "anime, cartoon, pixar, sketch, watercolor"
+        )
+        return
+    estilo = context.args[0].lower() if context.args else "anime"
+    await update.message.reply_text(f"Transformando foto em {estilo}... aguarde!")
+    from pathlib import Path
+    foto = None
+    if update.message.photo:
+        foto = update.message.photo[-1]
+    elif update.message.reply_to_message and update.message.reply_to_message.photo:
+        foto = update.message.reply_to_message.photo[-1]
+    if not foto:
+        await update.message.reply_text("Nenhuma foto encontrada!")
+        return
+    arquivo = await foto.get_file()
+    caminho_original = str(Path("assets") / f"original_{foto.file_id}.jpg")
+    Path("assets").mkdir(exist_ok=True)
+    await arquivo.download_to_drive(caminho_original)
+    loop = asyncio.get_event_loop()
+    caminho_result, ia_usada = await loop.run_in_executor(None, lambda: transformar_foto_anime(caminho_original, estilo))
+    if str(caminho_result).startswith("ERRO"):
+        await update.message.reply_text(caminho_result)
+    else:
+        await update.message.reply_photo(
+            photo=open(caminho_result, "rb"),
+            caption=f"Foto transformada em {estilo} usando {ia_usada}!"
+        )
+
 def iniciar_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -941,6 +1004,8 @@ def iniciar_bot():
     app.add_handler(CommandHandler("gerarlogo", gerarlogo_cmd))
     app.add_handler(CommandHandler("gerarbanner", gerarbanner_cmd))
     app.add_handler(CommandHandler("gerarcapa", gerarcapa_cmd))
+    app.add_handler(CommandHandler("animefoto", animefoto_cmd))
+    app.add_handler(CommandHandler("anime", animefoto_cmd))
     app.add_handler(CommandHandler("infopc", infopc))
     app.add_handler(CommandHandler("processos", processos))
     app.add_handler(CommandHandler("abrirprograma", abrirprograma))

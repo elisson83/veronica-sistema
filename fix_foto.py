@@ -1,26 +1,23 @@
 with open("modules/telegram_bot.py", "r", encoding="utf-8") as f:
-    codigo = f.read()
+    linhas = f.readlines()
 
-antiga = '''async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.message.from_user.id)
-    int_id = update.message.from_user.id
-    if not is_autorizado(int_id) and not usuario_liberado(user_id):
-        return
-    if not update.message.photo:
-        return
-    await update.message.reply_text("Analisando imagem...")
-    foto = update.message.photo[-1]
-    arquivo = await foto.get_file()
-    from pathlib import Path
-    caminho = str(Path("assets") / f"img_{foto.file_id}.jpg")
-    Path("assets").mkdir(exist_ok=True)
-    await arquivo.download_to_drive(caminho)
-    pergunta = update.message.caption or "O que voce ve nessa imagem? Descreva em detalhes em portugues."
-    loop = asyncio.get_event_loop()
-    descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
-    await update.message.reply_text(f"Analise:\\n\\n{descricao}")'''
+# Encontra inicio e fim da funcao responder_foto
+inicio = None
+fim = None
+for i, linha in enumerate(linhas):
+    if "async def responder_foto" in linha:
+        inicio = i
+    if inicio and i > inicio and "async def " in linha and "responder_foto" not in linha:
+        fim = i
+        break
 
-nova = '''async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
+print(f"Funcao encontrada: linhas {inicio} ate {fim}")
+print("Conteudo atual:")
+for i in range(inicio, min(inicio+20, len(linhas))):
+    print(f"{i}: {linhas[i]}", end="")
+
+# Substitui a funcao
+nova_funcao = '''async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
     int_id = update.message.from_user.id
     if not is_autorizado(int_id) and not usuario_liberado(user_id):
@@ -31,7 +28,6 @@ nova = '''async def responder_foto(update: Update, context: ContextTypes.DEFAULT
     legenda_lower = legenda.lower().strip()
     estilos_validos = ["anime", "cartoon", "pixar", "sketch", "watercolor"]
     palavras_transformar = ["anime", "cartoon", "pixar", "sketch", "watercolor", "desenho", "transforma", "converte", "estilo"]
-
     if any(p in legenda_lower for p in palavras_transformar):
         estilo = "anime"
         for e in estilos_validos:
@@ -54,7 +50,6 @@ nova = '''async def responder_foto(update: Update, context: ContextTypes.DEFAULT
         else:
             await update.message.reply_photo(photo=open(caminho_result, "rb"), caption=f"Foto transformada em {estilo}!")
         return
-
     await update.message.reply_text("Analisando imagem...")
     foto = update.message.photo[-1]
     arquivo = await foto.get_file()
@@ -65,20 +60,13 @@ nova = '''async def responder_foto(update: Update, context: ContextTypes.DEFAULT
     pergunta = legenda or "O que voce ve nessa imagem? Descreva em detalhes em portugues."
     loop = asyncio.get_event_loop()
     descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
-    await update.message.reply_text(f"Analise:\\n\\n{descricao}")'''
+    await update.message.reply_text(f"Analise:\\n\\n{descricao}")
 
-if antiga in codigo:
-    codigo = codigo.replace(antiga, nova)
-    print("Substituicao feita com sucesso!")
-else:
-    print("Ainda nao encontrado - forcando substituicao...")
-    idx = codigo.find("async def responder_foto")
-    idx_fim = codigo.find("async def responder_foto", idx + 1)
-    if idx_fim == -1:
-        idx_fim = codigo.find("def iniciar_bot")
-    codigo = codigo[:idx] + nova + "\n\n" + codigo[idx_fim:]
-    print("Substituicao forcada!")
+'''
+
+novas_linhas = linhas[:inicio] + [nova_funcao] + linhas[fim:]
 
 with open("modules/telegram_bot.py", "w", encoding="utf-8") as f:
-    f.write(codigo)
-print("Arquivo salvo!")
+    f.writelines(novas_linhas)
+
+print("\\nFuncao substituida com sucesso!")

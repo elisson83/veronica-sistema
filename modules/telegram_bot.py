@@ -21,6 +21,7 @@ from modules.memoria_permanente import lembrar_fato, lembrar_preferencia, buscar
 from modules.visao_ia import tirar_e_descrever, ver_e_agir, analisar_imagem_enviada
 from modules.dual_brain import get_status_completo, get_status_resumido, get_melhor_ia
 from modules.marketing import criar_post_otimizado, criar_calendario_editorial, criar_estrategia_completa, criar_copy_vendas, analisar_concorrente, get_tendencias, listar_posts
+from modules.visao_geradora import gerar_imagem, gerar_logo, gerar_banner_post, gerar_capa_ebook, gerar_imagem_inteligente
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
@@ -827,6 +828,78 @@ async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
     await update.message.reply_text(f"Analise:\n\n{descricao}")
 
+
+async def gerarimg_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text("Use: /gerarimg descricao da imagem que voce quer")
+        return
+    descricao = " ".join(context.args)
+    await update.message.reply_text(f"Gerando imagem... aguarde alguns segundos!")
+    loop = asyncio.get_event_loop()
+    caminho, ia_usada = await loop.run_in_executor(None, lambda: gerar_imagem_inteligente(descricao))
+    if caminho.startswith("X") or caminho.startswith("E") or caminho.startswith("?"):
+        await update.message.reply_text(caminho)
+    else:
+        await update.message.reply_photo(photo=open(caminho, "rb"), caption=f"Imagem gerada com {ia_usada}!")
+
+async def gerarlogo_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text("Use: /gerarlogo MinhaEmpresa|tecnologia|azul e branco")
+        return
+    texto = " ".join(context.args)
+    partes = texto.split("|")
+    nome = partes[0].strip()
+    nicho = partes[1].strip() if len(partes) > 1 else "empresa"
+    cores = partes[2].strip() if len(partes) > 2 else "azul e branco"
+    await update.message.reply_text(f"Gerando logo para {nome}... aguarde!")
+    loop = asyncio.get_event_loop()
+    caminho, prompt = await loop.run_in_executor(None, lambda: gerar_logo(nome, nicho, cores))
+    if caminho.startswith("X") or caminho.startswith("E"):
+        await update.message.reply_text(caminho)
+    else:
+        await update.message.reply_photo(photo=open(caminho, "rb"), caption=f"Logo gerado para: {nome}")
+
+async def gerarbanner_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text("Use: /gerarbanner instagram|Marketing Digital")
+        return
+    texto = " ".join(context.args)
+    partes = texto.split("|")
+    rede = partes[0].strip() if len(partes) > 1 else "instagram"
+    tema = partes[1].strip() if len(partes) > 1 else texto
+    await update.message.reply_text(f"Gerando banner para {rede}... aguarde!")
+    loop = asyncio.get_event_loop()
+    caminho, prompt = await loop.run_in_executor(None, lambda: gerar_banner_post(tema, rede))
+    if caminho.startswith("X") or caminho.startswith("E"):
+        await update.message.reply_text(caminho)
+    else:
+        await update.message.reply_photo(photo=open(caminho, "rb"), caption=f"Banner {rede}: {tema[:100]}")
+
+async def gerarcapa_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text("Use: /gerarcapa Como Ganhar Dinheiro Online")
+        return
+    titulo = " ".join(context.args)
+    await update.message.reply_text(f"Gerando capa para: {titulo}... aguarde!")
+    loop = asyncio.get_event_loop()
+    caminho, prompt = await loop.run_in_executor(None, lambda: gerar_capa_ebook(titulo))
+    if caminho.startswith("X") or caminho.startswith("E"):
+        await update.message.reply_text(caminho)
+    else:
+        await update.message.reply_photo(photo=open(caminho, "rb"), caption=f"Capa ebook: {titulo[:100]}")
+
 def iniciar_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -864,6 +937,10 @@ def iniciar_bot():
     app.add_handler(CommandHandler("mkconcorrente", mkconcorrente_cmd))
     app.add_handler(CommandHandler("mktendencias", mktendencias_cmd))
     app.add_handler(CommandHandler("mkposts", mkposts_cmd))
+    app.add_handler(CommandHandler("gerarimg", gerarimg_cmd))
+    app.add_handler(CommandHandler("gerarlogo", gerarlogo_cmd))
+    app.add_handler(CommandHandler("gerarbanner", gerarbanner_cmd))
+    app.add_handler(CommandHandler("gerarcapa", gerarcapa_cmd))
     app.add_handler(CommandHandler("infopc", infopc))
     app.add_handler(CommandHandler("processos", processos))
     app.add_handler(CommandHandler("abrirprograma", abrirprograma))

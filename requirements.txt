@@ -12,7 +12,11 @@ psutil
 reportlab
 fpdf2
 mss
-paramikotweepy
-python-dotenv
+paramiko
+tweepy
+pyautogui
+pillow
 flask
 flask-cors
+openai
+schedule

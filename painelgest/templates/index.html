@@ -1,0 +1,15 @@
+```html
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container mt-5 pt-5 d-flex justify-content-center align-items-center" style="height: 90vh;">
+        <div class="card text-center" style="width: 30rem;">
+            <div class="card-body">
+                <h1 class="card-title text-white">PainelGest</h1>
+                <p class="card-text text-white">Seja bem-vindo ao PainelGest</p>
+                <a href="{{ url_for('login') }}" class="btn btn-primary w-100">Entrar</a>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+```

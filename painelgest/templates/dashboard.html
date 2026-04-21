@@ -1,0 +1,51 @@
+```html
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container mt-5 pt-5">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Clientes iFood</h5>
+                        <h1 class="card-text">{{ clientes | length }}</h1>
+                        <a href="{{ url_for('clientes') }}" class="btn btn-light">Ver detalhes</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Perfis Instagram</h5>
+                        <h1 class="card-text">{{ perfis | length }}</h1>
+                        <a href="{{ url_for('perfis_instagram') }}" class="btn btn-light">Ver detalhes</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Vencimentos Próximos</h5>
+                        <h1 class="card-text">{{ vencimentos_proximos | length }}</h1>
+                        <a href="{{ url_for('vencimentos') }}" class="btn btn-light">Ver detalhes</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Status do Sistema</h5>
+                        <h1 class="card-text">
+                            {% if status_sistema == 'online' %}
+                                <i class="bi bi-check-circle"></i> Online
+                            {% else %}
+                                <i class="bi bi-x-circle"></i> Offline
+                            {% endif %}
+                        </h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+```

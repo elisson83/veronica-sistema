@@ -1,0 +1,42 @@
+```html
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container mt-5 pt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <h1 class="text-white">Cadastrar Cliente iFood</h1>
+                <form method="POST" action="{{ url_for('cadastrar_cliente') }}">
+                    <div class="mb-3">
+                        <label for="nome_da_loja" class="form-label text-white">Nome da Loja</label>
+                        <input type="text" id="nome_da_loja" name="nome_da_loja" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="login_ifood" class="form-label text-white">Login iFood</label>
+                        <input type="text" id="login_ifood" name="login_ifood" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="senha_ifood" class="form-label text-white">Senha iFood</label>
+                        <input type="password" id="senha_ifood" name="senha_ifood" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="status" class="form-label text-white">Status</label>
+                        <select id="status" name="status" class="form-select" required>
+                            <option value="ativo">Ativo</option>
+                            <option value="inativo">Inativo</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
+                </form>
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="alert alert-danger mt-3" role="alert">
+                            {{ messages[0] }}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+```

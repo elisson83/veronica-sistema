@@ -1,0 +1,46 @@
+```html
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container mt-5 pt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <h1 class="text-white">Cadastrar Vencimento</h1>
+                <form method="POST" action="{{ url_for('cadastrar_vencimento') }}">
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label text-white">Descrição</label>
+                        <input type="text" id="descricao" name="descricao" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="valor" class="form-label text-white">Valor</label>
+                        <input type="number" id="valor" name="valor" class="form-control" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="data_vencimento" class="form-label text-white">Data de Vencimento</label>
+                        <input type="date" id="data_vencimento" name="data_vencimento" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="status" class="form-label text-white">Status</label>
+                        <select id="status" name="status" class="form-select" required>
+                            <option value="pago">Pago</option>
+                            <option value="nao_pago">Não Pago</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="chave_pix_ou_link_pagamento" class="form-label text-white">Chave PIX ou Link de Pagamento</label>
+                        <input type="text" id="chave_pix_ou_link_pagamento" name="chave_pix_ou_link_pagamento" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
+                </form>
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="alert alert-danger mt-3" role="alert">
+                            {{ messages[0] }}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+```

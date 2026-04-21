@@ -1,0 +1,43 @@
+```html
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container mt-5 pt-5">
+        <div class="row">
+            <div class="col-md-12">
+                <h1 class="text-white">Perfis Instagram</h1>
+                <a href="{{ url_for('cadastrar_perfil_instagram') }}" class="btn btn-primary float-end">Adicionar Novo Perfil</a>
+                <table class="table table-dark table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Login</th>
+                            <th>Próxima Postagem Agendada</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for perfil in perfis_instagram %}
+                            <tr>
+                                <td>{{ perfil.nome }}</td>
+                                <td>{{ perfil.login }}</td>
+                                <td>
+                                    {% if perfil.proxima_postagem %}
+                                        {{ perfil.proxima_postagem | datetimeformat('%d/%m/%Y %H:%M') }}
+                                    {% else %}
+                                        Não agendada
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('editar_perfil_instagram', id=perfil.id) }}" class="btn btn-sm btn-primary">Editar</a>
+                                    <a href="{{ url_for('excluir_perfil_instagram', id=perfil.id) }}" class="btn btn-sm btn-danger">Excluir</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+```

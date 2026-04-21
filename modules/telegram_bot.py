@@ -21,6 +21,10 @@ from modules.memoria_permanente import lembrar_fato, lembrar_preferencia, buscar
 from modules.visao_ia import tirar_e_descrever, ver_e_agir, analisar_imagem_enviada
 from modules.dual_brain import get_status_completo, get_status_resumido, get_melhor_ia
 from modules.twitter_bot import postar_tweet, get_meu_perfil, get_meus_tweets, testar_conexao
+from modules.gerenciador_chaves import get_status_chaves, salvar_chave, get_chave_pendente, remover_chave_pendente, salvar_chave_pendente, get_info_chave, CHAVES_CONHECIDAS
+from modules.auto_update import get_status_sistema, verificar_atualizacao, aplicar_atualizacao, reiniciar_veronica, instalar_dependencias
+from modules.gerenciador_chaves import get_status_chaves, salvar_chave, get_chave_pendente, remover_chave_pendente, salvar_chave_pendente, get_info_chave, CHAVES_CONHECIDAS
+from modules.auto_update import get_status_sistema, verificar_atualizacao, aplicar_atualizacao, reiniciar_veronica, instalar_dependencias
 from modules.marketing import criar_post_otimizado, criar_calendario_editorial, criar_estrategia_completa, criar_copy_vendas, analisar_concorrente, get_tendencias, listar_posts
 from modules.visao_geradora import gerar_imagem, gerar_logo, gerar_banner_post, gerar_capa_ebook, gerar_imagem_inteligente, transformar_foto_anime
 
@@ -743,6 +747,28 @@ async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
     texto = update.message.text
     texto_upper = texto.upper().strip()
 
+    # Verifica se esta aguardando uma chave API
+    chave_pendente = get_chave_pendente(user_id)
+    if chave_pendente:
+        valor = texto.strip()
+        if salvar_chave(chave_pendente, valor):
+            remover_chave_pendente(user_id)
+            await update.message.reply_text(f"Chave {chave_pendente} salva com sucesso!")
+        else:
+            await update.message.reply_text("Erro ao salvar chave. Tente novamente.")
+        return
+
+    # Verifica se esta aguardando uma chave API
+    chave_pendente = get_chave_pendente(user_id)
+    if chave_pendente:
+        valor = texto.strip()
+        if salvar_chave(chave_pendente, valor):
+            remover_chave_pendente(user_id)
+            await update.message.reply_text(f"Chave {chave_pendente} salva com sucesso!")
+        else:
+            await update.message.reply_text("Erro ao salvar chave. Tente novamente.")
+        return
+
     if user_id in aguardando_nova_senha and aguardando_nova_senha[user_id]:
         nova_senha = texto.strip()
         trocar_senha(nova_senha)
@@ -761,6 +787,30 @@ async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 resposta = desligar_kali()
             elif acao == "apagar_memoria":
                 resposta = apagar_memorias()
+            elif acao == "aplicar_atualizacao":
+                await update.message.reply_text("Aplicando atualizacao...")
+                loop = asyncio.get_event_loop()
+                res1 = await loop.run_in_executor(None, aplicar_atualizacao)
+                await update.message.reply_text(res1)
+                res2 = await loop.run_in_executor(None, instalar_dependencias)
+                await update.message.reply_text(res2)
+                resposta = "Reinicie manualmente com /reiniciar"
+            elif acao == "reiniciar_veronica":
+                await update.message.reply_text("Reiniciando Veronica...")
+                reiniciar_veronica()
+                resposta = "Reiniciando..."
+            elif acao == "aplicar_atualizacao":
+                await update.message.reply_text("Aplicando atualizacao...")
+                loop = asyncio.get_event_loop()
+                res1 = await loop.run_in_executor(None, aplicar_atualizacao)
+                await update.message.reply_text(res1)
+                res2 = await loop.run_in_executor(None, instalar_dependencias)
+                await update.message.reply_text(res2)
+                resposta = "Reinicie manualmente com /reiniciar"
+            elif acao == "reiniciar_veronica":
+                await update.message.reply_text("Reiniciando Veronica...")
+                reiniciar_veronica()
+                resposta = "Reiniciando..."
             else:
                 resposta = "Confirmado!"
             await update.message.reply_text(resposta)
@@ -1024,6 +1074,126 @@ async def twitter_mkpost_cmd(update, context):
     resultado = await loop.run_in_executor(None, lambda: postar_tweet(post[:280]))
     await update.message.reply_text(resultado)
 
+
+async def chaves_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    await update.message.reply_text(get_status_chaves())
+
+async def adicionarchave_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        chaves_disponiveis = "\n".join([f"• {k}" for k in CHAVES_CONHECIDAS.keys()])
+        await update.message.reply_text(
+            f"Use: /adicionarchave NOME_DA_CHAVE\n\n"
+            f"Chaves disponiveis:\n{chaves_disponiveis}"
+        )
+        return
+    nome_chave = context.args[0].upper()
+    if nome_chave not in CHAVES_CONHECIDAS:
+        await update.message.reply_text(f"Chave {nome_chave} nao reconhecida!")
+        return
+    user_id = str(update.message.from_user.id)
+    salvar_chave_pendente(nome_chave, user_id)
+    info = get_info_chave(nome_chave)
+    await update.message.reply_text(
+        f"Digite agora o valor da chave {info.get('nome', nome_chave)}:\n\n"
+        f"Onde obter: {info.get('onde_obter', '')}\n\n"
+        f"(Digite apenas a chave, sem mais nada)"
+    )
+
+async def atualizar_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    await update.message.reply_text("Verificando atualizacoes...")
+    loop = asyncio.get_event_loop()
+    status = await loop.run_in_executor(None, get_status_sistema)
+    await update.message.reply_text(status)
+
+async def aplicaratualizar_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    user_id = str(update.message.from_user.id)
+    aguardando_confirmacao[user_id] = "aplicar_atualizacao"
+    await update.message.reply_text(
+        "Aplicar atualizacao do GitHub?\n\n"
+        "Isso vai baixar as ultimas mudancas e reiniciar a Veronica.\n\n"
+        "Digite SIM ou NAO"
+    )
+
+async def reiniciar_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    user_id = str(update.message.from_user.id)
+    aguardando_confirmacao[user_id] = "reiniciar_veronica"
+    await update.message.reply_text("Reiniciar a Veronica? Digite SIM ou NAO")
+
+
+async def chaves_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    await update.message.reply_text(get_status_chaves())
+
+async def adicionarchave_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        chaves_disponiveis = "\n".join([f"• {k}" for k in CHAVES_CONHECIDAS.keys()])
+        await update.message.reply_text(
+            f"Use: /adicionarchave NOME_DA_CHAVE\n\n"
+            f"Chaves disponiveis:\n{chaves_disponiveis}"
+        )
+        return
+    nome_chave = context.args[0].upper()
+    if nome_chave not in CHAVES_CONHECIDAS:
+        await update.message.reply_text(f"Chave {nome_chave} nao reconhecida!")
+        return
+    user_id = str(update.message.from_user.id)
+    salvar_chave_pendente(nome_chave, user_id)
+    info = get_info_chave(nome_chave)
+    await update.message.reply_text(
+        f"Digite agora o valor da chave {info.get('nome', nome_chave)}:\n\n"
+        f"Onde obter: {info.get('onde_obter', '')}\n\n"
+        f"(Digite apenas a chave, sem mais nada)"
+    )
+
+async def atualizar_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    await update.message.reply_text("Verificando atualizacoes...")
+    loop = asyncio.get_event_loop()
+    status = await loop.run_in_executor(None, get_status_sistema)
+    await update.message.reply_text(status)
+
+async def aplicaratualizar_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    user_id = str(update.message.from_user.id)
+    aguardando_confirmacao[user_id] = "aplicar_atualizacao"
+    await update.message.reply_text(
+        "Aplicar atualizacao do GitHub?\n\n"
+        "Isso vai baixar as ultimas mudancas e reiniciar a Veronica.\n\n"
+        "Digite SIM ou NAO"
+    )
+
+async def reiniciar_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    user_id = str(update.message.from_user.id)
+    aguardando_confirmacao[user_id] = "reiniciar_veronica"
+    await update.message.reply_text("Reiniciar a Veronica? Digite SIM ou NAO")
+
 def iniciar_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -1098,6 +1268,16 @@ def iniciar_bot():
     app.add_handler(CommandHandler("inforede", info_rede_cmd))
     app.add_handler(CommandHandler("relatorio", relatorio_cmd))
     app.add_handler(CommandHandler("licenca", licenca_cmd))
+    app.add_handler(CommandHandler("chaves", chaves_cmd))
+    app.add_handler(CommandHandler("adicionarchave", adicionarchave_cmd))
+    app.add_handler(CommandHandler("atualizar", atualizar_cmd))
+    app.add_handler(CommandHandler("aplicaratualizar", aplicaratualizar_cmd))
+    app.add_handler(CommandHandler("reiniciar", reiniciar_cmd))
+    app.add_handler(CommandHandler("chaves", chaves_cmd))
+    app.add_handler(CommandHandler("adicionarchave", adicionarchave_cmd))
+    app.add_handler(CommandHandler("atualizar", atualizar_cmd))
+    app.add_handler(CommandHandler("aplicaratualizar", aplicaratualizar_cmd))
+    app.add_handler(CommandHandler("reiniciar", reiniciar_cmd))
     app.add_handler(CommandHandler("twitterstatus", twitter_status_cmd))
     app.add_handler(CommandHandler("twitterperfil", twitter_perfil_cmd))
     app.add_handler(CommandHandler("meustveets", twitter_tweets_cmd))

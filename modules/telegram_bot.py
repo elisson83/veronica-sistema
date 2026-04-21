@@ -21,7 +21,7 @@ from modules.memoria_permanente import lembrar_fato, lembrar_preferencia, buscar
 from modules.visao_ia import tirar_e_descrever, ver_e_agir, analisar_imagem_enviada
 from modules.dual_brain import get_status_completo, get_status_resumido, get_melhor_ia
 from modules.twitter_bot import postar_tweet, get_meu_perfil, get_meus_tweets, testar_conexao
-from modules.gerenciador_chaves import get_status_chaves, salvar_chave, get_chave_pendente, remover_chave_pendente, salvar_chave_pendente, get_info_chave, CHAVES_CONHECIDAS
+from modules.gerenciador_chaves import get_status_chaves, salvar_chave, get_chave_pendente, remover_chave_pendente, salvar_chave_pendente, get_info_chave, adicionar_chave_livre, listar_todas_chaves, CHAVES_CONHECIDAS
 from modules.auto_update import get_status_sistema, verificar_atualizacao, aplicar_atualizacao, reiniciar_veronica, instalar_dependencias
 from modules.gerenciador_chaves import get_status_chaves, salvar_chave, get_chave_pendente, remover_chave_pendente, salvar_chave_pendente, get_info_chave, CHAVES_CONHECIDAS
 from modules.auto_update import get_status_sistema, verificar_atualizacao, aplicar_atualizacao, reiniciar_veronica, instalar_dependencias
@@ -1194,6 +1194,13 @@ async def reiniciar_cmd(update, context):
     aguardando_confirmacao[user_id] = "reiniciar_veronica"
     await update.message.reply_text("Reiniciar a Veronica? Digite SIM ou NAO")
 
+
+async def todas_chaves_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    await update.message.reply_text(listar_todas_chaves())
+
 def iniciar_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -1269,11 +1276,13 @@ def iniciar_bot():
     app.add_handler(CommandHandler("relatorio", relatorio_cmd))
     app.add_handler(CommandHandler("licenca", licenca_cmd))
     app.add_handler(CommandHandler("chaves", chaves_cmd))
+    app.add_handler(CommandHandler("todaschaves", todas_chaves_cmd))
     app.add_handler(CommandHandler("adicionarchave", adicionarchave_cmd))
     app.add_handler(CommandHandler("atualizar", atualizar_cmd))
     app.add_handler(CommandHandler("aplicaratualizar", aplicaratualizar_cmd))
     app.add_handler(CommandHandler("reiniciar", reiniciar_cmd))
     app.add_handler(CommandHandler("chaves", chaves_cmd))
+    app.add_handler(CommandHandler("todaschaves", todas_chaves_cmd))
     app.add_handler(CommandHandler("adicionarchave", adicionarchave_cmd))
     app.add_handler(CommandHandler("atualizar", atualizar_cmd))
     app.add_handler(CommandHandler("aplicaratualizar", aplicaratualizar_cmd))

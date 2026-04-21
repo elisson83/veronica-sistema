@@ -20,6 +20,7 @@ from modules.ai_local import get_status_local, listar_modelos_locais
 from modules.memoria_permanente import lembrar_fato, lembrar_preferencia, buscar_memorias, apagar_memorias
 from modules.visao_ia import tirar_e_descrever, ver_e_agir, analisar_imagem_enviada
 from modules.dual_brain import get_status_completo, get_status_resumido, get_melhor_ia
+from modules.twitter_bot import postar_tweet, get_meu_perfil, get_meus_tweets, testar_conexao
 from modules.marketing import criar_post_otimizado, criar_calendario_editorial, criar_estrategia_completa, criar_copy_vendas, analisar_concorrente, get_tendencias, listar_posts
 from modules.visao_geradora import gerar_imagem, gerar_logo, gerar_banner_post, gerar_capa_ebook, gerar_imagem_inteligente, transformar_foto_anime
 
@@ -963,6 +964,66 @@ async def animefoto_cmd(update, context):
             caption=f"Foto transformada em {estilo} usando {ia_usada}!"
         )
 
+
+async def twitter_status_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    await update.message.reply_text("Verificando conexao com Twitter...")
+    loop = asyncio.get_event_loop()
+    resultado = await loop.run_in_executor(None, testar_conexao)
+    await update.message.reply_text(resultado)
+
+async def twitter_perfil_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    loop = asyncio.get_event_loop()
+    resultado = await loop.run_in_executor(None, get_meu_perfil)
+    await update.message.reply_text(resultado)
+
+async def twitter_tweets_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    loop = asyncio.get_event_loop()
+    resultado = await loop.run_in_executor(None, lambda: get_meus_tweets(5))
+    await update.message.reply_text(resultado)
+
+async def twitter_postar_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text(
+            "Use: /tweetar Seu texto aqui\n\n"
+            "Maximo 280 caracteres!"
+        )
+        return
+    texto = " ".join(context.args)
+    await update.message.reply_text(f"Postando tweet...")
+    loop = asyncio.get_event_loop()
+    resultado = await loop.run_in_executor(None, lambda: postar_tweet(texto))
+    await update.message.reply_text(resultado)
+
+async def twitter_mkpost_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text(
+            "Cria post com IA e posta no Twitter!\n\n"
+            "Use: /mktweet Marketing Digital com IA"
+        )
+        return
+    tema = " ".join(context.args)
+    await update.message.reply_text(f"Criando tweet sobre {tema}...")
+    loop = asyncio.get_event_loop()
+    post = await loop.run_in_executor(None, lambda: criar_post_otimizado(tema, "twitter"))
+    await update.message.reply_text(f"Tweet criado:\n\n{post[:280]}\n\nPostando...")
+    resultado = await loop.run_in_executor(None, lambda: postar_tweet(post[:280]))
+    await update.message.reply_text(resultado)
+
 def iniciar_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -1037,6 +1098,11 @@ def iniciar_bot():
     app.add_handler(CommandHandler("inforede", info_rede_cmd))
     app.add_handler(CommandHandler("relatorio", relatorio_cmd))
     app.add_handler(CommandHandler("licenca", licenca_cmd))
+    app.add_handler(CommandHandler("twitterstatus", twitter_status_cmd))
+    app.add_handler(CommandHandler("twitterperfil", twitter_perfil_cmd))
+    app.add_handler(CommandHandler("meustveets", twitter_tweets_cmd))
+    app.add_handler(CommandHandler("tweetar", twitter_postar_cmd))
+    app.add_handler(CommandHandler("mktweet", twitter_mkpost_cmd))
     app.add_handler(MessageHandler(filters.PHOTO, responder_foto))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_mensagem))
     print("Veronica esta online!")

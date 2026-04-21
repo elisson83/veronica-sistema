@@ -1,84 +1,83 @@
 with open("modules/telegram_bot.py", "r", encoding="utf-8") as f:
     codigo = f.read()
 
-antiga = '''async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.message.from_user.id)
-    int_id = update.message.from_user.id
-    if not is_autorizado(int_id) and not usuario_liberado(user_id):
+# Adiciona import do twitter
+codigo = codigo.replace(
+    "from modules.marketing import criar_post_otimizado",
+    "from modules.twitter_bot import postar_tweet, get_meu_perfil, get_meus_tweets, testar_conexao\nfrom modules.marketing import criar_post_otimizado"
+)
+
+# Adiciona comandos do twitter
+novo_cmd = '''
+async def twitter_status_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
         return
-    if not update.message.photo:
-        return
-    await update.message.reply_text("Analisando imagem...")
-    foto = update.message.photo[-1]
-    arquivo = await foto.get_file()
-    from pathlib import Path
-    caminho = str(Path("assets") / f"img_{foto.file_id}.jpg")
-    Path("assets").mkdir(exist_ok=True)
-    await arquivo.download_to_drive(caminho)
-    pergunta = update.message.caption or "O que voce ve nessa imagem? Descreva em detalhes em portugues."
+    await update.message.reply_text("Verificando conexao com Twitter...")
     loop = asyncio.get_event_loop()
-    descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
-    await update.message.reply_text(f"Analise:\\n\\n{descricao}")'''
+    resultado = await loop.run_in_executor(None, testar_conexao)
+    await update.message.reply_text(resultado)
 
-nova = '''async def responder_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.message.from_user.id)
-    int_id = update.message.from_user.id
-    if not is_autorizado(int_id) and not usuario_liberado(user_id):
+async def twitter_perfil_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
         return
-    if not update.message.photo:
-        return
-    legenda = update.message.caption or ""
-    legenda_lower = legenda.lower().strip()
-    estilos_validos = ["anime", "cartoon", "pixar", "sketch", "watercolor"]
-    palavras_transformar = ["anime", "cartoon", "pixar", "sketch", "watercolor", "desenho", "transforma", "converte", "estilo"]
-
-    if any(p in legenda_lower for p in palavras_transformar):
-        estilo = "anime"
-        for e in estilos_validos:
-            if e in legenda_lower:
-                estilo = e
-                break
-        if "desenho" in legenda_lower or "cartoon" in legenda_lower:
-            estilo = "cartoon"
-        await update.message.reply_text(f"Transformando foto em {estilo}... aguarde!")
-        foto = update.message.photo[-1]
-        arquivo = await foto.get_file()
-        from pathlib import Path
-        caminho = str(Path("assets") / f"original_{foto.file_id}.jpg")
-        Path("assets").mkdir(exist_ok=True)
-        await arquivo.download_to_drive(caminho)
-        loop = asyncio.get_event_loop()
-        caminho_result, ia_usada = await loop.run_in_executor(None, lambda: transformar_foto_anime(caminho, estilo))
-        if str(caminho_result).startswith("ERRO"):
-            await update.message.reply_text(caminho_result)
-        else:
-            await update.message.reply_photo(photo=open(caminho_result, "rb"), caption=f"Foto transformada em {estilo}!")
-        return
-
-    await update.message.reply_text("Analisando imagem...")
-    foto = update.message.photo[-1]
-    arquivo = await foto.get_file()
-    from pathlib import Path
-    caminho = str(Path("assets") / f"img_{foto.file_id}.jpg")
-    Path("assets").mkdir(exist_ok=True)
-    await arquivo.download_to_drive(caminho)
-    pergunta = legenda or "O que voce ve nessa imagem? Descreva em detalhes em portugues."
     loop = asyncio.get_event_loop()
-    descricao = await loop.run_in_executor(None, lambda: analisar_imagem_enviada(caminho, pergunta))
-    await update.message.reply_text(f"Analise:\\n\\n{descricao}")'''
+    resultado = await loop.run_in_executor(None, get_meu_perfil)
+    await update.message.reply_text(resultado)
 
-if antiga in codigo:
-    codigo = codigo.replace(antiga, nova)
-    print("Substituicao feita com sucesso!")
-else:
-    print("Ainda nao encontrado - forcando substituicao...")
-    idx = codigo.find("async def responder_foto")
-    idx_fim = codigo.find("async def responder_foto", idx + 1)
-    if idx_fim == -1:
-        idx_fim = codigo.find("def iniciar_bot")
-    codigo = codigo[:idx] + nova + "\n\n" + codigo[idx_fim:]
-    print("Substituicao forcada!")
+async def twitter_tweets_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    loop = asyncio.get_event_loop()
+    resultado = await loop.run_in_executor(None, lambda: get_meus_tweets(5))
+    await update.message.reply_text(resultado)
+
+async def twitter_postar_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text(
+            "Use: /tweetar Seu texto aqui\\n\\n"
+            "Maximo 280 caracteres!"
+        )
+        return
+    texto = " ".join(context.args)
+    await update.message.reply_text(f"Postando tweet...")
+    loop = asyncio.get_event_loop()
+    resultado = await loop.run_in_executor(None, lambda: postar_tweet(texto))
+    await update.message.reply_text(resultado)
+
+async def twitter_mkpost_cmd(update, context):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text(
+            "Cria post com IA e posta no Twitter!\\n\\n"
+            "Use: /mktweet Marketing Digital com IA"
+        )
+        return
+    tema = " ".join(context.args)
+    await update.message.reply_text(f"Criando tweet sobre {tema}...")
+    loop = asyncio.get_event_loop()
+    post = await loop.run_in_executor(None, lambda: criar_post_otimizado(tema, "twitter"))
+    await update.message.reply_text(f"Tweet criado:\\n\\n{post[:280]}\\n\\nPostando...")
+    resultado = await loop.run_in_executor(None, lambda: postar_tweet(post[:280]))
+    await update.message.reply_text(resultado)
+
+'''
+
+codigo = codigo.replace("def iniciar_bot():", novo_cmd + "def iniciar_bot():")
+
+# Adiciona handlers
+codigo = codigo.replace(
+    'app.add_handler(CommandHandler("licenca", licenca_cmd))',
+    'app.add_handler(CommandHandler("licenca", licenca_cmd))\n    app.add_handler(CommandHandler("twitterstatus", twitter_status_cmd))\n    app.add_handler(CommandHandler("twitterperfil", twitter_perfil_cmd))\n    app.add_handler(CommandHandler("meustveets", twitter_tweets_cmd))\n    app.add_handler(CommandHandler("tweetar", twitter_postar_cmd))\n    app.add_handler(CommandHandler("mktweet", twitter_mkpost_cmd))'
+)
 
 with open("modules/telegram_bot.py", "w", encoding="utf-8") as f:
     f.write(codigo)
-print("Arquivo salvo!")
+print("Comandos Twitter adicionados!")

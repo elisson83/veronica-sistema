@@ -12,4 +12,7 @@ psutil
 reportlab
 fpdf2
 mss
-paramiko
+paramikotweepy
+python-dotenv
+flask
+flask-cors

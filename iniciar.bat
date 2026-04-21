@@ -14,11 +14,15 @@ start "API Verônica" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python api
 timeout /t 2 /nobreak > nul
 
 start "Verônica Bot" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python main.py"
+timeout /t 2 /nobreak > nul
+
+start "Zeus Guardiao" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python zeus.py"
 
 echo.
 echo Tudo iniciado!
 echo Dashboard: http://localhost:5000
 echo API Veronica: http://localhost:5001
-echo Telegram: @veronica_assistente_bot
+echo Telegram Veronica: @veronica_assistente_bot
+echo Telegram Zeus: @zeus_guardiao_bot
 echo.
 pause

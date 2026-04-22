@@ -1,46 +1,43 @@
-```html
 {% extends 'base.html' %}
+{% block title %}Novo Vencimento — PainelGest{% endblock %}
+{% block topbar_title %}Novo Vencimento{% endblock %}
+{% block topbar_sub %}Cadastrar vencimento{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('vencimentos') }}" class="btn-ghost"><i class="fas fa-arrow-left"></i> Voltar</a>
+{% endblock %}
 
 {% block content %}
-    <div class="container mt-5 pt-5">
-        <div class="row">
-            <div class="col-md-6">
-                <h1 class="text-white">Cadastrar Vencimento</h1>
-                <form method="POST" action="{{ url_for('cadastrar_vencimento') }}">
-                    <div class="mb-3">
-                        <label for="descricao" class="form-label text-white">Descrição</label>
-                        <input type="text" id="descricao" name="descricao" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="valor" class="form-label text-white">Valor</label>
-                        <input type="number" id="valor" name="valor" class="form-control" step="0.01" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="data_vencimento" class="form-label text-white">Data de Vencimento</label>
-                        <input type="date" id="data_vencimento" name="data_vencimento" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="status" class="form-label text-white">Status</label>
-                        <select id="status" name="status" class="form-select" required>
-                            <option value="pago">Pago</option>
-                            <option value="nao_pago">Não Pago</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="chave_pix_ou_link_pagamento" class="form-label text-white">Chave PIX ou Link de Pagamento</label>
-                        <input type="text" id="chave_pix_ou_link_pagamento" name="chave_pix_ou_link_pagamento" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
-                </form>
-                {% with messages = get_flashed_messages() %}
-                    {% if messages %}
-                        <div class="alert alert-danger mt-3" role="alert">
-                            {{ messages[0] }}
-                        </div>
-                    {% endif %}
-                {% endwith %}
-            </div>
-        </div>
+<div style="max-width:480px">
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title"><i class="fas fa-calendar-plus me-2" style="color:#facc15"></i>Cadastrar Vencimento</span>
     </div>
+    <div class="pg-card-body">
+      <form method="POST" action="{{ url_for('cadastrar_vencimento') }}">
+        <div class="form-group">
+          <label class="pg-label">Descrição *</label>
+          <input type="text" name="descricao" class="pg-input" placeholder="Ex: Mensalidade iFood" required>
+        </div>
+        <div class="form-group">
+          <label class="pg-label">Valor (R$) *</label>
+          <input type="number" name="valor" class="pg-input" step="0.01" placeholder="0,00" required>
+        </div>
+        <div class="form-group">
+          <label class="pg-label">Data de Vencimento *</label>
+          <input type="date" name="data_vencimento" class="pg-input" required>
+        </div>
+        <div class="form-group">
+          <label class="pg-label">Status</label>
+          <select name="status" class="pg-select">
+            <option value="nao_pago">Não Pago</option>
+            <option value="pago">Pago</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-accent w-100" style="justify-content:center;padding:11px">
+          <i class="fas fa-check"></i> Cadastrar
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
-```

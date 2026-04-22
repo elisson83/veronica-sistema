@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Editar Vencimento — PainelGest{% endblock %}
+{% block topbar_title %}Editar Vencimento{% endblock %}
+{% block topbar_sub %}{{ vencimento.descricao }}{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('vencimentos') }}" class="btn-ghost"><i class="fas fa-arrow-left"></i> Voltar</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:480px">
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title"><i class="fas fa-pen me-2" style="color:#facc15"></i>Editando Vencimento</span>
+    </div>
+    <div class="pg-card-body">
+      <form method="POST">
+        <div class="form-group">
+          <label class="pg-label">Descrição *</label>
+          <input type="text" name="descricao" class="pg-input" value="{{ vencimento.descricao }}" required>
+        </div>
+        <div class="form-group">
+          <label class="pg-label">Valor (R$) *</label>
+          <input type="number" name="valor" class="pg-input" step="0.01" value="{{ vencimento.valor }}" required>
+        </div>
+        <div class="form-group">
+          <label class="pg-label">Data de Vencimento *</label>
+          <input type="date" name="data_vencimento" class="pg-input"
+                 value="{{ vencimento.data_vencimento.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="form-group">
+          <label class="pg-label">Status</label>
+          <select name="status" class="pg-select">
+            <option value="nao_pago" {% if vencimento.status == 'nao_pago' %}selected{% endif %}>Não Pago</option>
+            <option value="pago" {% if vencimento.status == 'pago' %}selected{% endif %}>Pago</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button type="submit" class="btn-accent" style="flex:1;justify-content:center;padding:11px">
+            <i class="fas fa-check"></i> Salvar
+          </button>
+          <a href="{{ url_for('vencimentos') }}" class="btn-ghost" style="flex:1;justify-content:center;padding:11px">
+            Cancelar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

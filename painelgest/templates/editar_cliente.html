@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% block title %}Novo Cliente — PainelGest{% endblock %}
-{% block topbar_title %}Novo Cliente{% endblock %}
-{% block topbar_sub %}Cadastrar cliente iFood{% endblock %}
+{% block title %}Editar Cliente — PainelGest{% endblock %}
+{% block topbar_title %}Editar Cliente{% endblock %}
+{% block topbar_sub %}{{ cliente.nome }}{% endblock %}
 {% block topbar_actions %}
   <a href="{{ url_for('clientes') }}" class="btn-ghost"><i class="fas fa-arrow-left"></i> Voltar</a>
 {% endblock %}
@@ -10,24 +10,24 @@
 <div style="max-width:640px">
   <div class="pg-card">
     <div class="pg-card-header">
-      <span class="pg-card-title"><i class="fas fa-user-plus me-2" style="color:#818cf8"></i>Informações do Cliente</span>
+      <span class="pg-card-title"><i class="fas fa-pen me-2" style="color:#818cf8"></i>Editando: {{ cliente.nome }}</span>
     </div>
     <div class="pg-card-body">
-      <form method="POST" action="{{ url_for('cadastrar_cliente') }}">
+      <form method="POST">
 
         <div class="row g-3 mb-2">
           <div class="col-md-6">
             <div class="form-group">
               <label class="pg-label">Nome da Loja *</label>
-              <input type="text" name="nome" class="pg-input" placeholder="Ex: Burguer X" required>
+              <input type="text" name="nome" class="pg-input" value="{{ cliente.nome }}" required>
             </div>
           </div>
           <div class="col-md-6">
             <div class="form-group">
               <label class="pg-label">Status</label>
               <select name="status" class="pg-select">
-                <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
+                <option value="ativo" {% if cliente.status == 'ativo' %}selected{% endif %}>Ativo</option>
+                <option value="inativo" {% if cliente.status == 'inativo' %}selected{% endif %}>Inativo</option>
               </select>
             </div>
           </div>
@@ -37,13 +37,13 @@
           <div class="col-md-6">
             <div class="form-group">
               <label class="pg-label">Login iFood *</label>
-              <input type="text" name="login" class="pg-input" placeholder="email@exemplo.com" required>
+              <input type="text" name="login" class="pg-input" value="{{ cliente.login }}" required>
             </div>
           </div>
           <div class="col-md-6">
             <div class="form-group">
-              <label class="pg-label">Senha iFood *</label>
-              <input type="password" name="senha" class="pg-input" placeholder="••••••••" required>
+              <label class="pg-label">Nova Senha (deixe vazio para manter)</label>
+              <input type="password" name="senha" class="pg-input" placeholder="••••••••">
             </div>
           </div>
         </div>
@@ -55,7 +55,7 @@
             {% for key, plano in PLANOS.items() %}
             <label style="cursor:pointer">
               <input type="radio" name="plano" value="{{ key }}" style="display:none" class="plano-radio"
-                     {% if key == 'basico' %}checked{% endif %}>
+                     {% if cliente.plano == key %}checked{% endif %}>
               <div class="plano-option" data-key="{{ key }}"
                    style="border:2px solid var(--border);border-radius:10px;padding:12px;text-align:center;transition:all .2s">
                 <i class="fas {{ plano.icone }}" style="font-size:18px;margin-bottom:6px;display:block;
@@ -72,25 +72,31 @@
           <div class="col-md-6">
             <div class="form-group">
               <label class="pg-label">Telefone</label>
-              <input type="text" name="telefone" class="pg-input" placeholder="(11) 99999-9999">
+              <input type="text" name="telefone" class="pg-input" value="{{ cliente.telefone or '' }}" placeholder="(11) 99999-9999">
             </div>
           </div>
           <div class="col-md-6">
             <div class="form-group">
               <label class="pg-label">E-mail</label>
-              <input type="email" name="email" class="pg-input" placeholder="contato@loja.com">
+              <input type="email" name="email" class="pg-input" value="{{ cliente.email or '' }}" placeholder="contato@loja.com">
             </div>
           </div>
         </div>
 
         <div class="form-group">
           <label class="pg-label">Data de Vencimento do Plano</label>
-          <input type="date" name="data_vencimento" class="pg-input">
+          <input type="date" name="data_vencimento" class="pg-input"
+                 value="{{ cliente.data_vencimento.strftime('%Y-%m-%d') if cliente.data_vencimento else '' }}">
         </div>
 
-        <button type="submit" class="btn-accent w-100" style="justify-content:center;padding:11px">
-          <i class="fas fa-check"></i> Cadastrar Cliente
-        </button>
+        <div style="display:flex;gap:10px">
+          <button type="submit" class="btn-accent" style="flex:1;justify-content:center;padding:11px">
+            <i class="fas fa-check"></i> Salvar Alterações
+          </button>
+          <a href="{{ url_for('clientes') }}" class="btn-ghost" style="flex:1;justify-content:center;padding:11px">
+            Cancelar
+          </a>
+        </div>
       </form>
     </div>
   </div>
@@ -110,7 +116,6 @@ document.querySelectorAll('.plano-radio').forEach(radio => {
     opt.style.background = 'rgba(99,102,241,0.08)';
   });
 });
-// Marcar o padrão
 document.querySelector('.plano-radio:checked').dispatchEvent(new Event('change'));
 </script>
 {% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Planos — PainelGest{% endblock %}
+{% block topbar_title %}Planos{% endblock %}
+{% block topbar_sub %}Visualize e gerencie os planos disponíveis{% endblock %}
+
+{% block content %}
+<!-- Cards dos planos -->
+<div class="row g-3 mb-4">
+  {% for key, plano in PLANOS.items() %}
+  <div class="col-md-4">
+    <div class="pg-card h-100" style="{% if key == 'pro' %}border-color:rgba(99,102,241,.4);{% endif %}">
+      {% if key == 'pro' %}
+      <div style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:6px;letter-spacing:.8px">
+        MAIS POPULAR
+      </div>
+      {% endif %}
+      <div class="pg-card-body">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div class="stat-icon {% if key == 'basico' %}si-cyan{% elif key == 'pro' %}si-indigo{% else %}si-yellow{% endif %}" style="width:42px;height:42px;font-size:17px">
+            <i class="fas {{ plano.icone }}"></i>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:700">{{ plano.nome }}</div>
+            <div style="font-size:12px;color:var(--muted)">{{ plano.descricao }}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:20px">
+          <span style="font-size:32px;font-weight:800;letter-spacing:-1px">R$ {{ '%.2f'|format(plano.preco)|replace('.',',') }}</span>
+          <span style="color:var(--muted);font-size:13px">/mês</span>
+        </div>
+
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+          {% for recurso in plano.recursos %}
+          <li style="display:flex;align-items:center;gap:8px;font-size:13px">
+            <i class="fas fa-check" style="color:#4ade80;font-size:11px"></i>
+            {{ recurso }}
+          </li>
+          {% endfor %}
+        </ul>
+
+        <!-- Stat -->
+        <div style="background:var(--surface2);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:22px;font-weight:700">{{ stats[key] }}</div>
+            <div style="font-size:11px;color:var(--muted)">cliente(s) neste plano</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:14px;font-weight:600;color:#4ade80">{{ receita_planos[key] }}</div>
+            <div style="font-size:11px;color:var(--muted)">receita estimada</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Clientes por plano -->
+<div class="row g-3">
+  {% for key, plano in PLANOS.items() %}
+  <div class="col-md-4">
+    <div class="pg-card">
+      <div class="pg-card-header">
+        <span class="pg-card-title">
+          <span class="badge-plano bp-{{ key }} me-2">{{ plano.nome }}</span>
+          Clientes
+        </span>
+        <a href="{{ url_for('clientes') }}" class="btn-ghost" style="font-size:11px;padding:5px 10px">Ver todos</a>
+      </div>
+      <table class="pg-table">
+        <thead><tr><th>Nome</th><th>Status</th></tr></thead>
+        <tbody>
+          {% set clientes_plano = [] %}
+          {% for c in [] %}{% endfor %}
+          {# Renderizado via Jinja query não disponível aqui — listagem simplificada #}
+          <tr><td colspan="2" style="color:var(--muted);font-size:12px;padding:16px;text-align:center">
+            <a href="{{ url_for('clientes') }}" style="color:var(--accent)">Filtrar na lista de clientes →</a>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

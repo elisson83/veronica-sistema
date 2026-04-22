@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}Cobranças — PainelGest{% endblock %}
+{% block topbar_title %}Cobranças{% endblock %}
+{% block topbar_sub %}Histórico de cobranças e pagamentos{% endblock %}
+
+{% block content %}
+<!-- Resumo -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon si-green"><i class="fas fa-circle-check"></i></div>
+      <div>
+        <div class="stat-value" style="font-size:20px">{{ total_pago }}</div>
+        <div class="stat-label">Total Recebido</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon si-yellow"><i class="fas fa-clock"></i></div>
+      <div>
+        <div class="stat-value" style="font-size:20px">{{ total_pendente }}</div>
+        <div class="stat-label">Total Pendente</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon si-indigo"><i class="fas fa-receipt"></i></div>
+      <div>
+        <div class="stat-value">{{ cobrancas|length }}</div>
+        <div class="stat-label">Total de Cobranças</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not mp_ativo %}
+<div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+  <i class="fas fa-triangle-exclamation" style="color:#facc15;font-size:18px"></i>
+  <div>
+    <div style="font-weight:600;color:#facc15;font-size:13px">Mercado Pago não configurado</div>
+    <div style="color:var(--muted);font-size:12px">Adicione <code>MERCADOPAGO_ACCESS_TOKEN</code> no arquivo <code>.env</code> para ativar links de pagamento automáticos.</div>
+  </div>
+</div>
+{% endif %}
+
+<div class="pg-card">
+  <div class="pg-card-header">
+    <span class="pg-card-title"><i class="fas fa-credit-card me-2" style="color:#4ade80"></i>Todas as Cobranças</span>
+  </div>
+  <table class="pg-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Cliente</th>
+        <th>Descrição</th>
+        <th>Valor</th>
+        <th>Status</th>
+        <th>Data</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in cobrancas %}
+      <tr>
+        <td style="color:var(--muted);font-size:12px">#{{ c.id }}</td>
+        <td>
+          <div style="font-weight:500">{{ c.cliente.nome }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ c.cliente.login }}</div>
+        </td>
+        <td style="font-size:12px;max-width:200px">{{ c.descricao or '—' }}</td>
+        <td style="font-weight:600">
+          R$ {{ '%.2f'|format(c.valor)|replace('.',',') }}
+        </td>
+        <td>
+          {% if c.status == 'pago' %}
+            <span class="badge-status bs-success">Pago</span>
+          {% elif c.status == 'pendente' %}
+            <span class="badge-status bs-warning">Pendente</span>
+          {% else %}
+            <span class="badge-status bs-muted">Cancelado</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px;color:var(--muted)">
+          {{ c.criado_em.strftime('%d/%m/%Y %H:%M') }}
+          {% if c.pago_em %}
+            <div style="color:#4ade80">Pago: {{ c.pago_em.strftime('%d/%m/%Y') }}</div>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex;gap:6px">
+            {% if c.mp_link %}
+            <a href="{{ c.mp_link }}" target="_blank" class="icon-btn ib-pay" title="Link de pagamento">
+              <i class="fas fa-external-link-alt"></i>
+            </a>
+            {% endif %}
+            {% if c.status == 'pendente' %}
+            <a href="{{ url_for('cancelar_cobranca', id=c.id) }}" class="icon-btn ib-delete" title="Cancelar"
+               onclick="return confirm('Cancelar esta cobrança?')">
+              <i class="fas fa-ban"></i>
+            </a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">
+          <i class="fas fa-receipt" style="font-size:32px;margin-bottom:10px;display:block;opacity:.3"></i>
+          Nenhuma cobrança gerada ainda.
+          <a href="{{ url_for('clientes') }}" style="color:var(--accent);display:block;margin-top:8px">Ir para clientes →</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

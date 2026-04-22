@@ -1,43 +1,58 @@
-```html
 {% extends 'base.html' %}
+{% block title %}Perfis Instagram — PainelGest{% endblock %}
+{% block topbar_title %}Perfis Instagram{% endblock %}
+{% block topbar_sub %}Gerenciar perfis agendados{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('cadastrar_perfil_instagram') }}" class="btn-accent">
+    <i class="fas fa-plus"></i> Novo Perfil
+  </a>
+{% endblock %}
 
 {% block content %}
-    <div class="container mt-5 pt-5">
-        <div class="row">
-            <div class="col-md-12">
-                <h1 class="text-white">Perfis Instagram</h1>
-                <a href="{{ url_for('cadastrar_perfil_instagram') }}" class="btn btn-primary float-end">Adicionar Novo Perfil</a>
-                <table class="table table-dark table-striped table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Nome</th>
-                            <th>Login</th>
-                            <th>Próxima Postagem Agendada</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for perfil in perfis_instagram %}
-                            <tr>
-                                <td>{{ perfil.nome }}</td>
-                                <td>{{ perfil.login }}</td>
-                                <td>
-                                    {% if perfil.proxima_postagem %}
-                                        {{ perfil.proxima_postagem | datetimeformat('%d/%m/%Y %H:%M') }}
-                                    {% else %}
-                                        Não agendada
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('editar_perfil_instagram', id=perfil.id) }}" class="btn btn-sm btn-primary">Editar</a>
-                                    <a href="{{ url_for('excluir_perfil_instagram', id=perfil.id) }}" class="btn btn-sm btn-danger">Excluir</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+<div class="pg-card">
+  <div class="pg-card-header">
+    <span class="pg-card-title"><i class="fab fa-instagram me-2" style="color:#818cf8"></i>{{ perfis|length }} perfil(is) cadastrado(s)</span>
+  </div>
+  <table class="pg-table">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Login</th>
+        <th>Próxima Postagem</th>
+        <th>Texto</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for perfil in perfis %}
+      <tr>
+        <td style="font-weight:500">{{ perfil.nome }}</td>
+        <td style="font-size:12px;color:var(--muted)">{{ perfil.login }}</td>
+        <td style="font-size:12px">{{ perfil.data_postagem.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td style="font-size:12px;color:var(--muted);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          {{ perfil.postagem }}
+        </td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <a href="{{ url_for('editar_perfil_instagram', id=perfil.id) }}" class="icon-btn ib-edit" title="Editar">
+              <i class="fas fa-pen"></i>
+            </a>
+            <a href="{{ url_for('excluir_perfil_instagram', id=perfil.id) }}" class="icon-btn ib-delete" title="Excluir"
+               onclick="return confirm('Excluir o perfil {{ perfil.nome }}?')">
+              <i class="fas fa-trash"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" style="text-align:center;padding:40px;color:var(--muted)">
+          <i class="fab fa-instagram" style="font-size:32px;margin-bottom:10px;display:block;opacity:.3"></i>
+          Nenhum perfil cadastrado.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}
-```

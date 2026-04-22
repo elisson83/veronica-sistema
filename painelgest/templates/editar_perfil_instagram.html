@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Editar Perfil — PainelGest{% endblock %}
+{% block topbar_title %}Editar Perfil Instagram{% endblock %}
+{% block topbar_sub %}{{ perfil.nome }}{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('perfis_instagram') }}" class="btn-ghost"><i class="fas fa-arrow-left"></i> Voltar</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:540px">
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title"><i class="fab fa-instagram me-2" style="color:#818cf8"></i>Editando: {{ perfil.nome }}</span>
+    </div>
+    <div class="pg-card-body">
+      <form method="POST">
+        <div class="form-group">
+          <label class="pg-label">Nome *</label>
+          <input type="text" name="nome" class="pg-input" value="{{ perfil.nome }}" required>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="pg-label">Login Instagram *</label>
+              <input type="text" name="login" class="pg-input" value="{{ perfil.login }}" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="pg-label">Nova Senha (vazio = manter)</label>
+              <input type="password" name="senha" class="pg-input" placeholder="••••••••">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="pg-label">Texto da Postagem *</label>
+          <textarea name="postagem" class="pg-textarea" required>{{ perfil.postagem }}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="pg-label">Data e Hora do Agendamento *</label>
+          <input type="datetime-local" name="data_postagem" class="pg-input"
+                 value="{{ perfil.data_postagem.strftime('%Y-%m-%dT%H:%M') }}" required>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button type="submit" class="btn-accent" style="flex:1;justify-content:center;padding:11px">
+            <i class="fas fa-check"></i> Salvar
+          </button>
+          <a href="{{ url_for('perfis_instagram') }}" class="btn-ghost" style="flex:1;justify-content:center;padding:11px">
+            Cancelar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

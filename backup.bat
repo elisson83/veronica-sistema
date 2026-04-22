@@ -1,40 +1,33 @@
 @echo off
-title Backup Verônica IA
-color 0A
-
-echo ================================================
-echo    BACKUP VERONICA IA - %date% %time%
-echo ================================================
+title Backup Completo Verônica IA
+chcp 65001 > nul
+echo.
+echo ╔════════════════════════════════════╗
+echo ║   BACKUP COMPLETO VERÔNICA IA      ║
+echo ╚════════════════════════════════════╝
 echo.
 
-set ORIGEM=C:\Users\%USERNAME%\Desktop\veronica
-set PENDRIVE=D:\Backup_Veronica
-set HD_EXTERNO=E:\Backup_Veronica
+cd /d %USERPROFILE%\Desktop\veronica
 
-echo [1/3] Salvando no Computador (já está salvo!)
-echo ✓ Computador OK!
+echo [1/4] Fazendo push para GitHub...
+git add .
+git commit -m "Backup automatico %date% %time%"
+git push origin main
 echo.
 
-echo [2/3] Salvando no Pendrive (D:)...
-if exist "D:\" (
-    xcopy "%ORIGEM%" "%PENDRIVE%" /E /I /H /Y /Q
-    echo ✓ Pendrive OK!
-) else (
-    echo ✗ Pendrive não encontrado! Conecte o Pendrive e tente novamente.
-)
+echo [2/4] Backup da Veronica...
+python organizar.py 3
 echo.
 
-echo [3/3] Salvando no HD Externo (E:)...
-if exist "E:\" (
-    xcopy "%ORIGEM%" "%HD_EXTERNO%" /E /I /H /Y /Q
-    echo ✓ HD Externo OK!
-) else (
-    echo ✗ HD Externo não encontrado! Conecte o HD e tente novamente.
-)
+echo [3/4] Backup do PainelGest...
+python organizar.py 2
 echo.
 
-echo ================================================
-echo    BACKUP CONCLUIDO! %date% %time%
-echo ================================================
+echo [4/4] Backup concluido!
 echo.
-pause
+echo ✅ GitHub atualizado
+echo ✅ HD (E:) atualizado
+echo ✅ Pen Drive (D:) atualizado
+echo.
+echo Pressione qualquer tecla para fechar...
+pause > nul

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+html = '''<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -69,4 +69,8 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+</html>'''
+
+with open("painelgest/templates/vencimentos.html", "w", encoding="utf-8") as f:
+    f.write(html)
+print("vencimentos.html salvo!")

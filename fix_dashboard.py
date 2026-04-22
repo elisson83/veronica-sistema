@@ -1,4 +1,13 @@
-<!DOCTYPE html>
+import shutil
+import os
+
+# Copia o dashboard novo para o painelgest
+src = "painelgest/templates/dashboard.html"
+
+html = open(src, "r", encoding="utf-8").read() if os.path.exists(src) else ""
+
+# Salva o novo dashboard profissional
+novo_html = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -180,4 +189,8 @@
 <script>
 </script>
 </body>
-</html>
+</html>"""
+
+with open("painelgest/templates/dashboard.html", "w", encoding="utf-8") as f:
+    f.write(novo_html)
+print("Dashboard profissional salvo!")

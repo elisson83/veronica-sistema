@@ -1,0 +1,141 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Restaurante</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <style>
+        body {
+            background-color: #1a1a2e;
+        }
+        .sidebar {
+            background-color: #16213e;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .logo {
+            margin-bottom: 20px;
+        }
+        .nav-item {
+            margin-bottom: 10px;
+        }
+        .nav-link {
+            color: #fff;
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            color: #0f3460;
+        }
+        .nav-link.active {
+            background-color: #0f3460;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .content {
+            margin-left: 200px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <h1 class="text-white mb-3">Painel do Restaurante</h1>
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <i class="fa-solid fa-gauge"></i>
+                    Posts Agendados
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <i class="fa-solid fa-image"></i>
+                    Enviar Imagem
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <i class="fa-solid fa-calendar"></i>
+                    Data de Vencimento
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <i class="fa-solid fa-credit-card"></i>
+                    Link de Pagamento
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <i class="fa-solid fa-history"></i>
+                    Histórico de Posts
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="content">
+        <h1 class="text-white mb-3">Posts Agendados</h1>
+        <table class="table table-dark">
+            <thead>
+                <tr>
+                    <th scope="col">Data</th>
+                    <th scope="col">Hora</th>
+                    <th scope="col">Descrição</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in posts_agendados %}
+                <tr>
+                    <td>{{ post.data }}</td>
+                    <td>{{ post.hora }}</td>
+                    <td>{{ post.descricao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <h1 class="text-white mb-3">Enviar Imagem</h1>
+        <form action="" method="post" enctype="multipart/form-data">
+            <input type="file" name="imagem" class="form-control">
+            <textarea name="descricao" class="form-control" placeholder="Descrição"></textarea>
+            <button type="submit" class="btn btn-primary">Enviar</button>
+        </form>
+        <h1 class="text-white mb-3">Data de Vencimento</h1>
+        <p>{{ data_vencimento }}</p>
+        <h1 class="text-white mb-3">Link de Pagamento</h1>
+        <p>{{ link_pagamento }}</p>
+        <h1 class="text-white mb-3">Histórico de Posts</h1>
+        <table class="table table-dark">
+            <thead>
+                <tr>
+                    <th scope="col">Data</th>
+                    <th scope="col">Hora</th>
+                    <th scope="col">Descrição</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in posts_publicados %}
+                <tr>
+                    <td>{{ post.data }}</td>
+                    <td>{{ post.hora }}</td>
+                    <td>{{ post.descricao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+```

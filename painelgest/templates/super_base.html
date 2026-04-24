@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Super Admin — PainelGest{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0b0d17;
+      --surface:   #131720;
+      --surface2:  #1c2133;
+      --border:    rgba(255,255,255,0.07);
+      --accent:    #f59e0b;
+      --accent-h:  #d97706;
+      --success:   #22c55e;
+      --warning:   #eab308;
+      --danger:    #ef4444;
+      --info:      #06b6d4;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --sidebar-w: 260px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0;
+      height: 100vh; z-index: 200;
+      overflow-y: auto;
+    }
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-radius: 10px;
+      display: grid; place-items: center;
+      font-size: 16px; color: #fff;
+    }
+    .sidebar-logo-text { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+    .sidebar-logo-text span { color: var(--accent); }
+    .sidebar-logo-badge {
+      font-size: 9px; font-weight: 700;
+      background: rgba(245,158,11,0.15);
+      color: #fbbf24; padding: 2px 7px; border-radius: 20px;
+      letter-spacing: .5px; margin-top: 2px;
+    }
+    .nav-group-label {
+      padding: 20px 20px 6px;
+      font-size: 10px; font-weight: 600;
+      color: var(--muted); letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+    .nav-link-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px;
+      color: var(--muted); text-decoration: none;
+      font-size: 13.5px; font-weight: 500;
+      transition: color .15s, background .15s;
+      position: relative;
+    }
+    .nav-link-item i { width: 16px; text-align: center; font-size: 14px; }
+    .nav-link-item:hover { color: var(--text); background: var(--surface2); }
+    .nav-link-item.active { color: #fff; background: rgba(245,158,11,0.12); }
+    .nav-link-item.active::before {
+      content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
+      width: 3px; background: var(--accent); border-radius: 0 4px 4px 0;
+    }
+    .sidebar-footer {
+      margin-top: auto; padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sidebar-avatar {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 12px; font-weight: 700; color: #fff;
+    }
+    .sidebar-user small { color: var(--muted); font-size: 11px; display: block; }
+    .main-wrapper {
+      margin-left: var(--sidebar-w); flex: 1;
+      display: flex; flex-direction: column; min-height: 100vh;
+    }
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(245,158,11,0.12);
+      border: 1px solid rgba(245,158,11,0.2);
+      color: #fbbf24; font-size: 10px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px;
+    }
+    .topbar-info .topbar-title { font-size: 16px; font-weight: 600; }
+    .topbar-info .topbar-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .topbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    .flash-container { padding: 12px 28px 0; }
+    .flash-msg {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px; border-radius: 10px;
+      font-size: 13px; font-weight: 500; margin-bottom: 8px;
+      animation: fadeIn .25s ease;
+    }
+    .flash-success { background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.25); color:#4ade80; }
+    .flash-danger  { background:rgba(239,68,68,0.12);  border:1px solid rgba(239,68,68,0.25);  color:#f87171; }
+    .flash-warning { background:rgba(234,179,8,0.12);  border:1px solid rgba(234,179,8,0.25);  color:#facc15; }
+    .flash-info    { background:rgba(6,182,212,0.12);  border:1px solid rgba(6,182,212,0.25);  color:#22d3ee; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+    .main-content { padding: 28px; flex: 1; }
+    .btn-accent {
+      background: var(--accent); color: #000; border: none;
+      padding: 8px 16px; border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 7px;
+      text-decoration: none; transition: background .15s; cursor: pointer;
+    }
+    .btn-accent:hover { background: var(--accent-h); color: #000; }
+    .btn-ghost {
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 16px; border-radius: 8px;
+      font-size: 13px; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 7px;
+      text-decoration: none; transition: background .15s; cursor: pointer;
+    }
+    .btn-ghost:hover { background: #232a3e; color: var(--text); }
+    .pg-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+    }
+    .pg-card-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .pg-card-title { font-size: 14px; font-weight: 600; }
+    .pg-card-body { padding: 20px; }
+    .pg-table { width: 100%; border-collapse: collapse; }
+    .pg-table thead th {
+      padding: 10px 14px; font-size: 11px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .8px;
+      border-bottom: 1px solid var(--border); text-align: left;
+    }
+    .pg-table tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+    .pg-table tbody tr:last-child { border-bottom: none; }
+    .pg-table tbody tr:hover { background: var(--surface2); }
+    .pg-table td { padding: 12px 14px; font-size: 13px; vertical-align: middle; }
+    .badge-status {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-status::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+    .bs-success { background:rgba(34,197,94,.12); color:#4ade80; }
+    .bs-danger  { background:rgba(239,68,68,.12);  color:#f87171; }
+    .bs-warning { background:rgba(234,179,8,.12);  color:#facc15; }
+    .bs-muted   { background:rgba(100,116,139,.12);color:var(--muted); }
+    .badge-plano { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+    .bp-basico  { background:rgba(6,182,212,.12);  color:#22d3ee; }
+    .bp-pro     { background:rgba(99,102,241,.12); color:#818cf8; }
+    .bp-premium { background:rgba(234,179,8,.12);  color:#facc15; }
+    .icon-btn {
+      width: 30px; height: 30px; border-radius: 8px;
+      border: none; cursor: pointer;
+      display: inline-grid; place-items: center;
+      font-size: 12px; transition: all .15s; text-decoration: none;
+    }
+    .ib-edit   { background:rgba(99,102,241,.12); color:#818cf8; }
+    .ib-edit:hover   { background:rgba(99,102,241,.25); color:#818cf8; }
+    .ib-delete { background:rgba(239,68,68,.1);  color:#f87171; }
+    .ib-delete:hover { background:rgba(239,68,68,.2);  color:#f87171; }
+    .ib-lock   { background:rgba(234,179,8,.1);  color:#facc15; }
+    .ib-lock:hover   { background:rgba(234,179,8,.2);  color:#facc15; }
+    .ib-unlock { background:rgba(34,197,94,.1);  color:#4ade80; }
+    .ib-unlock:hover { background:rgba(34,197,94,.2);  color:#4ade80; }
+    .pg-label { display:block; margin-bottom:6px; font-size:12px; font-weight:500; color:var(--muted); }
+    .pg-input, .pg-select, .pg-textarea {
+      width:100%; background:var(--surface2); border:1px solid var(--border);
+      border-radius:8px; padding:9px 12px; color:var(--text);
+      font-size:13px; font-family:'Inter',sans-serif;
+      transition:border-color .15s; outline:none;
+    }
+    .pg-input:focus, .pg-select:focus, .pg-textarea:focus { border-color:var(--accent); }
+    .pg-select option { background:var(--surface2); }
+    .pg-textarea { resize:vertical; min-height:90px; }
+    .form-group { margin-bottom:18px; }
+    .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+    .stat-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; padding:20px;
+      display:flex; flex-direction:column; gap:14px;
+      transition:transform .2s;
+    }
+    .stat-card:hover { transform:translateY(-2px); }
+    .stat-icon { width:38px; height:38px; border-radius:10px; display:grid; place-items:center; font-size:15px; }
+    .si-amber   { background:rgba(245,158,11,.12); color:#fbbf24; }
+    .si-green   { background:rgba(34,197,94,.12);  color:#4ade80; }
+    .si-red     { background:rgba(239,68,68,.12);  color:#f87171; }
+    .si-indigo  { background:rgba(99,102,241,.12); color:#818cf8; }
+    .si-cyan    { background:rgba(6,182,212,.12);  color:#22d3ee; }
+    .stat-value { font-size:28px; font-weight:700; letter-spacing:-1px; line-height:1; }
+    .stat-label { font-size:12px; color:var(--muted); margin-top:3px; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon"><i class="fas fa-crown"></i></div>
+    <div>
+      <div class="sidebar-logo-text">Painel<span>Gest</span></div>
+      <div class="sidebar-logo-badge">SUPER ADMIN</div>
+    </div>
+  </div>
+
+  <div class="nav-group-label">Plataforma</div>
+  <a href="{{ url_for('super_dashboard') }}"
+     class="nav-link-item {% if request.endpoint == 'super_dashboard' %}active{% endif %}">
+    <i class="fas fa-chart-line"></i> Dashboard MRR
+  </a>
+  <a href="{{ url_for('super_gestores') }}"
+     class="nav-link-item {% if 'gestor' in request.endpoint %}active{% endif %}">
+    <i class="fas fa-users-gear"></i> Gestores
+  </a>
+
+  <div class="nav-group-label">Sistema</div>
+  <a href="{{ url_for('login') }}" class="nav-link-item">
+    <i class="fas fa-store"></i> Painel do Gestor
+  </a>
+  <a href="{{ url_for('super_logout') }}" class="nav-link-item">
+    <i class="fas fa-sign-out-alt"></i> Sair
+  </a>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-avatar"><i class="fas fa-crown" style="font-size:12px"></i></div>
+    <div class="sidebar-user">
+      <strong>{{ session.get('super_admin', 'Super') }}</strong>
+      <small>Super Administrador</small>
+    </div>
+  </div>
+</aside>
+
+<div class="main-wrapper">
+  <header class="topbar">
+    <div class="topbar-info">
+      <div class="topbar-title">{% block topbar_title %}Super Admin{% endblock %}</div>
+      <div class="topbar-sub">{% block topbar_sub %}{% endblock %}</div>
+    </div>
+    <div class="topbar-actions">
+      <span class="topbar-badge"><i class="fas fa-shield-halved"></i> Super Admin</span>
+      {% block topbar_actions %}{% endblock %}
+    </div>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+          <div class="flash-msg flash-{{ category }}">
+            <i class="fas {% if category == 'success' %}fa-circle-check{% elif category == 'danger' %}fa-circle-xmark{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="main-content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

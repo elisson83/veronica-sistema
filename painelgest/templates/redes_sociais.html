@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% block title %}Redes Sociais — PainelGest{% endblock %}
+{% block topbar_title %}Redes Sociais{% endblock %}
+{% block topbar_sub %}Perfis de todas as plataformas{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('cadastrar_rede_social') }}" class="btn-accent">
+    <i class="fas fa-plus"></i> Novo Perfil
+  </a>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .rede-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .rede-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    display: grid; place-items: center; font-size: 16px; color: #fff;
+  }
+  .rede-header h6 { font-size: 14px; font-weight: 600; margin: 0; }
+  .rede-header small { font-size: 11px; color: var(--muted); }
+  .rede-empty {
+    padding: 24px; text-align: center; color: var(--muted); font-size: 13px;
+  }
+  .rede-tab-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    text-decoration: none; transition: all .15s;
+    border: 1px solid transparent;
+  }
+  .rede-tab-btn.active, .rede-tab-btn:hover {
+    color: var(--text); background: var(--surface2);
+    border-color: var(--border);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filtros por rede -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+  <a href="#" class="rede-tab-btn active" onclick="filtrarRede('todas',this);return false">
+    <i class="fas fa-globe"></i> Todas
+    <span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:1px 8px;font-size:11px">{{ perfis|length }}</span>
+  </a>
+  {% for rede_key, rede_info in REDES_SOCIAIS.items() %}
+  {% set count = por_rede[rede_key]|length %}
+  <a href="#" class="rede-tab-btn" onclick="filtrarRede('{{ rede_key }}',this);return false"
+     style="--rede-cor:{{ rede_info.cor }}">
+    <i class="{{ rede_info.icone }}" style="color:{{ rede_info.cor }}"></i>
+    {{ rede_info.nome }}
+    {% if count > 0 %}
+    <span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:1px 8px;font-size:11px">{{ count }}</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Grid por rede -->
+{% for rede_key, rede_info in REDES_SOCIAIS.items() %}
+{% set lista = por_rede[rede_key] %}
+<div class="rede-section mb-3" data-rede="{{ rede_key }}">
+  <div class="pg-card">
+    <div class="rede-header">
+      <div class="rede-icon" style="background:{{ rede_info.cor }}20;color:{{ rede_info.cor }}">
+        <i class="{{ rede_info.icone }}"></i>
+      </div>
+      <div>
+        <h6>{{ rede_info.nome }}</h6>
+        <small>{{ lista|length }} perfil{% if lista|length != 1 %}s{% endif %} cadastrado{% if lista|length != 1 %}s{% endif %}</small>
+      </div>
+      <a href="{{ url_for('cadastrar_rede_social', rede=rede_key) }}" class="btn-ghost ms-auto" style="font-size:12px;padding:6px 12px">
+        <i class="fas fa-plus"></i> Adicionar
+      </a>
+    </div>
+    {% if lista %}
+    <table class="pg-table">
+      <thead>
+        <tr>
+          <th>Nome / Perfil</th>
+          <th>Login</th>
+          <th>Próxima Postagem</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in lista %}
+        <tr>
+          <td>
+            <div style="font-weight:500">{{ p.nome }}</div>
+            <div style="font-size:11px;color:{{ rede_info.cor }}">
+              <i class="{{ rede_info.icone }} me-1"></i>{{ rede_info.nome }}
+            </div>
+          </td>
+          <td style="font-family:monospace;font-size:12px;color:var(--muted)">{{ p.login }}</td>
+          <td style="font-size:12px;color:var(--muted)">
+            {% if p.data_postagem %}
+              {{ p.data_postagem.strftime('%d/%m/%Y %H:%M') }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if p.status == 'ativo' %}
+              <span class="badge-status bs-success">Ativo</span>
+            {% else %}
+              <span class="badge-status bs-muted">Inativo</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:6px;justify-content:flex-end">
+              <a href="{{ url_for('editar_rede_social', id=p.id) }}" class="icon-btn ib-edit" title="Editar">
+                <i class="fas fa-pen"></i>
+              </a>
+              <a href="{{ url_for('excluir_rede_social', id=p.id) }}"
+                 class="icon-btn ib-delete" title="Excluir"
+                 onclick="return confirm('Excluir este perfil?')">
+                <i class="fas fa-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="rede-empty">
+      <i class="{{ rede_info.icone }}" style="font-size:24px;color:{{ rede_info.cor }};opacity:.3;display:block;margin-bottom:8px"></i>
+      Nenhum perfil de {{ rede_info.nome }} cadastrado.
+      <a href="{{ url_for('cadastrar_rede_social', rede=rede_key) }}" style="color:{{ rede_info.cor }};text-decoration:none;margin-left:6px">Adicionar agora →</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+{% if not perfis %}
+<div class="pg-card">
+  <div class="pg-card-body" style="text-align:center;padding:48px">
+    <i class="fas fa-share-nodes" style="font-size:36px;color:var(--muted);opacity:.3;margin-bottom:16px;display:block"></i>
+    <p style="color:var(--muted);margin-bottom:16px">Nenhum perfil de rede social cadastrado ainda.</p>
+    <a href="{{ url_for('cadastrar_rede_social') }}" class="btn-accent">
+      <i class="fas fa-plus"></i> Cadastrar Primeiro Perfil
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filtrarRede(rede, btn) {
+  document.querySelectorAll('.rede-tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.rede-section').forEach(s => {
+    if (rede === 'todas' || s.dataset.rede === rede) {
+      s.style.display = 'block';
+    } else {
+      s.style.display = 'none';
+    }
+  });
+}
+</script>
+{% endblock %}

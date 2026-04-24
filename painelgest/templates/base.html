@@ -348,9 +348,13 @@
   </a>
 
   <div class="nav-group-label">Canais</div>
-  <a href="{{ url_for('perfis_instagram') }}"
-     class="nav-link-item {% if 'instagram' in request.endpoint %}active{% endif %}">
-    <i class="fab fa-instagram"></i> Perfis Instagram
+  <a href="{{ url_for('redes_sociais') }}"
+     class="nav-link-item {% if request.endpoint in ['redes_sociais','cadastrar_rede_social','editar_rede_social'] %}active{% endif %}">
+    <i class="fas fa-share-nodes"></i> Redes Sociais
+  </a>
+  <a href="{{ url_for('agendamentos') }}"
+     class="nav-link-item {% if 'agendamento' in request.endpoint %}active{% endif %}">
+    <i class="fas fa-calendar-plus"></i> Agendamentos
   </a>
 
   <div class="nav-group-label">Financeiro</div>

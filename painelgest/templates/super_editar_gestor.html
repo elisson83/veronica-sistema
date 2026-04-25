@@ -1,0 +1,135 @@
+{% extends 'super_base.html' %}
+{% block title %}Editar Gestor — PainelGest{% endblock %}
+{% block topbar_title %}Editar Gestor{% endblock %}
+{% block topbar_sub %}{{ gestor.username }} {% if gestor.nome_empresa %}— {{ gestor.nome_empresa }}{% endif %}{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('super_gestores') }}" class="btn-ghost">
+    <i class="fas fa-arrow-left"></i> Voltar
+  </a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;margin:0 auto">
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title">
+        <i class="fas fa-user-pen me-2" style="color:#fbbf24"></i>
+        Editar — {{ gestor.username }}
+      </span>
+      <a href="{{ url_for('super_excluir_gestor', id=gestor.id) }}" class="icon-btn ib-delete"
+         title="Excluir gestor"
+         onclick="return confirm('EXCLUIR permanentemente o gestor {{ gestor.username }}?')">
+        <i class="fas fa-trash"></i>
+      </a>
+    </div>
+    <div class="pg-card-body">
+      <form method="POST">
+        <!-- Info básica (username não editável) -->
+        <div class="form-group">
+          <label class="pg-label">Username</label>
+          <input type="text" class="pg-input" value="{{ gestor.username }}" disabled
+                 style="opacity:.5;cursor:not-allowed">
+          <small style="font-size:11px;color:var(--muted);margin-top:3px;display:block">Username não pode ser alterado</small>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">E-mail</label>
+            <input type="email" name="email" class="pg-input" value="{{ gestor.email or '' }}" placeholder="gestor@empresa.com">
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Nome da Empresa</label>
+            <input type="text" name="nome_empresa" class="pg-input" value="{{ gestor.nome_empresa or '' }}" placeholder="Nome do negócio">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="pg-label">Nova Senha (deixe em branco para manter)</label>
+          <input type="password" name="password" class="pg-input" placeholder="••••••••">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">Plano</label>
+            <select name="plano" class="pg-select">
+              {% for key, plano in PLANOS.items() %}
+              <option value="{{ key }}" {% if gestor.plano == key %}selected{% endif %}>
+                {{ plano.nome }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Status</label>
+            <select name="status" class="pg-select">
+              <option value="ativo" {% if gestor.status == 'ativo' %}selected{% endif %}>Ativo</option>
+              <option value="bloqueado" {% if gestor.status == 'bloqueado' %}selected{% endif %}>Bloqueado</option>
+              <option value="cancelado" {% if gestor.status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Data de Vencimento</label>
+            <input type="date" name="data_vencimento" class="pg-input"
+                   value="{{ gestor.data_vencimento.strftime('%Y-%m-%d') if gestor.data_vencimento else '' }}">
+          </div>
+        </div>
+
+        <!-- Resumo financeiro -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:18px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px">Resumo da Conta</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center">
+            <div>
+              <div style="font-size:18px;font-weight:700;color:#fbbf24">R$ {{ "%.2f"|format(gestor.mrr) }}</div>
+              <div style="font-size:11px;color:var(--muted)">MRR atual</div>
+            </div>
+            <div>
+              <div style="font-size:18px;font-weight:700">
+                {% if gestor.status == 'ativo' %}<span style="color:#4ade80">Ativo</span>
+                {% elif gestor.status == 'bloqueado' %}<span style="color:#f87171">Bloqueado</span>
+                {% else %}<span style="color:var(--muted)">{{ gestor.status }}</span>{% endif %}
+              </div>
+              <div style="font-size:11px;color:var(--muted)">Status</div>
+            </div>
+            <div>
+              <div style="font-size:18px;font-weight:700;color:{% if gestor.vencido %}#f87171{% else %}#4ade80{% endif %}">
+                {% if gestor.data_vencimento %}
+                  {{ gestor.data_vencimento.strftime('%d/%m/%Y') }}
+                {% else %}—{% endif %}
+              </div>
+              <div style="font-size:11px;color:var(--muted)">Vencimento</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <a href="{{ url_for('super_gestores') }}" class="btn-ghost">Cancelar</a>
+          <button type="submit" class="btn-accent">
+            <i class="fas fa-floppy-disk"></i> Salvar Alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Ações rápidas -->
+  <div style="display:flex;gap:10px;margin-top:16px">
+    {% if gestor.status == 'ativo' %}
+    <a href="{{ url_for('super_bloquear_gestor', id=gestor.id) }}" class="btn-ghost"
+       style="flex:1;justify-content:center;color:#facc15"
+       onclick="return confirm('Bloquear {{ gestor.username }}?')">
+      <i class="fas fa-lock"></i> Bloquear Acesso
+    </a>
+    {% else %}
+    <a href="{{ url_for('super_desbloquear_gestor', id=gestor.id) }}" class="btn-ghost"
+       style="flex:1;justify-content:center;color:#4ade80">
+      <i class="fas fa-lock-open"></i> Desbloquear Acesso
+    </a>
+    {% endif %}
+    <a href="{{ url_for('super_excluir_gestor', id=gestor.id) }}"
+       class="btn-ghost" style="flex:1;justify-content:center;color:#f87171"
+       onclick="return confirm('EXCLUIR permanentemente?')">
+      <i class="fas fa-trash"></i> Excluir Gestor
+    </a>
+  </div>
+</div>
+{% endblock %}

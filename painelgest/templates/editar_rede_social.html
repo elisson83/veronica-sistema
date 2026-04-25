@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Editar Perfil — PainelGest{% endblock %}
+{% block topbar_title %}Editar Perfil{% endblock %}
+{% block topbar_sub %}{{ perfil.info_rede.nome }} — {{ perfil.nome }}{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('redes_sociais') }}" class="btn-ghost">
+    <i class="fas fa-arrow-left"></i> Voltar
+  </a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:620px;margin:0 auto">
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title">
+        <i class="{{ perfil.info_rede.icone }} me-2" style="color:{{ perfil.info_rede.cor }}"></i>
+        Editar — {{ perfil.nome }}
+      </span>
+      <a href="{{ url_for('excluir_rede_social', id=perfil.id) }}"
+         class="icon-btn ib-delete" title="Excluir perfil"
+         onclick="return confirm('Excluir o perfil {{ perfil.nome }}?')">
+        <i class="fas fa-trash"></i>
+      </a>
+    </div>
+    <div class="pg-card-body">
+      <form method="POST">
+        <!-- Rede Social -->
+        <div class="form-group">
+          <label class="pg-label">Rede Social *</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px">
+            {% for rede_key, rede_info in REDES_SOCIAIS.items() %}
+            <label class="rede-card {% if rede_key == perfil.rede %}selected{% endif %}" data-rede="{{ rede_key }}">
+              <input type="radio" name="rede" value="{{ rede_key }}" {% if rede_key == perfil.rede %}checked{% endif %} style="display:none">
+              <div class="rede-card-inner">
+                <i class="{{ rede_info.icone }}" style="color:{{ rede_info.cor }};font-size:20px"></i>
+                <span>{{ rede_info.nome }}</span>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">Nome / Apelido *</label>
+            <input type="text" name="nome" class="pg-input" value="{{ perfil.nome }}" required>
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Status</label>
+            <select name="status" class="pg-select">
+              <option value="ativo" {% if perfil.status == 'ativo' %}selected{% endif %}>Ativo</option>
+              <option value="inativo" {% if perfil.status != 'ativo' %}selected{% endif %}>Inativo</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">Login / Usuário *</label>
+            <input type="text" name="login" class="pg-input" value="{{ perfil.login }}" required>
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Nova Senha (deixe em branco para manter)</label>
+            <input type="password" name="senha" class="pg-input" placeholder="••••••••">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="pg-label">Próxima Postagem (opcional)</label>
+          <input type="datetime-local" name="data_postagem" class="pg-input"
+            value="{{ perfil.data_postagem.strftime('%Y-%m-%dT%H:%M') if perfil.data_postagem else '' }}">
+        </div>
+
+        <div class="form-group">
+          <label class="pg-label">Legenda / Texto do Post</label>
+          <textarea name="postagem" class="pg-textarea" placeholder="Texto que será publicado automaticamente...">{{ perfil.postagem or '' }}</textarea>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+          <a href="{{ url_for('redes_sociais') }}" class="btn-ghost">Cancelar</a>
+          <button type="submit" class="btn-accent">
+            <i class="fas fa-floppy-disk"></i> Salvar Alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .rede-card {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 8px;
+    transition: all .15s;
+    background: var(--surface2);
+  }
+  .rede-card:hover { border-color: rgba(255,255,255,.2); }
+  .rede-card.selected {
+    border-color: var(--accent);
+    background: rgba(99,102,241,.1);
+  }
+  .rede-card-inner {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500;
+    color: var(--text);
+  }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('.rede-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.rede-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+  });
+});
+</script>
+{% endblock %}

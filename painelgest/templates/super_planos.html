@@ -1,0 +1,74 @@
+{% extends 'super_base.html' %}
+{% block title %}Planos & Preços — PainelGest{% endblock %}
+{% block topbar_title %}Planos &amp; Preços{% endblock %}
+{% block topbar_sub %}Edite os valores dos planos cobrados dos gestores{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('super_dashboard') }}" class="btn-ghost">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+{% endblock %}
+
+{% block content %}
+<form method="POST">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:28px">
+
+  {% for chave, plano in planos_config.items() %}
+  {% set cores = {'basico':'#22d3ee','pro':'#818cf8','premium':'#facc15'} %}
+  {% set cor = cores[chave] %}
+  <div class="pg-card" style="border-top:3px solid {{ cor }}">
+    <div class="pg-card-header">
+      <span class="pg-card-title">
+        <i class="fas {{ plano.icone }} me-2" style="color:{{ cor }}"></i>
+        {{ plano.nome }}
+      </span>
+      <span style="font-size:11px;color:var(--muted)">{{ chave }}</span>
+    </div>
+    <div class="pg-card-body">
+      <div class="form-group">
+        <label class="pg-label">Descrição</label>
+        <p style="font-size:13px;color:var(--muted);margin:0">{{ plano.descricao }}</p>
+      </div>
+      <div class="form-group">
+        <label class="pg-label" style="color:{{ cor }}">Preço Mensal (R$) *</label>
+        <div style="position:relative">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px">R$</span>
+          <input type="number" step="0.01" min="0" name="preco_{{ chave }}"
+                 value="{{ '%.2f'|format(plano.preco) }}"
+                 class="pg-input" style="padding-left:36px;font-size:16px;font-weight:700;color:{{ cor }}"
+                 required>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <p style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Recursos</p>
+        {% for rec in plano.recursos %}
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;color:var(--text)">
+          <i class="fas fa-check-circle" style="color:{{ cor }};font-size:11px;flex-shrink:0"></i>
+          {{ rec }}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+<div style="display:flex;justify-content:center;gap:12px">
+  <a href="{{ url_for('super_dashboard') }}" class="btn-ghost">Cancelar</a>
+  <button type="submit" class="btn-accent" style="font-size:14px;padding:10px 28px">
+    <i class="fas fa-floppy-disk"></i> Salvar Preços
+  </button>
+</div>
+</form>
+
+<!-- Aviso -->
+<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:16px 20px;margin-top:24px;display:flex;gap:12px;align-items:flex-start">
+  <i class="fas fa-triangle-exclamation" style="color:#fbbf24;margin-top:2px;flex-shrink:0"></i>
+  <div>
+    <p style="font-weight:600;font-size:13px;color:#fbbf24;margin-bottom:4px">Atenção ao alterar preços</p>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6">
+      Os novos preços afetam o cálculo de MRR imediatamente. Gestores já cadastrados mantêm seus planos, mas o MRR será recalculado com base nos novos valores. Novos gestores serão cobrados pelos valores atualizados.
+    </p>
+  </div>
+</div>
+{% endblock %}

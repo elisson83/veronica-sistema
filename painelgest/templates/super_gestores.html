@@ -1,0 +1,116 @@
+{% extends 'super_base.html' %}
+{% block title %}Gestores — PainelGest{% endblock %}
+{% block topbar_title %}Gestores{% endblock %}
+{% block topbar_sub %}Gerenciamento de administradores da plataforma{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('super_novo_gestor') }}" class="btn-accent">
+    <i class="fas fa-plus"></i> Novo Gestor
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="pg-card">
+  <div class="pg-card-header">
+    <span class="pg-card-title">{{ gestores|length }} gestor(es) cadastrado(s)</span>
+    <input type="text" id="busca" placeholder="Buscar gestor…" onkeyup="filtrar()"
+           style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:13px;outline:none;width:220px">
+  </div>
+  <table class="pg-table" id="tabela-gestores">
+    <thead>
+      <tr>
+        <th>Gestor</th>
+        <th>Empresa</th>
+        <th>Plano</th>
+        <th>Status</th>
+        <th>Vencimento</th>
+        <th>MRR</th>
+        <th>Criado em</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in gestores %}
+      <tr>
+        <td>
+          <div style="font-weight:500">{{ g.username }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ g.email or '—' }}</div>
+        </td>
+        <td style="font-size:13px;color:var(--muted)">{{ g.nome_empresa or '—' }}</td>
+        <td><span class="badge-plano bp-{{ g.plano }}">{{ g.info_plano.nome }}</span></td>
+        <td>
+          {% if g.status == 'ativo' %}
+            <span class="badge-status bs-success">Ativo</span>
+          {% elif g.status == 'bloqueado' %}
+            <span class="badge-status bs-danger">Bloqueado</span>
+          {% else %}
+            <span class="badge-status bs-muted">{{ g.status }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if g.data_vencimento %}
+            {% if g.vencido %}
+              <span style="color:#f87171;font-size:12px;font-weight:600">
+                <i class="fas fa-circle-xmark me-1"></i>{{ g.data_vencimento.strftime('%d/%m/%Y') }}
+              </span>
+            {% elif (g.data_vencimento.date() - today).days <= 7 %}
+              <span style="color:#facc15;font-size:12px;font-weight:600">
+                <i class="fas fa-clock me-1"></i>{{ g.data_vencimento.strftime('%d/%m/%Y') }}
+              </span>
+            {% else %}
+              <span style="font-size:12px;color:var(--muted)">{{ g.data_vencimento.strftime('%d/%m/%Y') }}</span>
+            {% endif %}
+          {% else %}
+            <span style="color:var(--muted);font-size:12px">—</span>
+          {% endif %}
+        </td>
+        <td style="font-weight:600;color:#fbbf24">R$ {{ "%.2f"|format(g.mrr) }}</td>
+        <td style="font-size:12px;color:var(--muted)">
+          {{ g.criado_em.strftime('%d/%m/%Y') if g.criado_em else '—' }}
+        </td>
+        <td>
+          <div style="display:flex;gap:5px;align-items:center">
+            <a href="{{ url_for('super_editar_gestor', id=g.id) }}" class="icon-btn ib-edit" title="Editar">
+              <i class="fas fa-pen"></i>
+            </a>
+            {% if g.status == 'ativo' %}
+            <a href="{{ url_for('super_bloquear_gestor', id=g.id) }}" class="icon-btn ib-lock" title="Bloquear"
+               onclick="return confirm('Bloquear o gestor {{ g.username }}?')">
+              <i class="fas fa-lock"></i>
+            </a>
+            {% else %}
+            <a href="{{ url_for('super_desbloquear_gestor', id=g.id) }}" class="icon-btn ib-unlock" title="Desbloquear">
+              <i class="fas fa-lock-open"></i>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('super_excluir_gestor', id=g.id) }}" class="icon-btn ib-delete" title="Excluir"
+               onclick="return confirm('EXCLUIR permanentemente o gestor {{ g.username }}?')">
+              <i class="fas fa-trash"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" style="text-align:center;padding:48px;color:var(--muted)">
+          <i class="fas fa-users-gear" style="font-size:36px;opacity:.2;display:block;margin-bottom:12px"></i>
+          Nenhum gestor cadastrado.
+          <a href="{{ url_for('super_novo_gestor') }}" style="color:var(--accent);display:block;margin-top:8px">Criar primeiro gestor →</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filtrar() {
+  const busca = document.getElementById('busca').value.toLowerCase();
+  const rows = document.querySelectorAll('#tabela-gestores tbody tr');
+  rows.forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(busca) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

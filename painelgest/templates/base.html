@@ -369,8 +369,12 @@
 
   <div class="nav-group-label">Sistema</div>
   <a href="{{ url_for('admin_restaurantes') }}"
-     class="nav-link-item {% if 'restaurante' in request.endpoint %}active{% endif %}">
+     class="nav-link-item {% if request.endpoint in ['admin_restaurantes','novo_restaurante'] %}active{% endif %}">
     <i class="fas fa-store"></i> Restaurantes
+  </a>
+  <a href="{{ url_for('sub_admins') }}"
+     class="nav-link-item {% if 'sub_admin' in request.endpoint %}active{% endif %}">
+    <i class="fas fa-user-shield"></i> Sub-ADMs
   </a>
   <a href="{{ url_for('logout') }}" class="nav-link-item">
     <i class="fas fa-sign-out-alt"></i> Sair

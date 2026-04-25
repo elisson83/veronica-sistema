@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block title %}Novo Pedido — {{ restaurante.nome }}{% endblock %}
+{% block topbar_title %}Novo Pedido{% endblock %}
+{% block topbar_sub %}{{ restaurante.nome }}{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('restaurante_kanban') }}" class="btn-ghost">
+    <i class="fas fa-arrow-left"></i> Voltar ao Kanban
+  </a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;margin:0 auto">
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title"><i class="fas fa-plus-circle me-2" style="color:var(--accent)"></i>Criar Pedido</span>
+    </div>
+    <div class="pg-card-body">
+      <form method="POST" action="{{ url_for('novo_pedido_kanban') }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">Nome do Cliente</label>
+            <input type="text" name="cliente_nome" class="pg-input" placeholder="Ex: João Silva">
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Origem do Pedido</label>
+            <select name="origem" class="pg-select" id="origem-sel">
+              <option value="balcao">Balcão</option>
+              <option value="ifood">iFood</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="app">App Próprio</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" id="ifood-field" style="display:none">
+          <label class="pg-label">Código de Confirmação iFood</label>
+          <input type="text" name="codigo_ifood" class="pg-input" placeholder="Ex: 1234">
+        </div>
+
+        <div class="form-group">
+          <label class="pg-label">Forma de Pagamento</label>
+          <select name="forma_pagamento" class="pg-select">
+            <option value="">-- Selecione --</option>
+            {% if formas %}
+              {% for fp in formas %}
+              <option value="{{ fp }}">{{ fp }}</option>
+              {% endfor %}
+            {% else %}
+              <option value="Dinheiro">Dinheiro</option>
+              <option value="Pix">Pix</option>
+              <option value="Cartão de Débito">Cartão de Débito</option>
+              <option value="Cartão de Crédito">Cartão de Crédito</option>
+            {% endif %}
+          </select>
+        </div>
+
+        <!-- Itens -->
+        <div class="form-group">
+          <label class="pg-label">Itens do Pedido</label>
+          <div id="itens-wrap" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px">
+            <div style="display:grid;grid-template-columns:1fr 60px 90px 30px;gap:8px;padding:8px 10px;background:var(--surface2);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px">
+              <span>Item</span><span>Qtd</span><span>Preço</span><span></span>
+            </div>
+            <div id="itens-lista">
+              <div class="item-row" style="display:grid;grid-template-columns:1fr 60px 90px 30px;gap:8px;padding:8px 10px;border-top:1px solid var(--border)">
+                <input type="text" name="item_nome" class="pg-input" placeholder="Nome do item" style="padding:5px 8px">
+                <input type="number" name="item_qtd" class="pg-input" value="1" min="1" style="padding:5px 8px">
+                <input type="number" name="item_preco" class="pg-input" placeholder="0.00" step="0.01" style="padding:5px 8px">
+                <span></span>
+              </div>
+            </div>
+          </div>
+          <button type="button" onclick="addItem()"
+                  style="width:100%;background:var(--surface2);border:1px dashed var(--border);border-radius:8px;padding:8px;color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s"
+                  onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+            <i class="fas fa-plus me-1"></i> Adicionar Item
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">Total (R$)</label>
+            <input type="number" name="total" id="total-field" class="pg-input" step="0.01" min="0" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Observações</label>
+            <textarea name="observacoes" class="pg-textarea" style="min-height:42px" placeholder="Sem cebola, extra molho..."></textarea>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+          <a href="{{ url_for('restaurante_kanban') }}" class="btn-ghost">Cancelar</a>
+          <button type="submit" class="btn-accent">
+            <i class="fas fa-check"></i> Criar Pedido
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('origem-sel').addEventListener('change', function() {
+  document.getElementById('ifood-field').style.display = this.value === 'ifood' ? 'block' : 'none';
+});
+let ic = 1;
+function addItem() {
+  const lista = document.getElementById('itens-lista');
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 60px 90px 30px;gap:8px;padding:8px 10px;border-top:1px solid var(--border)';
+  row.innerHTML = `
+    <input type="text" name="item_nome" class="pg-input" placeholder="Nome do item" style="padding:5px 8px">
+    <input type="number" name="item_qtd" class="pg-input" value="1" min="1" style="padding:5px 8px">
+    <input type="number" name="item_preco" class="pg-input" placeholder="0.00" step="0.01" style="padding:5px 8px">
+    <button type="button" onclick="this.closest('.item-row').remove();calcTotal()"
+            style="background:rgba(239,68,68,.1);border:none;color:#f87171;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:10px">
+      <i class="fas fa-minus"></i>
+    </button>`;
+  lista.appendChild(row);
+  row.querySelectorAll('input').forEach(i => i.addEventListener('input', calcTotal));
+  ic++;
+}
+function calcTotal() {
+  let t = 0;
+  document.querySelectorAll('#itens-lista .item-row').forEach(r => {
+    const q = parseFloat(r.querySelector('[name=item_qtd]')?.value || 0);
+    const p = parseFloat(r.querySelector('[name=item_preco]')?.value || 0);
+    t += q * p;
+  });
+  document.getElementById('total-field').value = t.toFixed(2);
+}
+document.querySelectorAll('#itens-lista input').forEach(i => i.addEventListener('input', calcTotal));
+</script>
+{% endblock %}

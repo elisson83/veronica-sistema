@@ -195,23 +195,35 @@ class Cobranca(db.Model):
 
 
 class Restaurante(db.Model):
-    id              = db.Column(db.Integer, primary_key=True)
-    nome            = db.Column(db.String(80),  nullable=False)
-    username        = db.Column(db.String(80),  unique=True, nullable=False)
-    password        = db.Column(db.String(120), nullable=False)
-    cliente_id      = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=True)
-    data_vencimento = db.Column(db.DateTime,    nullable=True)
-    link_pagamento  = db.Column(db.String(200), nullable=True)
-    chave_pix       = db.Column(db.String(200), nullable=True)
-    telefone        = db.Column(db.String(30),  nullable=True)
-    endereco        = db.Column(db.String(200), nullable=True)
-    descricao       = db.Column(db.Text,        nullable=True)
-    cor_primaria    = db.Column(db.String(10),  default='#6366f1')
+    id                   = db.Column(db.Integer, primary_key=True)
+    nome                 = db.Column(db.String(80),  nullable=False)
+    username             = db.Column(db.String(80),  unique=True, nullable=False)
+    password             = db.Column(db.String(120), nullable=False)
+    cliente_id           = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=True)
+    data_vencimento      = db.Column(db.DateTime,    nullable=True)
+    link_pagamento       = db.Column(db.String(200), nullable=True)
+    chave_pix            = db.Column(db.String(200), nullable=True)
+    telefone             = db.Column(db.String(30),  nullable=True)
+    endereco             = db.Column(db.String(200), nullable=True)
+    descricao            = db.Column(db.Text,        nullable=True)
+    cor_primaria         = db.Column(db.String(10),  default='#6366f1')
+    logo_path            = db.Column(db.String(300), nullable=True)
+    formas_pagamento_json= db.Column(db.Text,        nullable=True)
+    instagram            = db.Column(db.String(100), nullable=True)
+    facebook             = db.Column(db.String(100), nullable=True)
+    whatsapp             = db.Column(db.String(30),  nullable=True)
 
     def __init__(self, nome, username, password, cliente_id=None):
         self.nome = nome; self.username = username
         self.password = generate_password_hash(password)
         self.cliente_id = cliente_id
+
+    @property
+    def formas_pagamento(self):
+        try:
+            return json.loads(self.formas_pagamento_json or '[]')
+        except Exception:
+            return []
 
 
 class Categoria(db.Model):
@@ -269,6 +281,79 @@ class PostAgendado(db.Model):
     criado_em     = db.Column(db.DateTime,    default=datetime.utcnow)
 
 
+class PlanoConfig(db.Model):
+    """Preços dinâmicos dos planos — editável pelo Super Admin."""
+    id    = db.Column(db.Integer, primary_key=True)
+    chave = db.Column(db.String(20), unique=True, nullable=False)
+    preco = db.Column(db.Float, nullable=False)
+
+    def __init__(self, chave, preco):
+        self.chave = chave
+        self.preco = preco
+
+
+class SubAdministrador(db.Model):
+    """Sub-administradores vinculados a um Gestor — até 3 por conta."""
+    id        = db.Column(db.Integer, primary_key=True)
+    admin_id  = db.Column(db.Integer, db.ForeignKey('administrador.id'), nullable=False)
+    admin     = db.relationship('Administrador', backref='sub_admins')
+    username  = db.Column(db.String(80), unique=True, nullable=False)
+    password  = db.Column(db.String(120), nullable=False)
+    nome      = db.Column(db.String(80),  nullable=True)
+    email     = db.Column(db.String(120), nullable=True)
+    nivel     = db.Column(db.String(20),  default='operador')  # admin|operador|visualizador
+    status    = db.Column(db.String(10),  default='ativo')
+    criado_em = db.Column(db.DateTime,    default=datetime.utcnow)
+
+    def __init__(self, admin_id, username, password, nome=None, email=None, nivel='operador'):
+        self.admin_id = admin_id
+        self.username = username
+        self.password = generate_password_hash(password)
+        self.nome     = nome
+        self.email    = email
+        self.nivel    = nivel
+
+
+class PedidoKanban(db.Model):
+    """Pedido no board Kanban do restaurante."""
+    id              = db.Column(db.Integer, primary_key=True)
+    restaurante_id  = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=False)
+    restaurante_rel = db.relationship('Restaurante', backref='pedidos')
+    numero          = db.Column(db.Integer, nullable=False, default=1)
+    cliente_nome    = db.Column(db.String(80),  nullable=True)
+    itens_json      = db.Column(db.Text,        nullable=True)
+    total           = db.Column(db.Float,       default=0.0)
+    coluna          = db.Column(db.String(20),  default='novo')
+    origem          = db.Column(db.String(20),  default='balcao')
+    codigo_ifood    = db.Column(db.String(20),  nullable=True)
+    forma_pagamento = db.Column(db.String(30),  nullable=True)
+    observacoes     = db.Column(db.Text,        nullable=True)
+    criado_em       = db.Column(db.DateTime,    default=datetime.utcnow)
+    atualizado_em   = db.Column(db.DateTime,    default=datetime.utcnow)
+
+    def __init__(self, restaurante_id, numero, cliente_nome=None, total=0.0,
+                 origem='balcao', forma_pagamento=None, observacoes=None, codigo_ifood=None):
+        self.restaurante_id  = restaurante_id
+        self.numero          = numero
+        self.cliente_nome    = cliente_nome
+        self.total           = total
+        self.origem          = origem
+        self.forma_pagamento = forma_pagamento
+        self.observacoes     = observacoes
+        self.codigo_ifood    = codigo_ifood
+
+    @property
+    def itens(self):
+        try:
+            return json.loads(self.itens_json or '[]')
+        except Exception:
+            return []
+
+    @property
+    def total_fmt(self):
+        return f"R$ {self.total:.2f}".replace('.', ',')
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -286,6 +371,18 @@ def get_mp_sdk():
 
 def formatar_valor(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def get_planos_config():
+    """Retorna PLANOS com preços sobrepostos pelos valores salvos no banco."""
+    config = {k: dict(v) for k, v in PLANOS.items()}
+    try:
+        for pc in PlanoConfig.query.all():
+            if pc.chave in config:
+                config[pc.chave]['preco'] = pc.preco
+    except Exception:
+        pass
+    return config
 
 
 def calcular_mrr():
@@ -369,11 +466,16 @@ def requer_restaurante(f):
 
 @app.context_processor
 def inject_globals():
+    try:
+        planos_dinamicos = get_planos_config()
+    except Exception:
+        planos_dinamicos = PLANOS
     return {
         'admin_user': session.get('administrador'),
-        'PLANOS': PLANOS,
+        'PLANOS': planos_dinamicos,
         'REDES_SOCIAIS': REDES_SOCIAIS,
         'mp_ativo': bool(os.environ.get('MERCADOPAGO_ACCESS_TOKEN')),
+        'today': date.today(),
     }
 
 
@@ -481,7 +583,7 @@ def super_dashboard():
 @requer_super
 def super_gestores():
     gestores = Administrador.query.order_by(Administrador.criado_em.desc()).all()
-    return render_template('super_gestores.html', gestores=gestores)
+    return render_template('super_gestores.html', gestores=gestores, today=date.today())
 
 
 @app.route('/super/gestores/novo', methods=['GET', 'POST'])
@@ -1185,6 +1287,266 @@ def excluir_agendamento(id):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — SUPER ADMIN: PLANOS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/super/planos', methods=['GET', 'POST'])
+@requer_super
+def super_planos():
+    if request.method == 'POST':
+        for chave in PLANOS:
+            preco_str = request.form.get(f'preco_{chave}', '').replace(',', '.')
+            try:
+                preco = float(preco_str)
+                pc = PlanoConfig.query.filter_by(chave=chave).first()
+                if pc:
+                    pc.preco = preco
+                else:
+                    db.session.add(PlanoConfig(chave, preco))
+            except (ValueError, TypeError):
+                pass
+        db.session.commit()
+        flash('Preços dos planos atualizados com sucesso!', 'success')
+        return redirect(url_for('super_planos'))
+    planos_config = get_planos_config()
+    return render_template('super_planos.html', planos_config=planos_config)
+
+
+@app.route('/super/bloquear_inadimplentes', methods=['POST'])
+@requer_super
+def super_bloquear_inadimplentes():
+    hoje = date.today()
+    inadimplentes = Administrador.query.filter(
+        Administrador.status == 'ativo',
+        Administrador.data_vencimento.isnot(None),
+        Administrador.data_vencimento < datetime.combine(hoje, datetime.min.time())
+    ).all()
+    count = len(inadimplentes)
+    for g in inadimplentes:
+        g.status = 'bloqueado'
+    db.session.commit()
+    if count:
+        flash(f'{count} gestor(es) inadimplente(s) bloqueado(s).', 'warning')
+    else:
+        flash('Nenhum gestor inadimplente encontrado.', 'success')
+    return redirect(url_for('super_gestores'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — SUB-ADMINISTRADORES
+# ══════════════════════════════════════════════════════════════════════════════
+
+NIVEIS_PERMISSAO = {
+    'admin':       {'nome': 'Administrador', 'descricao': 'Acesso total ao painel'},
+    'operador':    {'nome': 'Operador',      'descricao': 'Pode editar clientes e redes sociais'},
+    'visualizador':{'nome': 'Visualizador',  'descricao': 'Apenas leitura, sem edição'},
+}
+
+
+@app.route('/sub_admins')
+@requer_login
+def sub_admins():
+    admin = Administrador.query.filter_by(username=session['administrador']).first()
+    subs  = SubAdministrador.query.filter_by(admin_id=admin.id).all()
+    return render_template('sub_admins.html', subs=subs, admin=admin,
+                           niveis=NIVEIS_PERMISSAO)
+
+
+@app.route('/sub_admins/novo', methods=['GET', 'POST'])
+@requer_login
+def novo_sub_admin():
+    admin = Administrador.query.filter_by(username=session['administrador']).first()
+    if SubAdministrador.query.filter_by(admin_id=admin.id).count() >= 3:
+        flash('Limite de 3 sub-administradores atingido.', 'warning')
+        return redirect(url_for('sub_admins'))
+    if request.method == 'POST':
+        sub = SubAdministrador(
+            admin_id=admin.id,
+            username=request.form['username'],
+            password=request.form['password'],
+            nome=request.form.get('nome') or None,
+            email=request.form.get('email') or None,
+            nivel=request.form.get('nivel', 'operador'),
+        )
+        db.session.add(sub)
+        try:
+            db.session.commit()
+            flash('Sub-administrador criado com sucesso!', 'success')
+            return redirect(url_for('sub_admins'))
+        except Exception:
+            db.session.rollback()
+            flash('Usuário já existe. Escolha outro username.', 'danger')
+    return render_template('cadastrar_sub_admin.html', niveis=NIVEIS_PERMISSAO)
+
+
+@app.route('/sub_admins/<int:id>/editar', methods=['GET', 'POST'])
+@requer_login
+def editar_sub_admin(id):
+    admin = Administrador.query.filter_by(username=session['administrador']).first()
+    sub   = SubAdministrador.query.filter_by(id=id, admin_id=admin.id).first_or_404()
+    if request.method == 'POST':
+        sub.nome   = request.form.get('nome') or None
+        sub.email  = request.form.get('email') or None
+        sub.nivel  = request.form.get('nivel', 'operador')
+        sub.status = request.form.get('status', 'ativo')
+        if request.form.get('password'):
+            sub.password = generate_password_hash(request.form['password'])
+        db.session.commit()
+        flash('Sub-administrador atualizado!', 'success')
+        return redirect(url_for('sub_admins'))
+    return render_template('editar_sub_admin.html', sub=sub, niveis=NIVEIS_PERMISSAO)
+
+
+@app.route('/sub_admins/<int:id>/excluir')
+@requer_login
+def excluir_sub_admin(id):
+    admin = Administrador.query.filter_by(username=session['administrador']).first()
+    sub   = SubAdministrador.query.filter_by(id=id, admin_id=admin.id).first_or_404()
+    db.session.delete(sub)
+    db.session.commit()
+    flash('Sub-administrador excluído.', 'success')
+    return redirect(url_for('sub_admins'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — KANBAN RESTAURANTE
+# ══════════════════════════════════════════════════════════════════════════════
+
+COLUNAS_KANBAN = [
+    {'key': 'novo',      'nome': 'Novos',       'icone': 'fa-bell',          'cor': '#6366f1'},
+    {'key': 'preparo',   'nome': 'Em Preparo',  'icone': 'fa-fire-burner',   'cor': '#f59e0b'},
+    {'key': 'pronto',    'nome': 'Pronto',      'icone': 'fa-check-circle',  'cor': '#22c55e'},
+    {'key': 'entrega',   'nome': 'Em Entrega',  'icone': 'fa-motorcycle',    'cor': '#06b6d4'},
+    {'key': 'concluido', 'nome': 'Concluído',   'icone': 'fa-flag-checkered','cor': '#64748b'},
+]
+
+
+@app.route('/restaurante/kanban')
+@requer_restaurante
+def restaurante_kanban():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    pedidos_por_coluna = {}
+    for col in COLUNAS_KANBAN:
+        pedidos_por_coluna[col['key']] = PedidoKanban.query.filter_by(
+            restaurante_id=restaurante.id, coluna=col['key']
+        ).order_by(PedidoKanban.criado_em).all()
+    return render_template('kanban.html', restaurante=restaurante,
+                           pedidos=pedidos_por_coluna, colunas=COLUNAS_KANBAN)
+
+
+@app.route('/restaurante/kanban/novo', methods=['GET', 'POST'])
+@requer_restaurante
+def novo_pedido_kanban():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if request.method == 'POST':
+        ultimo  = PedidoKanban.query.filter_by(restaurante_id=restaurante.id)\
+                    .order_by(PedidoKanban.numero.desc()).first()
+        numero  = (ultimo.numero + 1) if ultimo else 1
+        pedido  = PedidoKanban(
+            restaurante_id=restaurante.id,
+            numero=numero,
+            cliente_nome=request.form.get('cliente_nome') or None,
+            total=float(request.form.get('total', 0) or 0),
+            origem=request.form.get('origem', 'balcao'),
+            forma_pagamento=request.form.get('forma_pagamento') or None,
+            observacoes=request.form.get('observacoes') or None,
+            codigo_ifood=request.form.get('codigo_ifood') or None,
+        )
+        nomes  = request.form.getlist('item_nome')
+        qtds   = request.form.getlist('item_qtd')
+        precos = request.form.getlist('item_preco')
+        itens  = [{'nome': n.strip(), 'qtd': q, 'preco': p}
+                  for n, q, p in zip(nomes, qtds, precos) if n.strip()]
+        pedido.itens_json = json.dumps(itens, ensure_ascii=False)
+        db.session.add(pedido)
+        db.session.commit()
+        flash(f'Pedido #{numero} criado!', 'success')
+        return redirect(url_for('restaurante_kanban'))
+    categorias = Categoria.query.filter_by(restaurante_id=restaurante.id, ativo=True).all()
+    return render_template('novo_pedido.html', restaurante=restaurante,
+                           categorias=categorias, formas=restaurante.formas_pagamento)
+
+
+@app.route('/restaurante/kanban/<int:id>/mover', methods=['POST'])
+@requer_restaurante
+def mover_pedido(id):
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    pedido = PedidoKanban.query.filter_by(id=id, restaurante_id=restaurante.id).first_or_404()
+    coluna = request.form.get('coluna') or request.json.get('coluna') if request.is_json else request.form.get('coluna')
+    if request.is_json:
+        coluna = request.json.get('coluna')
+    chaves_validas = [c['key'] for c in COLUNAS_KANBAN]
+    if coluna in chaves_validas:
+        pedido.coluna = coluna
+        pedido.atualizado_em = datetime.utcnow()
+        db.session.commit()
+    return jsonify({'ok': True, 'coluna': pedido.coluna})
+
+
+@app.route('/restaurante/kanban/<int:id>/excluir')
+@requer_restaurante
+def excluir_pedido(id):
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    pedido = PedidoKanban.query.filter_by(id=id, restaurante_id=restaurante.id).first_or_404()
+    db.session.delete(pedido)
+    db.session.commit()
+    flash('Pedido removido.', 'success')
+    return redirect(url_for('restaurante_kanban'))
+
+
+@app.route('/restaurante/kanban/<int:id>/comanda')
+@requer_restaurante
+def imprimir_comanda(id):
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    pedido = PedidoKanban.query.filter_by(id=id, restaurante_id=restaurante.id).first_or_404()
+    return render_template('comanda.html', restaurante=restaurante, pedido=pedido)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — PERFIL DO RESTAURANTE
+# ══════════════════════════════════════════════════════════════════════════════
+
+FORMAS_PAGAMENTO_DISPONIVEIS = [
+    'Dinheiro', 'Cartão de Débito', 'Cartão de Crédito', 'Pix',
+    'Vale Refeição', 'Vale Alimentação', 'iFood Crédito',
+]
+
+
+@app.route('/restaurante/perfil', methods=['GET', 'POST'])
+@requer_restaurante
+def editar_perfil_restaurante():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if request.method == 'POST':
+        restaurante.nome         = request.form.get('nome') or restaurante.nome
+        restaurante.telefone     = request.form.get('telefone') or None
+        restaurante.endereco     = request.form.get('endereco') or None
+        restaurante.descricao    = request.form.get('descricao') or None
+        restaurante.cor_primaria = request.form.get('cor_primaria', '#6366f1')
+        restaurante.chave_pix    = request.form.get('chave_pix') or None
+        restaurante.link_pagamento = request.form.get('link_pagamento') or None
+        restaurante.instagram    = request.form.get('instagram') or None
+        restaurante.facebook     = request.form.get('facebook') or None
+        restaurante.whatsapp     = request.form.get('whatsapp') or None
+        formas = request.form.getlist('forma_pagamento')
+        restaurante.formas_pagamento_json = json.dumps(formas)
+        # Upload logo
+        if 'logo' in request.files and request.files['logo'].filename:
+            from pathlib import Path
+            logo = request.files['logo']
+            upload_dir = Path(app.root_path) / 'static' / 'uploads'
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            ext = logo.filename.rsplit('.', 1)[-1].lower()
+            filename = f"logo_{restaurante.id}.{ext}"
+            logo.save(str(upload_dir / filename))
+            restaurante.logo_path = f"uploads/{filename}"
+        db.session.commit()
+        flash('Perfil do restaurante atualizado!', 'success')
+        return redirect(url_for('editar_perfil_restaurante'))
+    return render_template('perfil_restaurante.html', restaurante=restaurante,
+                           formas_disponiveis=FORMAS_PAGAMENTO_DISPONIVEIS)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # BANCO — MIGRAÇÃO
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1221,10 +1583,15 @@ def migrate_db():
     add_col('cliente', 'criado_em',       'DATETIME')
 
     # Restaurante
-    add_col('restaurante', 'telefone',    'VARCHAR(30)')
-    add_col('restaurante', 'endereco',    'VARCHAR(200)')
-    add_col('restaurante', 'descricao',   'TEXT')
-    add_col('restaurante', 'cor_primaria',"VARCHAR(10) DEFAULT '#6366f1'")
+    add_col('restaurante', 'telefone',             'VARCHAR(30)')
+    add_col('restaurante', 'endereco',             'VARCHAR(200)')
+    add_col('restaurante', 'descricao',            'TEXT')
+    add_col('restaurante', 'cor_primaria',         "VARCHAR(10) DEFAULT '#6366f1'")
+    add_col('restaurante', 'logo_path',            'VARCHAR(300)')
+    add_col('restaurante', 'formas_pagamento_json','TEXT')
+    add_col('restaurante', 'instagram',            'VARCHAR(100)')
+    add_col('restaurante', 'facebook',             'VARCHAR(100)')
+    add_col('restaurante', 'whatsapp',             'VARCHAR(30)')
 
     # PostAgendado
     add_col('post_agendado', 'erro',       'TEXT')

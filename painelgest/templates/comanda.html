@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Comanda #{{ pedido.numero }} — {{ restaurante.nome }}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Courier New', monospace; background: #fff; color: #000;
+           max-width: 300px; margin: 0 auto; padding: 16px; font-size: 13px; }
+    .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+    .logo { font-size: 18px; font-weight: 700; }
+    .pedido-num { font-size: 24px; font-weight: 900; margin: 8px 0 4px; }
+    .linha { border-top: 1px dashed #000; margin: 8px 0; }
+    .row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px; }
+    .row-item { padding: 3px 0; }
+    .row-item .nome { font-weight: 600; }
+    .row-item .sub { color: #555; font-size: 11px; }
+    .total-row { display: flex; justify-content: space-between; font-weight: 900;
+                 font-size: 15px; border-top: 2px dashed #000; margin-top: 8px; padding-top: 8px; }
+    .obs { background: #f5f5f5; border: 1px solid #ccc; padding: 6px 8px; border-radius: 4px;
+           font-size: 11px; margin: 6px 0; }
+    .footer { text-align: center; margin-top: 14px; font-size: 11px; color: #555; }
+    .badge { display: inline-block; background: #000; color: #fff; padding: 2px 8px;
+             border-radius: 4px; font-size: 11px; font-weight: 700; }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">{{ restaurante.nome }}</div>
+  {% if restaurante.endereco %}<div style="font-size:11px;margin-top:3px">{{ restaurante.endereco }}</div>{% endif %}
+  {% if restaurante.telefone %}<div style="font-size:11px">Tel: {{ restaurante.telefone }}</div>{% endif %}
+  <div class="pedido-num">PEDIDO #{{ '%04d' % pedido.numero }}</div>
+  <div style="font-size:11px">{{ pedido.criado_em.strftime('%d/%m/%Y %H:%M') }}</div>
+</div>
+
+<div class="row"><span>Cliente:</span><span><strong>{{ pedido.cliente_nome or '—' }}</strong></span></div>
+<div class="row"><span>Origem:</span><span><span class="badge">{{ pedido.origem.upper() }}</span></span></div>
+{% if pedido.codigo_ifood %}
+<div class="row"><span>Código iFood:</span><span><strong>{{ pedido.codigo_ifood }}</strong></span></div>
+{% endif %}
+{% if pedido.forma_pagamento %}
+<div class="row"><span>Pagamento:</span><span>{{ pedido.forma_pagamento }}</span></div>
+{% endif %}
+
+<div class="linha"></div>
+<div style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Itens</div>
+
+{% if pedido.itens %}
+  {% for item in pedido.itens %}
+  <div class="row-item">
+    <div class="nome">{{ item.qtd }}x {{ item.nome }}</div>
+    {% if item.preco %}
+    <div class="sub" style="text-align:right">R$ {{ '%.2f'|format((item.qtd|float) * (item.preco|float)) }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+<div style="color:#777;font-size:12px">Itens não detalhados</div>
+{% endif %}
+
+<div class="total-row">
+  <span>TOTAL</span>
+  <span>{{ pedido.total_fmt }}</span>
+</div>
+
+{% if pedido.observacoes %}
+<div class="linha"></div>
+<div class="obs"><strong>Obs:</strong> {{ pedido.observacoes }}</div>
+{% endif %}
+
+<div class="footer">
+  <div class="linha"></div>
+  Obrigado pela preferência!<br>
+  <small>PainelGest — Sistema de Gestão</small>
+</div>
+
+<div class="no-print" style="text-align:center;margin-top:16px">
+  <button onclick="window.print()"
+          style="background:#000;color:#fff;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px">
+    <i class="fas fa-print"></i> Imprimir Comanda
+  </button>
+  <button onclick="window.close()"
+          style="background:#f0f0f0;color:#000;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px;margin-left:8px">
+    Fechar
+  </button>
+</div>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</body>
+</html>

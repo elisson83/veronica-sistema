@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Novo Sub-ADM — PainelGest{% endblock %}
+{% block topbar_title %}Novo Sub-Administrador{% endblock %}
+{% block topbar_sub %}Crie um acesso com permissão limitada{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('sub_admins') }}" class="btn-ghost">
+    <i class="fas fa-arrow-left"></i> Voltar
+  </a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:580px;margin:0 auto">
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title"><i class="fas fa-user-plus me-2" style="color:var(--accent)"></i>Dados do Sub-Administrador</span>
+    </div>
+    <div class="pg-card-body">
+      <form method="POST">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">Username *</label>
+            <input type="text" name="username" class="pg-input" placeholder="login de acesso" required>
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Nome Completo</label>
+            <input type="text" name="nome" class="pg-input" placeholder="Nome do colaborador">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="pg-label">E-mail</label>
+          <input type="email" name="email" class="pg-input" placeholder="email@empresa.com">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">Senha *</label>
+            <input type="password" name="password" class="pg-input" placeholder="Senha de acesso" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Nível de Permissão *</label>
+            <select name="nivel" class="pg-select" required>
+              {% for key, nivel in niveis.items() %}
+              <option value="{{ key }}">{{ nivel.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Info nível selecionado -->
+        <div id="nivel-info" style="background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:18px;border:1px solid var(--border)">
+          <p style="font-size:12px;color:var(--muted)" id="nivel-desc">Selecione um nível para ver a descrição.</p>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <a href="{{ url_for('sub_admins') }}" class="btn-ghost">Cancelar</a>
+          <button type="submit" class="btn-accent">
+            <i class="fas fa-plus"></i> Criar Sub-ADM
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const niveis = {{ niveis | tojson }};
+const sel = document.querySelector('[name=nivel]');
+const desc = document.getElementById('nivel-desc');
+
+function atualizarDesc() {
+  const n = niveis[sel.value];
+  desc.textContent = n ? n.descricao : '';
+}
+sel.addEventListener('change', atualizarDesc);
+atualizarDesc();
+</script>
+{% endblock %}

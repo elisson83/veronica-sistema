@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cardápio — {{ restaurante.nome }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0b0d17; --surface:#131720; --surface2:#1c2133;
+      --border:rgba(255,255,255,0.07); --text:#e2e8f0; --muted:#64748b;
+      --accent: {{ restaurante.cor_primaria or '#6366f1' }};
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+    .header-title{font-size:16px;font-weight:600}
+    .header-sub{font-size:12px;color:var(--muted)}
+    .header-actions{margin-left:auto;display:flex;gap:8px}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;border:none;cursor:pointer;transition:all .15s}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+    .btn-ghost:hover{background:#232a3e;color:var(--text)}
+    .btn-sm{padding:5px 10px;font-size:12px}
+    .flash-c{padding:12px 24px 0}
+    .flash-msg{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:500;margin-bottom:6px}
+    .flash-success{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.2);color:#4ade80}
+    .flash-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2);color:#f87171}
+    .flash-warning{background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.2);color:#facc15}
+    .content{padding:24px}
+    .pg-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px}
+    .pg-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .pg-card-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+    .pg-table{width:100%;border-collapse:collapse}
+    .pg-table thead th{padding:9px 14px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);text-align:left}
+    .pg-table tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+    .pg-table tbody tr:last-child{border-bottom:none}
+    .pg-table tbody tr:hover{background:var(--surface2)}
+    .pg-table td{padding:11px 14px;font-size:13px;vertical-align:middle}
+    .icon-btn{width:28px;height:28px;border-radius:7px;border:none;cursor:pointer;display:inline-grid;place-items:center;font-size:11px;transition:all .15s;text-decoration:none}
+    .ib-edit{background:rgba(99,102,241,.12);color:#818cf8}
+    .ib-edit:hover{background:rgba(99,102,241,.25);color:#818cf8}
+    .ib-delete{background:rgba(239,68,68,.1);color:#f87171}
+    .ib-delete:hover{background:rgba(239,68,68,.2);color:#f87171}
+    .ib-toggle-on{background:rgba(34,197,94,.1);color:#4ade80}
+    .ib-toggle-on:hover{background:rgba(34,197,94,.2)}
+    .ib-toggle-off{background:rgba(100,116,139,.1);color:var(--muted)}
+    .ib-toggle-off:hover{background:rgba(100,116,139,.2)}
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+    .badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+    .bs-success{background:rgba(34,197,94,.12);color:#4ade80}
+    .bs-muted{background:rgba(100,116,139,.12);color:var(--muted)}
+    .bs-yellow{background:rgba(234,179,8,.12);color:#facc15}
+  </style>
+</head>
+<body>
+
+<header class="header">
+  {% if restaurante.logo_path %}
+  <img src="{{ url_for('static', filename=restaurante.logo_path) }}" style="height:32px;border-radius:6px" alt="">
+  {% endif %}
+  <div>
+    <div class="header-title">Cardápio</div>
+    <div class="header-sub">{{ restaurante.nome }}</div>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('restaurante_dashboard') }}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+    <a href="{{ url_for('nova_categoria') }}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-folder-plus"></i> Nova Categoria
+    </a>
+    <a href="{{ url_for('novo_item') }}" class="btn btn-primary btn-sm">
+      <i class="fas fa-plus"></i> Novo Item
+    </a>
+  </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-c">
+  {% for cat, msg in messages %}
+  <div class="flash-msg flash-{{ cat }}">{{ msg }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="content">
+  {% if categorias %}
+    {% for cat in categorias %}
+    <div class="pg-card">
+      <div class="pg-card-header">
+        <div class="pg-card-title">
+          <div style="width:28px;height:28px;border-radius:8px;background:rgba(99,102,241,.12);display:grid;place-items:center;color:#818cf8;font-size:12px;flex-shrink:0">
+            <i class="fas {{ cat.icone }}"></i>
+          </div>
+          {{ cat.nome }}
+          <span style="font-size:12px;color:var(--muted);font-weight:400">({{ cat.itens|length }} iten(s))</span>
+          {% if not cat.ativo %}
+          <span class="badge bs-muted">Inativa</span>
+          {% endif %}
+        </div>
+        <div style="display:flex;gap:6px">
+          <a href="{{ url_for('novo_item') }}?categoria_id={{ cat.id }}" class="btn btn-ghost btn-sm">
+            <i class="fas fa-plus"></i> Item
+          </a>
+          <a href="{{ url_for('editar_categoria', id=cat.id) }}" class="icon-btn ib-edit" title="Editar categoria">
+            <i class="fas fa-pen"></i>
+          </a>
+          <a href="{{ url_for('excluir_categoria', id=cat.id) }}" class="icon-btn ib-delete" title="Excluir categoria"
+             onclick="return confirm('Excluir a categoria {{ cat.nome }} e todos os seus itens?')">
+            <i class="fas fa-trash"></i>
+          </a>
+        </div>
+      </div>
+      {% if cat.itens %}
+      <table class="pg-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Preço</th>
+            <th>Promo</th>
+            <th>Destaque</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in cat.itens %}
+          <tr>
+            <td>
+              <div style="font-weight:500">{{ item.nome }}</div>
+              {% if item.descricao %}
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ item.descricao[:60] }}{% if item.descricao|length > 60 %}...{% endif %}</div>
+              {% endif %}
+            </td>
+            <td style="font-weight:600;color:#4ade80">{{ item.preco_fmt }}</td>
+            <td style="font-size:12px;color:#fbbf24">{{ item.preco_promo_fmt or '—' }}</td>
+            <td>
+              {% if item.destaque %}
+              <span style="color:#fbbf24"><i class="fas fa-star"></i></span>
+              {% else %}
+              <span style="color:var(--muted)"><i class="far fa-star"></i></span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.disponivel %}
+              <span class="badge bs-success">Disponível</span>
+              {% else %}
+              <span class="badge bs-muted">Indisponível</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display:flex;gap:5px">
+                <a href="{{ url_for('toggle_item', id=item.id) }}" class="icon-btn {{ 'ib-toggle-on' if item.disponivel else 'ib-toggle-off' }}" title="{{ 'Marcar indisponível' if item.disponivel else 'Marcar disponível' }}">
+                  <i class="fas {{ 'fa-eye' if item.disponivel else 'fa-eye-slash' }}"></i>
+                </a>
+                <a href="{{ url_for('editar_item', id=item.id) }}" class="icon-btn ib-edit" title="Editar">
+                  <i class="fas fa-pen"></i>
+                </a>
+                <a href="{{ url_for('excluir_item', id=item.id) }}" class="icon-btn ib-delete" title="Excluir"
+                   onclick="return confirm('Excluir {{ item.nome }}?')">
+                  <i class="fas fa-trash"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">
+        Nenhum item nesta categoria.
+        <a href="{{ url_for('novo_item') }}?categoria_id={{ cat.id }}" style="color:var(--accent);margin-left:6px">Adicionar item →</a>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+  <div style="text-align:center;padding:80px;color:var(--muted)">
+    <i class="fas fa-book-open" style="font-size:48px;opacity:.2;display:block;margin-bottom:16px"></i>
+    <p style="font-size:15px;font-weight:500;margin-bottom:12px">Cardápio vazio</p>
+    <p style="font-size:13px;margin-bottom:20px">Crie categorias e adicione itens para montar seu cardápio.</p>
+    <a href="{{ url_for('nova_categoria') }}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Criar Primeira Categoria
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+</body>
+</html>

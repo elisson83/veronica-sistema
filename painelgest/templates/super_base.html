@@ -244,6 +244,10 @@
      class="nav-link-item {% if 'gestor' in request.endpoint %}active{% endif %}">
     <i class="fas fa-users-gear"></i> Gestores
   </a>
+  <a href="{{ url_for('super_planos') }}"
+     class="nav-link-item {% if request.endpoint == 'super_planos' %}active{% endif %}">
+    <i class="fas fa-layer-group"></i> Planos &amp; Preços
+  </a>
 
   <div class="nav-group-label">Sistema</div>
   <a href="{{ url_for('login') }}" class="nav-link-item">

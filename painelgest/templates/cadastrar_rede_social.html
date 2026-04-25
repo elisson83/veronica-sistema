@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block title %}Novo Perfil — PainelGest{% endblock %}
+{% block topbar_title %}Novo Perfil de Rede Social{% endblock %}
+{% block topbar_sub %}Adicionar perfil para gerenciamento{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('redes_sociais') }}" class="btn-ghost">
+    <i class="fas fa-arrow-left"></i> Voltar
+  </a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:620px;margin:0 auto">
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title"><i class="fas fa-share-nodes me-2" style="color:var(--accent)"></i>Dados do Perfil</span>
+    </div>
+    <div class="pg-card-body">
+      <form method="POST">
+        <!-- Rede Social -->
+        <div class="form-group">
+          <label class="pg-label">Rede Social *</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px" id="rede-grid">
+            {% for rede_key, rede_info in REDES_SOCIAIS.items() %}
+            <label class="rede-card {% if rede_key == rede_pre %}selected{% endif %}" data-rede="{{ rede_key }}">
+              <input type="radio" name="rede" value="{{ rede_key }}" {% if rede_key == rede_pre %}checked{% endif %} style="display:none">
+              <div class="rede-card-inner">
+                <i class="{{ rede_info.icone }}" style="color:{{ rede_info.cor }};font-size:20px"></i>
+                <span>{{ rede_info.nome }}</span>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">Nome / Apelido *</label>
+            <input type="text" name="nome" class="pg-input" placeholder="Ex: Conta Principal" required>
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Status</label>
+            <select name="status" class="pg-select">
+              <option value="ativo">Ativo</option>
+              <option value="inativo">Inativo</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="pg-label">Login / Usuário *</label>
+            <input type="text" name="login" class="pg-input" placeholder="@usuario ou e-mail" required>
+          </div>
+          <div class="form-group">
+            <label class="pg-label">Senha</label>
+            <input type="password" name="senha" class="pg-input" placeholder="Senha da conta" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="pg-label">Próxima Postagem (opcional)</label>
+          <input type="datetime-local" name="data_postagem" class="pg-input">
+          <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">
+            <i class="fas fa-info-circle me-1"></i>Postagem automática via agendamento (apenas Instagram).
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label class="pg-label">Legenda / Texto do Post (opcional)</label>
+          <textarea name="postagem" class="pg-textarea" placeholder="Texto que será publicado automaticamente..."></textarea>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+          <a href="{{ url_for('redes_sociais') }}" class="btn-ghost">Cancelar</a>
+          <button type="submit" class="btn-accent">
+            <i class="fas fa-plus"></i> Cadastrar Perfil
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .rede-card {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 8px;
+    transition: all .15s;
+    background: var(--surface2);
+  }
+  .rede-card:hover { border-color: rgba(255,255,255,.2); }
+  .rede-card.selected {
+    border-color: var(--accent);
+    background: rgba(99,102,241,.1);
+  }
+  .rede-card-inner {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500;
+    color: var(--text);
+  }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('.rede-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.rede-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Categoria — {{ restaurante.nome }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root{--bg:#0b0d17;--surface:#131720;--surface2:#1c2133;--border:rgba(255,255,255,0.07);--text:#e2e8f0;--muted:#64748b;--accent:{{ restaurante.cor_primaria or '#6366f1' }}}
+    *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;border:none;cursor:pointer;transition:all .15s}
+    .btn-primary{background:var(--accent);color:#fff}.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+    .btn-ghost:hover{background:#232a3e;color:var(--text)}
+    .content{padding:24px;max-width:540px;margin:0 auto}
+    .pg-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    .pg-card-header{padding:16px 20px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600}
+    .pg-card-body{padding:20px}
+    .label{display:block;margin-bottom:5px;font-size:12px;font-weight:500;color:var(--muted)}
+    .input,.select,.textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border .15s}
+    .input:focus,.select:focus,.textarea:focus{border-color:var(--accent)}.select option{background:var(--surface2)}
+    .form-group{margin-bottom:18px}
+    .flash-c{padding:12px 24px 0}.flash-msg{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:500;margin-bottom:6px}
+    .flash-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2);color:#f87171}
+  </style>
+</head>
+<body>
+<header class="header">
+  <a href="{{ url_for('restaurante_cardapio') }}" class="btn btn-ghost" style="padding:6px 12px;font-size:13px">
+    <i class="fas fa-arrow-left"></i> Voltar
+  </a>
+  <span style="font-size:15px;font-weight:600">Nova Categoria</span>
+</header>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-c">{% for cat,msg in messages %}<div class="flash-msg flash-{{ cat }}">{{ msg }}</div>{% endfor %}</div>
+{% endif %}{% endwith %}
+<div class="content" style="margin-top:24px">
+  <div class="pg-card">
+    <div class="pg-card-header"><i class="fas fa-folder-plus me-2" style="color:var(--accent)"></i>Dados da Categoria</div>
+    <div class="pg-card-body">
+      <form method="POST">
+        <div class="form-group">
+          <label class="label">Nome da Categoria *</label>
+          <input type="text" name="nome" class="input" placeholder="Ex: Entradas, Pratos Principais, Sobremesas" required>
+        </div>
+        <div class="form-group">
+          <label class="label">Descrição (opcional)</label>
+          <textarea name="descricao" class="textarea" placeholder="Breve descrição da categoria..."></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="label">Ícone</label>
+            <select name="icone" class="select">
+              <option value="fa-utensils">🍴 Talheres</option>
+              <option value="fa-burger">🍔 Hambúrguer</option>
+              <option value="fa-pizza-slice">🍕 Pizza</option>
+              <option value="fa-fish">🐟 Peixe</option>
+              <option value="fa-salad">🥗 Salada</option>
+              <option value="fa-ice-cream">🍦 Sorvete</option>
+              <option value="fa-mug-hot">☕ Bebida Quente</option>
+              <option value="fa-wine-glass">🍷 Bebida</option>
+              <option value="fa-bread-slice">🍞 Pão</option>
+              <option value="fa-drumstick-bite">🍗 Frango</option>
+              <option value="fa-leaf">🌿 Vegetariano</option>
+              <option value="fa-fire">🔥 Especiais</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="label">Ordem (menor = primeiro)</label>
+            <input type="number" name="ordem" class="input" value="0" min="0">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <a href="{{ url_for('restaurante_cardapio') }}" class="btn btn-ghost">Cancelar</a>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Criar Categoria</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</body></html>

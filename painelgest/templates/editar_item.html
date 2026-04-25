@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Item</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root{--bg:#0b0d17;--surface:#131720;--surface2:#1c2133;--border:rgba(255,255,255,0.07);--text:#e2e8f0;--muted:#64748b;--accent:#6366f1}
+    *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;border:none;cursor:pointer;transition:all .15s}
+    .btn-primary{background:var(--accent);color:#fff}.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+    .btn-ghost:hover{background:#232a3e;color:var(--text)}
+    .content{padding:24px;max-width:620px;margin:0 auto}
+    .pg-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    .pg-card-header{padding:16px 20px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+    .pg-card-body{padding:20px}
+    .label{display:block;margin-bottom:5px;font-size:12px;font-weight:500;color:var(--muted)}
+    .input,.select,.textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border .15s}
+    .input:focus,.select:focus,.textarea:focus{border-color:var(--accent)}.select option{background:var(--surface2)}
+    .textarea{resize:vertical;min-height:80px}.form-group{margin-bottom:18px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .switch-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+    .switch-row label{font-size:13px;font-weight:500;cursor:pointer;flex:1}
+    .switch-row input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+    .icon-btn{width:28px;height:28px;border-radius:7px;border:none;cursor:pointer;display:inline-grid;place-items:center;font-size:11px;transition:all .15s;text-decoration:none}
+    .ib-delete{background:rgba(239,68,68,.1);color:#f87171}.ib-delete:hover{background:rgba(239,68,68,.2)}
+  </style>
+</head>
+<body>
+<header class="header">
+  <a href="{{ url_for('restaurante_cardapio') }}" class="btn btn-ghost" style="padding:6px 12px;font-size:13px">
+    <i class="fas fa-arrow-left"></i> Cardápio
+  </a>
+  <span style="font-size:15px;font-weight:600">Editar Item</span>
+</header>
+<div class="content" style="margin-top:24px">
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span><i class="fas fa-pen me-2" style="color:var(--accent)"></i>{{ item.nome }}</span>
+      <a href="{{ url_for('excluir_item', id=item.id) }}" class="icon-btn ib-delete"
+         onclick="return confirm('Excluir {{ item.nome }}?')">
+        <i class="fas fa-trash"></i>
+      </a>
+    </div>
+    <div class="pg-card-body">
+      <form method="POST">
+        <div class="form-group">
+          <label class="label">Categoria *</label>
+          <select name="categoria_id" class="select" required>
+            {% for cat in categorias %}
+            <option value="{{ cat.id }}" {% if cat.id == item.categoria_id %}selected{% endif %}>{{ cat.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="label">Nome do Item *</label>
+          <input type="text" name="nome" class="input" value="{{ item.nome }}" required>
+        </div>
+        <div class="form-group">
+          <label class="label">Descrição</label>
+          <textarea name="descricao" class="textarea">{{ item.descricao or '' }}</textarea>
+        </div>
+        <div class="grid2">
+          <div class="form-group">
+            <label class="label">Preço (R$) *</label>
+            <input type="number" name="preco" class="input" step="0.01" min="0" value="{{ item.preco }}" required>
+          </div>
+          <div class="form-group">
+            <label class="label">Preço Promocional (R$)</label>
+            <input type="number" name="preco_promo" class="input" step="0.01" min="0" value="{{ item.preco_promo or '' }}">
+          </div>
+        </div>
+        <div class="grid2" style="margin-bottom:18px">
+          <div class="switch-row">
+            <label for="disponivel">Disponível para venda</label>
+            <input type="checkbox" name="disponivel" id="disponivel" {% if item.disponivel %}checked{% endif %}>
+          </div>
+          <div class="switch-row">
+            <label for="destaque">Marcar como destaque</label>
+            <input type="checkbox" name="destaque" id="destaque" {% if item.destaque %}checked{% endif %}>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <a href="{{ url_for('restaurante_cardapio') }}" class="btn btn-ghost">Cancelar</a>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i> Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</body></html>

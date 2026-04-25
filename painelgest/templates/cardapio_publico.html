@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cardápio — {{ restaurante.nome }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --accent: {{ restaurante.cor_primaria or '#6366f1' }};
+      --bg: #0b0d17; --surface: #131720; --surface2: #1c2133;
+      --border: rgba(255,255,255,.07); --text: #e2e8f0; --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .hero { background: linear-gradient(135deg, var(--surface), var(--surface2));
+            border-bottom: 1px solid var(--border); padding: 40px 20px; text-align: center; }
+    .hero-logo { width: 80px; height: 80px; border-radius: 20px; object-fit: cover; margin-bottom: 14px; }
+    .hero-icon { width: 80px; height: 80px; border-radius: 20px; background: var(--accent);
+                 display: grid; place-items: center; font-size: 32px; color: #fff; margin: 0 auto 14px; }
+    .hero-nome { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .hero-desc { font-size: 14px; color: var(--muted); max-width: 500px; margin: 0 auto 16px; }
+    .hero-info { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+    .hero-info-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+
+    /* Formas de pagamento */
+    .formas { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .forma-tag { background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+                 padding: 4px 12px; font-size: 11px; font-weight: 500; color: var(--muted); }
+
+    /* Navigation categorias */
+    .cat-nav { background: var(--surface); border-bottom: 1px solid var(--border);
+               padding: 0 20px; display: flex; gap: 2px; overflow-x: auto;
+               scrollbar-width: none; position: sticky; top: 0; z-index: 100; }
+    .cat-nav::-webkit-scrollbar { display: none; }
+    .cat-nav-item { padding: 14px 16px; font-size: 13px; font-weight: 500; color: var(--muted);
+                    cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent;
+                    transition: all .15s; }
+    .cat-nav-item:hover { color: var(--text); }
+    .cat-nav-item.active { color: var(--accent); border-color: var(--accent); }
+
+    .content { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
+    .cat-section { margin-bottom: 40px; }
+    .cat-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+    .cat-title i { color: var(--accent); font-size: 16px; }
+
+    .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .item-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+                 overflow: hidden; transition: transform .15s, border-color .15s; }
+    .item-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.12); }
+    .item-img { width: 100%; height: 160px; object-fit: cover; background: var(--surface2);
+                display: flex; align-items: center; justify-content: center; }
+    .item-img i { font-size: 32px; color: rgba(255,255,255,.1); }
+    .item-body { padding: 14px; }
+    .item-nome { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .item-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+    .item-price-row { display: flex; align-items: center; gap: 10px; }
+    .item-preco { font-size: 18px; font-weight: 700; color: #4ade80; }
+    .item-preco-orig { font-size: 13px; color: var(--muted); text-decoration: line-through; }
+    .item-destaque { background: rgba(234,179,8,.12); border: 1px solid rgba(234,179,8,.2);
+                     color: #fbbf24; font-size: 10px; font-weight: 600; padding: 2px 7px;
+                     border-radius: 20px; margin-left: auto; }
+
+    .empty-cat { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+                 padding: 32px; text-align: center; color: var(--muted); font-size: 13px; }
+    .footer { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  {% if restaurante.logo_path %}
+  <img src="{{ url_for('static', filename=restaurante.logo_path) }}" class="hero-logo" alt="{{ restaurante.nome }}">
+  {% else %}
+  <div class="hero-icon"><i class="fas fa-store"></i></div>
+  {% endif %}
+  <h1 class="hero-nome">{{ restaurante.nome }}</h1>
+  {% if restaurante.descricao %}
+  <p class="hero-desc">{{ restaurante.descricao }}</p>
+  {% endif %}
+  <div class="hero-info">
+    {% if restaurante.telefone %}
+    <span class="hero-info-item"><i class="fas fa-phone"></i> {{ restaurante.telefone }}</span>
+    {% endif %}
+    {% if restaurante.endereco %}
+    <span class="hero-info-item"><i class="fas fa-map-marker-alt"></i> {{ restaurante.endereco }}</span>
+    {% endif %}
+    {% if restaurante.whatsapp %}
+    <a href="https://wa.me/{{ restaurante.whatsapp|replace('(','') |replace(')','') |replace(' ','') |replace('-','') }}"
+       style="display:flex;align-items:center;gap:6px;color:#25D366;text-decoration:none;font-size:13px">
+      <i class="fab fa-whatsapp"></i> WhatsApp
+    </a>
+    {% endif %}
+  </div>
+  {% if restaurante.formas_pagamento %}
+  <div class="formas">
+    {% for fp in restaurante.formas_pagamento %}
+    <span class="forma-tag"><i class="fas fa-check me-1"></i>{{ fp }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Navegação categorias -->
+{% if categorias %}
+<nav class="cat-nav">
+  {% for cat in categorias %}
+  <span class="cat-nav-item" onclick="document.getElementById('cat-{{ cat.id }}').scrollIntoView({behavior:'smooth',block:'start'})">
+    <i class="fas {{ cat.icone }} me-1"></i>{{ cat.nome }}
+  </span>
+  {% endfor %}
+</nav>
+{% endif %}
+
+<div class="content">
+  {% if categorias %}
+    {% for cat in categorias %}
+    {% if cat.itens_disponiveis %}
+    <section class="cat-section" id="cat-{{ cat.id }}">
+      <div class="cat-title">
+        <i class="fas {{ cat.icone }}"></i>
+        {{ cat.nome }}
+      </div>
+      <div class="items-grid">
+        {% for item in cat.itens_disponiveis %}
+        <div class="item-card">
+          {% if item.imagem_path %}
+          <img src="{{ url_for('static', filename=item.imagem_path) }}" class="item-img" alt="{{ item.nome }}">
+          {% else %}
+          <div class="item-img"><i class="fas fa-utensils"></i></div>
+          {% endif %}
+          <div class="item-body">
+            <div class="item-nome">{{ item.nome }}</div>
+            {% if item.descricao %}
+            <div class="item-desc">{{ item.descricao }}</div>
+            {% endif %}
+            <div class="item-price-row">
+              {% if item.preco_promo %}
+              <span class="item-preco">{{ item.preco_promo_fmt }}</span>
+              <span class="item-preco-orig">{{ item.preco_fmt }}</span>
+              {% else %}
+              <span class="item-preco">{{ item.preco_fmt }}</span>
+              {% endif %}
+              {% if item.destaque %}
+              <span class="item-destaque"><i class="fas fa-star me-1"></i>Destaque</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+    {% endfor %}
+  {% else %}
+  <div class="empty-cat">
+    <i class="fas fa-book-open" style="font-size:40px;opacity:.2;display:block;margin-bottom:12px"></i>
+    Cardápio em atualização. Volte em breve!
+  </div>
+  {% endif %}
+</div>
+
+<footer class="footer">
+  <p>{{ restaurante.nome }}</p>
+  {% if restaurante.instagram %}
+  <a href="https://instagram.com/{{ restaurante.instagram|replace('@','') }}" target="_blank"
+     style="color:#E1306C;text-decoration:none;margin:0 8px">
+    <i class="fab fa-instagram"></i> {{ restaurante.instagram }}
+  </a>
+  {% endif %}
+  {% if restaurante.facebook %}
+  <a href="{{ restaurante.facebook }}" target="_blank"
+     style="color:#1877F2;text-decoration:none;margin:0 8px">
+    <i class="fab fa-facebook"></i> Facebook
+  </a>
+  {% endif %}
+  <p style="margin-top:12px;opacity:.4">Cardápio digital by PainelGest</p>
+</footer>
+
+<script>
+// Highlight active category on scroll
+const secs = document.querySelectorAll('.cat-section');
+const navItems = document.querySelectorAll('.cat-nav-item');
+window.addEventListener('scroll', () => {
+  let current = '';
+  secs.forEach(s => { if (window.scrollY >= s.offsetTop - 120) current = s.id; });
+  navItems.forEach((n, i) => {
+    n.classList.toggle('active', secs[i] && secs[i].id === current);
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}Sub-Administradores — PainelGest{% endblock %}
+{% block topbar_title %}Sub-Administradores{% endblock %}
+{% block topbar_sub %}Gerencie até 3 sub-admins para sua conta{% endblock %}
+{% block topbar_actions %}
+  {% if subs|length < 3 %}
+  <a href="{{ url_for('novo_sub_admin') }}" class="btn-accent">
+    <i class="fas fa-plus"></i> Novo Sub-ADM
+  </a>
+  {% else %}
+  <span class="btn-ghost" style="opacity:.5;cursor:not-allowed">
+    <i class="fas fa-lock"></i> Limite atingido (3/3)
+  </span>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Resumo -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon si-indigo"><i class="fas fa-user-shield"></i></div>
+    <div>
+      <div class="stat-value">{{ subs|length }}/3</div>
+      <div class="stat-label">Sub-ADMs cadastrados</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-green"><i class="fas fa-circle-check"></i></div>
+    <div>
+      <div class="stat-value">{{ subs|selectattr('status','eq','ativo')|list|length }}</div>
+      <div class="stat-label">Ativos</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-cyan"><i class="fas fa-key"></i></div>
+    <div>
+      <div class="stat-value">{{ 3 - subs|length }}</div>
+      <div class="stat-label">Vagas disponíveis</div>
+    </div>
+  </div>
+</div>
+
+<!-- Níveis de permissão explicados -->
+<div class="pg-card" style="margin-bottom:20px">
+  <div class="pg-card-header">
+    <span class="pg-card-title"><i class="fas fa-shield-halved me-2" style="color:var(--accent)"></i>Níveis de Permissão</span>
+  </div>
+  <div class="pg-card-body" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+    {% for key, nivel in niveis.items() %}
+    {% set cores = {'admin':'#f87171','operador':'#fbbf24','visualizador':'#22d3ee'} %}
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="width:8px;height:8px;border-radius:50%;background:{{ cores[key] }};flex-shrink:0"></span>
+        <span style="font-weight:600;font-size:13px;color:{{ cores[key] }}">{{ nivel.nome }}</span>
+      </div>
+      <p style="font-size:12px;color:var(--muted)">{{ nivel.descricao }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Lista -->
+<div class="pg-card">
+  <div class="pg-card-header">
+    <span class="pg-card-title">{{ subs|length }} sub-administrador(es)</span>
+  </div>
+  {% if subs %}
+  <table class="pg-table">
+    <thead>
+      <tr>
+        <th>Usuário</th>
+        <th>Nome</th>
+        <th>E-mail</th>
+        <th>Nível</th>
+        <th>Status</th>
+        <th>Criado em</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sub in subs %}
+      {% set cores_nivel = {'admin':'bs-danger','operador':'bs-warning','visualizador':'bs-info'} %}
+      <tr>
+        <td style="font-weight:600">{{ sub.username }}</td>
+        <td style="color:var(--muted)">{{ sub.nome or '—' }}</td>
+        <td style="font-size:12px;color:var(--muted)">{{ sub.email or '—' }}</td>
+        <td>
+          <span class="badge-status {{ cores_nivel.get(sub.nivel,'bs-muted') }}">
+            {{ niveis.get(sub.nivel, {}).get('nome', sub.nivel) }}
+          </span>
+        </td>
+        <td>
+          {% if sub.status == 'ativo' %}
+            <span class="badge-status bs-success">Ativo</span>
+          {% else %}
+            <span class="badge-status bs-danger">Inativo</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px;color:var(--muted)">
+          {{ sub.criado_em.strftime('%d/%m/%Y') if sub.criado_em else '—' }}
+        </td>
+        <td>
+          <div style="display:flex;gap:5px">
+            <a href="{{ url_for('editar_sub_admin', id=sub.id) }}" class="icon-btn ib-edit" title="Editar">
+              <i class="fas fa-pen"></i>
+            </a>
+            <a href="{{ url_for('excluir_sub_admin', id=sub.id) }}" class="icon-btn ib-delete" title="Excluir"
+               onclick="return confirm('Excluir o sub-admin {{ sub.username }}?')">
+              <i class="fas fa-trash"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:60px;color:var(--muted)">
+    <i class="fas fa-user-shield" style="font-size:40px;opacity:.2;display:block;margin-bottom:12px"></i>
+    <p style="font-size:14px;margin-bottom:12px">Nenhum sub-administrador cadastrado.</p>
+    <a href="{{ url_for('novo_sub_admin') }}" class="btn-accent">
+      <i class="fas fa-plus"></i> Criar Primeiro Sub-ADM
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

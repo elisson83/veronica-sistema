@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfil — {{ restaurante.nome }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0b0d17; --surface:#131720; --surface2:#1c2133;
+      --border:rgba(255,255,255,0.07); --text:#e2e8f0; --muted:#64748b;
+      --accent: {{ restaurante.cor_primaria }};
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .header { background: var(--surface); border-bottom: 1px solid var(--border);
+              padding: 14px 28px; display: flex; align-items: center; gap: 12px; }
+    .header-title { font-size: 16px; font-weight: 600; }
+    .header-sub { font-size: 12px; color: var(--muted); }
+    .header-actions { margin-left: auto; display: flex; gap: 8px; }
+    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px;
+           border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none;
+           border: none; cursor: pointer; transition: all .15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: .85; }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: #232a3e; }
+
+    .flash-c { padding: 12px 28px 0; }
+    .flash-msg { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+                 border-radius: 8px; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+    .flash-success { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.2); color: #4ade80; }
+    .flash-danger  { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.2); color: #f87171; }
+
+    .content { padding: 28px; max-width: 800px; margin: 0 auto; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+            overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border);
+                   display: flex; align-items: center; gap: 10px; }
+    .card-title { font-size: 14px; font-weight: 600; }
+    .card-body { padding: 20px; }
+    .label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 500; color: var(--muted); }
+    .input, .select, .textarea {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 13px;
+      font-family: 'Inter', sans-serif; outline: none; transition: border .15s;
+    }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--accent); }
+    .textarea { resize: vertical; min-height: 80px; }
+    .select option { background: var(--surface2); }
+    .form-group { margin-bottom: 18px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    /* Logo preview */
+    .logo-area { display: flex; align-items: center; gap: 16px; }
+    .logo-preview {
+      width: 80px; height: 80px; border-radius: 12px;
+      background: var(--surface2); border: 2px dashed var(--border);
+      display: grid; place-items: center; overflow: hidden; flex-shrink: 0;
+    }
+    .logo-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .logo-preview i { font-size: 24px; color: var(--muted); }
+    .logo-upload-btn { cursor: pointer; }
+    .logo-upload-btn input { display: none; }
+
+    /* Checkboxes formas de pagamento */
+    .formas-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .forma-check { display: flex; align-items: center; gap: 8px;
+                   background: var(--surface2); border: 1px solid var(--border);
+                   border-radius: 8px; padding: 8px 12px; cursor: pointer;
+                   transition: all .15s; }
+    .forma-check:has(input:checked) { border-color: var(--accent); background: rgba(99,102,241,.08); }
+    .forma-check input { accent-color: var(--accent); }
+    .forma-check span { font-size: 12px; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  {% if restaurante.logo_path %}
+  <img src="{{ url_for('static', filename=restaurante.logo_path) }}"
+       style="height:36px;border-radius:8px" alt="Logo">
+  {% endif %}
+  <div>
+    <div class="header-title">Perfil do Restaurante</div>
+    <div class="header-sub">{{ restaurante.nome }}</div>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('restaurante_dashboard') }}" class="btn btn-ghost">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+    <a href="{{ url_for('restaurante_kanban') }}" class="btn btn-ghost">
+      <i class="fas fa-table-columns"></i> Kanban
+    </a>
+  </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-c">
+  {% for cat, msg in messages %}
+  <div class="flash-msg flash-{{ cat }}">{{ msg }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="content">
+  <form method="POST" enctype="multipart/form-data">
+
+    <!-- Logo e Identidade Visual -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-palette" style="color:var(--accent)"></i>
+        <span class="card-title">Identidade Visual</span>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="label">Logo do Restaurante</label>
+          <div class="logo-area">
+            <div class="logo-preview">
+              {% if restaurante.logo_path %}
+              <img src="{{ url_for('static', filename=restaurante.logo_path) }}" alt="Logo" id="logo-img">
+              {% else %}
+              <i class="fas fa-image" id="logo-placeholder"></i>
+              {% endif %}
+            </div>
+            <div>
+              <label class="btn btn-ghost logo-upload-btn">
+                <i class="fas fa-upload"></i> Escolher Logo
+                <input type="file" name="logo" accept="image/*" onchange="previewLogo(this)">
+              </label>
+              <p style="font-size:11px;color:var(--muted);margin-top:6px">PNG, JPG ou WEBP. Recomendado: 200x200px</p>
+            </div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="form-group">
+            <label class="label">Nome do Restaurante *</label>
+            <input type="text" name="nome" class="input" value="{{ restaurante.nome }}" required>
+          </div>
+          <div class="form-group">
+            <label class="label">Cor Principal</label>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input type="color" name="cor_primaria" value="{{ restaurante.cor_primaria }}"
+                     style="width:48px;height:40px;border:none;border-radius:8px;cursor:pointer;background:none;padding:0">
+              <input type="text" id="cor-hex" value="{{ restaurante.cor_primaria }}"
+                     class="input" style="flex:1" placeholder="#6366f1"
+                     oninput="document.querySelector('[name=cor_primaria]').value=this.value">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="label">Descrição / Slogan</label>
+          <textarea name="descricao" class="textarea">{{ restaurante.descricao or '' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contato e Localização -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-map-marker-alt" style="color:#22d3ee"></i>
+        <span class="card-title">Contato &amp; Localização</span>
+      </div>
+      <div class="card-body">
+        <div class="grid2">
+          <div class="form-group">
+            <label class="label">Telefone / WhatsApp</label>
+            <input type="text" name="telefone" class="input" value="{{ restaurante.telefone or '' }}" placeholder="(11) 99999-9999">
+          </div>
+          <div class="form-group">
+            <label class="label">Endereço</label>
+            <input type="text" name="endereco" class="input" value="{{ restaurante.endereco or '' }}" placeholder="Rua, número, bairro">
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="form-group">
+            <label class="label"><i class="fab fa-instagram me-1" style="color:#E1306C"></i>Instagram</label>
+            <input type="text" name="instagram" class="input" value="{{ restaurante.instagram or '' }}" placeholder="@perfil">
+          </div>
+          <div class="form-group">
+            <label class="label"><i class="fab fa-facebook me-1" style="color:#1877F2"></i>Facebook</label>
+            <input type="text" name="facebook" class="input" value="{{ restaurante.facebook or '' }}" placeholder="facebook.com/pagina">
+          </div>
+          <div class="form-group">
+            <label class="label"><i class="fab fa-whatsapp me-1" style="color:#25D366"></i>WhatsApp</label>
+            <input type="text" name="whatsapp" class="input" value="{{ restaurante.whatsapp or '' }}" placeholder="(11) 99999-9999">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formas de Pagamento -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-credit-card" style="color:#4ade80"></i>
+        <span class="card-title">Formas de Pagamento Aceitas</span>
+      </div>
+      <div class="card-body">
+        <div class="formas-grid">
+          {% for forma in formas_disponiveis %}
+          <label class="forma-check">
+            <input type="checkbox" name="forma_pagamento" value="{{ forma }}"
+                   {% if forma in restaurante.formas_pagamento %}checked{% endif %}>
+            <span>{{ forma }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagamento e PIX -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-qrcode" style="color:#fbbf24"></i>
+        <span class="card-title">Pagamento Online</span>
+      </div>
+      <div class="card-body">
+        <div class="grid2">
+          <div class="form-group">
+            <label class="label">Chave PIX</label>
+            <input type="text" name="chave_pix" class="input" value="{{ restaurante.chave_pix or '' }}" placeholder="CPF, e-mail ou telefone">
+          </div>
+          <div class="form-group">
+            <label class="label">Link de Pagamento</label>
+            <input type="text" name="link_pagamento" class="input" value="{{ restaurante.link_pagamento or '' }}" placeholder="https://...">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <a href="{{ url_for('restaurante_dashboard') }}" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary" style="padding:10px 28px;font-size:14px">
+        <i class="fas fa-floppy-disk"></i> Salvar Perfil
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+function previewLogo(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      let img = document.getElementById('logo-img');
+      if (!img) {
+        img = document.createElement('img');
+        img.id = 'logo-img';
+        document.querySelector('.logo-preview').innerHTML = '';
+        document.querySelector('.logo-preview').appendChild(img);
+        const ph = document.getElementById('logo-placeholder');
+        if (ph) ph.remove();
+      }
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+document.querySelector('[name=cor_primaria]').addEventListener('input', function() {
+  document.getElementById('cor-hex').value = this.value;
+});
+</script>
+</body>
+</html>

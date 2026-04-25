@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — PainelFrota{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4 col-6">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#8b5cf622;"><i class="fas fa-motorcycle" style="color:#8b5cf6;"></i></div>
+      <div class="val">{{ total_motoboys }}</div>
+      <div class="lbl">Motoboys Ativos</div>
+    </div>
+  </div>
+  <div class="col-md-4 col-6">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#10b98122;"><i class="fas fa-circle-dot" style="color:#10b981;"></i></div>
+      <div class="val" style="color:#10b981;">{{ turnos_ativos }}</div>
+      <div class="lbl">Online Agora</div>
+    </div>
+  </div>
+  <div class="col-md-4 col-6">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#06b6d422;"><i class="fas fa-box" style="color:#06b6d4;"></i></div>
+      <div class="val" style="color:#06b6d4;">{{ entregas_hoje }}</div>
+      <div class="lbl">Entregas Hoje</div>
+    </div>
+  </div>
+  <div class="col-md-6 col-6">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#f59e0b22;"><i class="fas fa-coins" style="color:#f59e0b;"></i></div>
+      <div class="val" style="color:#f59e0b;">R$ {{ '%.2f'|format(receita_hoje) }}</div>
+      <div class="lbl">Receita Hoje (frota)</div>
+    </div>
+  </div>
+  <div class="col-md-6 col-6">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#a855f722;"><i class="fas fa-chart-line" style="color:#a855f7;"></i></div>
+      <div class="val" style="color:#a855f7;">R$ {{ '%.2f'|format(receita_mes) }}</div>
+      <div class="lbl">Receita do Mês (frota)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Botões rápidos -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  <a href="{{ url_for('nova_entrega') }}" class="btn btn-accent btn-sm"><i class="fas fa-plus me-1"></i>Nova Entrega</a>
+  <a href="{{ url_for('listar_entregas') }}?status=pendente" class="btn btn-accent2 btn-sm"><i class="fas fa-clock me-1"></i>Pendentes</a>
+  {% if current_user.nivel in ['super','financeiro'] %}
+  <a href="{{ url_for('financeiro') }}" class="btn btn-surface btn-sm"><i class="fas fa-wallet me-1"></i>Financeiro</a>
+  {% endif %}
+  <a href="{{ url_for('mapa') }}" class="btn btn-surface btn-sm"><i class="fas fa-map-location-dot me-1"></i>Mapa GPS</a>
+</div>
+
+<!-- Últimas entregas -->
+<div class="card-dark">
+  <div class="p-3 border-bottom" style="border-color: var(--border) !important; display:flex; justify-content:space-between; align-items:center;">
+    <h6 class="mb-0 fw-bold">Últimas Entregas</h6>
+    <a href="{{ url_for('listar_entregas') }}" style="font-size:.82rem; color: var(--accent);">Ver todas <i class="fas fa-arrow-right ms-1"></i></a>
+  </div>
+  <div class="p-0">
+    <table class="table-dark-custom w-100">
+      <thead><tr>
+        <th>Cliente</th>
+        <th>Motoboy</th>
+        <th>Taxa</th>
+        <th>Status</th>
+        <th>Hora</th>
+      </tr></thead>
+      <tbody>
+        {% for e in ultimas_entregas %}
+        <tr>
+          <td>{{ e.cliente_nome or '—' }}</td>
+          <td>{{ e.motoboy.nome if e.motoboy else '—' }}</td>
+          <td class="text-warning fw-bold">R$ {{ '%.2f'|format(e.valor_total_taxa) }}</td>
+          <td><span class="badge badge-{{ e.status }}">{{ e.status }}</span></td>
+          <td style="color:var(--muted); font-size:.8rem;">{{ e.criado_em.strftime('%H:%M') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">Nenhuma entrega ainda</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

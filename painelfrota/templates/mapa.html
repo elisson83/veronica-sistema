@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Mapa GPS — PainelFrota{% endblock %}
+{% block page_title %}Mapa GPS — Motoboys Online{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  #mapa { width:100%; height:calc(100vh - 200px); min-height:400px; border-radius:12px; border:1px solid var(--border); }
+  .motoboy-popup h6 { color:#8b5cf6; font-weight:700; margin-bottom:4px; }
+  .motoboy-popup p { margin:0; font-size:.82rem; color:#64748b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <span class="badge" style="background:#10b98122;color:#10b981;border:1px solid #064e3b;">
+      <i class="fas fa-circle-dot me-1"></i>{{ motoboys_online|length }} online agora
+    </span>
+  </div>
+  <button class="btn btn-surface btn-sm" onclick="location.reload()"><i class="fas fa-rotate me-1"></i>Atualizar</button>
+</div>
+
+<div id="mapa"></div>
+
+{% if not motoboys_online %}
+<div class="card-dark text-center py-4 mt-3 text-muted">
+  <i class="fas fa-map-location-dot fa-2x mb-2"></i><br>
+  Nenhum motoboy online com GPS ativo no momento
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const mapa = L.map('mapa').setView([-23.55, -46.63], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap'
+}).addTo(mapa);
+
+const icone = L.divIcon({
+  html: '<i class="fas fa-motorcycle" style="color:#8b5cf6;font-size:24px;text-shadow:0 0 6px rgba(0,0,0,.8);"></i>',
+  iconSize: [30,30], iconAnchor:[15,15], className: ''
+});
+
+const motoboys = {{ motoboys_online | tojson }};
+motoboys.forEach(mb => {
+  if (mb.lat && mb.lng) {
+    const m = L.marker([mb.lat, mb.lng], {icon: icone}).addTo(mapa);
+    m.bindPopup(`<div class="motoboy-popup"><h6>${mb.nome}</h6><p>Atualizado: ${mb.ultima_loc || '—'}</p></div>`);
+  }
+});
+
+if (motoboys.filter(m=>m.lat).length > 0) {
+  const coords = motoboys.filter(m=>m.lat).map(m=>[m.lat, m.lng]);
+  mapa.fitBounds(coords, {padding:[40,40]});
+}
+
+// Atualizar a cada 30s
+setInterval(() => location.reload(), 30000);
+</script>
+{% endblock %}

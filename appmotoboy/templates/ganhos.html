@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Ganhos — AppMotoboy{% endblock %}
+
+{% block content %}
+<h5 class="section-title">Meus Ganhos</h5>
+
+<!-- Cards de resumo -->
+<div class="row g-2 mb-3">
+  <div class="col-6">
+    <div class="card-dark stat-card">
+      <div class="val text-success">R$ {{ '%.2f'|format(ganhos_dia) }}</div>
+      <div class="lbl">Hoje ({{ qtd_dia }} entregas)</div>
+    </div>
+  </div>
+  <div class="col-6">
+    <div class="card-dark stat-card">
+      <div class="val text-warning">R$ {{ '%.2f'|format(ganhos_semana) }}</div>
+      <div class="lbl">Essa semana ({{ qtd_semana }})</div>
+    </div>
+  </div>
+  <div class="col-6">
+    <div class="card-dark stat-card">
+      <div class="val">R$ {{ '%.2f'|format(ganhos_mes) }}</div>
+      <div class="lbl">Esse mês ({{ qtd_mes }})</div>
+    </div>
+  </div>
+  <div class="col-6">
+    <div class="card-dark stat-card">
+      <div class="val" style="color:#a855f7;">R$ {{ '%.2f'|format(ganhos_total) }}</div>
+      <div class="lbl">Total acumulado</div>
+    </div>
+  </div>
+</div>
+
+<!-- Últimas entregues -->
+<h5 class="section-title">Últimas Entregas Pagas</h5>
+{% for e in ultimas %}
+<div class="card-dark mb-2 d-flex justify-content-between align-items-center">
+  <div>
+    <div style="font-size:.88rem; font-weight:600;">{{ e.cliente_nome or 'Cliente' }}</div>
+    <div style="font-size:.75rem; color:#64748b;">{{ e.entregue_em.strftime('%d/%m/%Y %H:%M') if e.entregue_em }}</div>
+  </div>
+  <div class="text-end">
+    <div class="text-success fw-bold">+ R$ {{ '%.2f'|format(e.valor_total_taxa) }}</div>
+    {% if e.adicional_chuva > 0 or e.adicional_pico > 0 or e.adicional_noturno > 0 %}
+    <div style="font-size:.7rem; color:#64748b;">
+      {% if e.adicional_chuva > 0 %}<i class="fas fa-cloud-rain me-1 text-info"></i>{% endif %}
+      {% if e.adicional_pico > 0 %}<i class="fas fa-fire me-1 text-warning"></i>{% endif %}
+      {% if e.adicional_noturno > 0 %}<i class="fas fa-moon me-1"></i>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="card-dark text-center py-4 text-muted">
+  <i class="fas fa-wallet fa-2x mb-2"></i><br>Nenhum ganho registrado ainda
+</div>
+{% endfor %}
+{% endblock %}

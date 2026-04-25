@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Novo Motoboy — PainelFrota{% endblock %}
+{% block page_title %}Cadastrar Motoboy{% endblock %}
+
+{% block content %}
+<div style="max-width:540px;">
+<form method="POST" class="card-dark p-4">
+  <h6 class="mb-4" style="color:#8b5cf6;">Dados do Motoboy</h6>
+
+  <div class="mb-3">
+    <label class="form-label">Nome completo *</label>
+    <input type="text" name="nome" class="form-control" required autofocus>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Telefone / WhatsApp</label>
+    <input type="tel" name="telefone" class="form-control" placeholder="(11) 99999-9999">
+  </div>
+  <div class="row g-2 mb-3">
+    <div class="col-6">
+      <label class="form-label">Placa da moto</label>
+      <input type="text" name="moto_placa" class="form-control" placeholder="ABC-1234">
+    </div>
+    <div class="col-6">
+      <label class="form-label">Modelo</label>
+      <input type="text" name="moto_modelo" class="form-control" placeholder="Honda Pop 110">
+    </div>
+  </div>
+
+  <h6 class="mb-3 mt-4" style="color:#8b5cf6;">Financeiro</h6>
+  <div class="row g-2 mb-4">
+    <div class="col-6">
+      <label class="form-label">Taxa por entrega (R$)</label>
+      <input type="number" name="taxa_entrega" class="form-control" value="5.00" step="0.50" min="1">
+    </div>
+    <div class="col-6">
+      <label class="form-label">% que a frota retém</label>
+      <input type="number" name="percentual_frota" class="form-control" value="20" step="1" min="0" max="100">
+      <div class="form-text" style="font-size:.72rem;">Ex: 20% = frota fica R$1 de uma taxa de R$5</div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-accent">Cadastrar</button>
+    <a href="{{ url_for('motoboys') }}" class="btn btn-surface">Cancelar</a>
+  </div>
+</form>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Entregas — PainelFrota{% endblock %}
+{% block page_title %}Entregas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex gap-2 flex-wrap">
+    {% for s, label in [('','Todas'),('pendente','Pendentes'),('aceita','Aceitas'),('retirada','A caminho'),('entregue','Entregues'),('cancelada','Canceladas')] %}
+    <a href="?status={{ s }}" class="badge text-decoration-none py-2 px-3"
+       style="{% if status==s %}background:#8b5cf6;color:#fff;{% else %}background:var(--card);color:var(--muted);border:1px solid var(--border);{% endif %} font-size:.78rem;">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <a href="{{ url_for('nova_entrega') }}" class="btn btn-accent btn-sm"><i class="fas fa-plus me-1"></i>Nova</a>
+</div>
+
+<div class="card-dark">
+  <table class="table-dark-custom w-100">
+    <thead><tr>
+      <th>Cliente / Endereço</th>
+      <th>Motoboy</th>
+      <th>Taxa Total</th>
+      <th>Motoboy</th>
+      <th>Frota</th>
+      <th>Status</th>
+      <th>Hora</th>
+      <th>Ações</th>
+    </tr></thead>
+    <tbody>
+    {% for e in entregas.items %}
+    <tr>
+      <td>
+        <div class="fw-semibold">{{ e.cliente_nome or '—' }}</div>
+        <div style="font-size:.75rem; color:var(--muted);">{{ e.cliente_endereco }}</div>
+        {% if e.codigo_ifood %}<div style="font-size:.72rem;"><i class="fab fa-apple text-danger me-1"></i>{{ e.codigo_ifood }}</div>{% endif %}
+        {% if e.adicional_chuva > 0 %}<span class="badge bg-info text-dark" style="font-size:.65rem;"><i class="fas fa-cloud-rain"></i></span>{% endif %}
+        {% if e.adicional_pico > 0 %}<span class="badge bg-warning text-dark" style="font-size:.65rem;"><i class="fas fa-fire"></i></span>{% endif %}
+        {% if e.adicional_noturno > 0 %}<span class="badge bg-dark border" style="font-size:.65rem;"><i class="fas fa-moon"></i></span>{% endif %}
+      </td>
+      <td>{{ e.motoboy.nome if e.motoboy else '—' }}</td>
+      <td class="text-warning fw-bold">R$ {{ '%.2f'|format(e.valor_total_taxa) }}</td>
+      <td class="text-success">R$ {{ '%.2f'|format(e.ganho_motoboy) }}</td>
+      <td style="color:#a855f7;">R$ {{ '%.2f'|format(e.ganho_frota) }}</td>
+      <td><span class="badge badge-{{ e.status }}">{{ e.status }}</span></td>
+      <td style="font-size:.78rem; color:var(--muted);">{{ e.criado_em.strftime('%H:%M') }}</td>
+      <td>
+        {% if e.status not in ['entregue','cancelada'] %}
+        <form method="POST" action="{{ url_for('mudar_status_entrega', eid=e.id) }}" class="d-flex gap-1">
+          {% if e.status == 'pendente' %}
+          <button name="status" value="aceita" class="btn btn-sm btn-success-custom" style="background:#10b981;color:#fff;border:none;font-size:.72rem;">Aceitar</button>
+          <button name="status" value="cancelada" class="btn btn-sm" style="background:#3b151533;border:1px solid #3b1515;color:#f87171;font-size:.72rem;">Cancelar</button>
+          {% elif e.status == 'aceita' %}
+          <button name="status" value="retirada" class="btn btn-sm btn-accent" style="font-size:.72rem;">Retirada</button>
+          {% elif e.status == 'retirada' %}
+          <button name="status" value="entregue" class="btn btn-sm" style="background:#064e3b;color:#6ee7b7;border:1px solid #064e3b;font-size:.72rem;">Entregue ✓</button>
+          {% endif %}
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="text-center text-muted py-5"><i class="fas fa-box fa-2x mb-2 d-block"></i>Nenhuma entrega encontrada</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if entregas.pages > 1 %}
+  <div class="p-3 border-top d-flex justify-content-center" style="border-color:var(--border)!important;">
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% for p in entregas.iter_pages() %}
+      {% if p %}
+      <li class="page-item {% if p==entregas.page %}active{% endif %}">
+        <a class="page-link" href="?status={{ status }}&page={{ p }}" style="background:var(--card);border-color:var(--border);color:var(--text);">{{ p }}</a>
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

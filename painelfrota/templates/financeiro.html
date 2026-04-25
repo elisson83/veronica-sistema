@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Financeiro — PainelFrota{% endblock %}
+{% block page_title %}Financeiro{% endblock %}
+
+{% block content %}
+<!-- Resumo mensal -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#10b98122;"><i class="fas fa-arrow-down" style="color:#10b981;"></i></div>
+      <div class="val text-success">R$ {{ '%.2f'|format(receita_mes) }}</div>
+      <div class="lbl">Receita da Frota (mês)</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#ef444422;"><i class="fas fa-arrow-up" style="color:#ef4444;"></i></div>
+      <div class="val text-danger">R$ {{ '%.2f'|format(pago_mes) }}</div>
+      <div class="lbl">Pago aos Motoboys (mês)</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#a855f722;"><i class="fas fa-wallet" style="color:#a855f7;"></i></div>
+      <div class="val" style="color:#a855f7;">R$ {{ '%.2f'|format(lucro_mes) }}</div>
+      <div class="lbl">Lucro Líquido (mês)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Saldo por motoboy -->
+<div class="card-dark mb-4">
+  <div class="p-3 border-bottom" style="border-color:var(--border)!important;">
+    <h6 class="mb-0 fw-bold">Saldo a Pagar — {{ inicio_mes.strftime('%d/%m') }} a {{ hoje.strftime('%d/%m/%Y') }}</h6>
+  </div>
+  <table class="table-dark-custom w-100">
+    <thead><tr>
+      <th>Motoboy</th>
+      <th>Ganhou no mês</th>
+      <th>Já pago</th>
+      <th>A pagar</th>
+      <th>Ação</th>
+    </tr></thead>
+    <tbody>
+    {% for item in motoboys_saldo %}
+    <tr>
+      <td class="fw-semibold">{{ item.motoboy.nome }}</td>
+      <td class="text-warning">R$ {{ '%.2f'|format(item.saldo) }}</td>
+      <td class="text-success">R$ {{ '%.2f'|format(item.pago) }}</td>
+      <td class="fw-bold {% if item.a_pagar > 0 %}text-danger{% else %}text-muted{% endif %}">
+        R$ {{ '%.2f'|format(item.a_pagar) }}
+      </td>
+      <td>
+        {% if item.a_pagar > 0 %}
+        <form method="POST" action="{{ url_for('pagar_motoboy', mid=item.motoboy.id) }}"
+              onsubmit="return confirm('Registrar PIX de R$ {{ '%.2f'|format(item.a_pagar) }} para {{ item.motoboy.nome }}?')">
+          <button class="btn btn-sm" style="background:#064e3b;color:#6ee7b7;border:1px solid #064e3b;font-size:.78rem;">
+            <i class="fas fa-pix me-1"></i>PIX R$ {{ '%.2f'|format(item.a_pagar) }}
+          </button>
+        </form>
+        {% else %}
+        <span class="text-muted" style="font-size:.78rem;">Em dia</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagamentos pendentes -->
+{% if pagamentos_pendentes %}
+<div class="card-dark">
+  <div class="p-3 border-bottom" style="border-color:var(--border)!important;">
+    <h6 class="mb-0 fw-bold text-warning"><i class="fas fa-clock me-1"></i>Pagamentos Pendentes</h6>
+  </div>
+  <table class="table-dark-custom w-100">
+    <thead><tr><th>Motoboy</th><th>Valor</th><th>Período</th><th>Tipo</th></tr></thead>
+    <tbody>
+    {% for pag in pagamentos_pendentes %}
+    <tr>
+      <td>{{ pag.motoboy.nome }}</td>
+      <td class="text-warning fw-bold">R$ {{ '%.2f'|format(pag.valor) }}</td>
+      <td style="font-size:.8rem; color:var(--muted);">
+        {{ pag.periodo_inicio.strftime('%d/%m') if pag.periodo_inicio }} – {{ pag.periodo_fim.strftime('%d/%m/%Y') if pag.periodo_fim }}
+      </td>
+      <td><span class="badge bg-info text-dark">{{ pag.tipo }}</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

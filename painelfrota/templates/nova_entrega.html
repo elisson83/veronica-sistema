@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block title %}Nova Entrega — PainelFrota{% endblock %}
+{% block page_title %}Despachar Entrega{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;">
+<form method="POST" class="card-dark p-4" id="formEntrega">
+  <!-- Motoboy + origem -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-7">
+      <label class="form-label">Motoboy *</label>
+      <select name="motoboy_id" class="form-select" id="selMotoboy" required onchange="atualizarTaxa()">
+        <option value="">— Selecione —</option>
+        {% for mb in motoboys %}
+        <option value="{{ mb.id }}" data-taxa="{{ mb.taxa_entrega }}" data-perc="{{ mb.percentual_frota }}">
+          {{ mb.nome }} — R$ {{ '%.2f'|format(mb.taxa_entrega) }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label">Origem</label>
+      <select name="origem" class="form-select" onchange="toggleIfood(this.value)">
+        <option value="direto">Direto / WhatsApp</option>
+        <option value="ifood">iFood</option>
+        <option value="telefone">Telefone</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Código iFood (oculto por padrão) -->
+  <div class="mb-3" id="blocoIfood" style="display:none;">
+    <label class="form-label"><i class="fab fa-apple text-danger me-1"></i>Código iFood de Confirmação</label>
+    <input type="text" name="codigo_ifood" class="form-control" placeholder="Ex: 1234" maxlength="10">
+  </div>
+
+  <!-- Cliente -->
+  <h6 class="mb-3 mt-2" style="color:#8b5cf6;">Dados do Cliente</h6>
+  <div class="row g-3 mb-4">
+    <div class="col-md-5">
+      <label class="form-label">Restaurante</label>
+      <input type="text" name="restaurante_nome" class="form-control" placeholder="Nome do restaurante">
+    </div>
+    <div class="col-md-7">
+      <label class="form-label">Nome do Cliente</label>
+      <input type="text" name="cliente_nome" class="form-control" placeholder="João Silva">
+    </div>
+    <div class="col-12">
+      <label class="form-label">Endereço de Entrega</label>
+      <input type="text" name="cliente_endereco" class="form-control" placeholder="Rua, número, bairro">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Valor do Pedido (R$)</label>
+      <input type="number" name="valor_pedido" class="form-control" value="0" step="0.01" min="0">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Distância (km)</label>
+      <input type="number" name="distancia_km" class="form-control" value="" step="0.1" min="0" placeholder="Opcional">
+    </div>
+  </div>
+
+  <!-- Adicionais -->
+  <h6 class="mb-3" style="color:#8b5cf6;">Adicionais de Taxa</h6>
+  <div class="row g-2 mb-4">
+    <div class="col-6 col-md-3">
+      <label class="form-label"><i class="fas fa-cloud-rain text-info me-1"></i>Chuva</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text" style="background:var(--bg);border-color:var(--border);color:var(--muted);">R$</span>
+        <input type="number" name="adicional_chuva" id="addChuva" class="form-control" value="{{ sugestao_chuva }}" step="0.50" min="0" onchange="recalcular()">
+      </div>
+      <div class="form-text" style="font-size:.7rem;">Padrão: R$ {{ ADICIONAL_CHUVA }}</div>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label"><i class="fas fa-fire text-warning me-1"></i>Horário Pico</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text" style="background:var(--bg);border-color:var(--border);color:var(--muted);">R$</span>
+        <input type="number" name="adicional_pico" id="addPico" class="form-control" value="{{ sugestao_pico }}" step="0.50" min="0" onchange="recalcular()">
+      </div>
+      <div class="form-text" style="font-size:.7rem;">Padrão: R$ {{ ADICIONAL_PICO }}</div>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label"><i class="fas fa-moon me-1"></i>Noturno</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text" style="background:var(--bg);border-color:var(--border);color:var(--muted);">R$</span>
+        <input type="number" name="adicional_noturno" id="addNoturno" class="form-control" value="{{ sugestao_noturno }}" step="0.50" min="0" onchange="recalcular()">
+      </div>
+      <div class="form-text" style="font-size:.7rem;">Padrão: R$ {{ ADICIONAL_NOTURNO }}</div>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label"><i class="fas fa-calendar-day text-danger me-1"></i>Feriado</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text" style="background:var(--bg);border-color:var(--border);color:var(--muted);">R$</span>
+        <input type="number" name="adicional_feriado" id="addFeriado" class="form-control" value="{{ sugestao_feriado }}" step="0.50" min="0" onchange="recalcular()">
+      </div>
+      <div class="form-text" style="font-size:.7rem;">Padrão: R$ {{ ADICIONAL_FERIADO }}</div>
+    </div>
+  </div>
+
+  <!-- Resumo financeiro -->
+  <div class="card-dark p-3 mb-4" style="background:#0a0a12; border-color:#252535;">
+    <div class="d-flex justify-content-between mb-1">
+      <span style="font-size:.85rem; color:var(--muted);">Taxa base</span>
+      <span id="taxaBase" class="fw-semibold">R$ 0,00</span>
+    </div>
+    <div class="d-flex justify-content-between mb-1">
+      <span style="font-size:.85rem; color:var(--muted);">+ Adicionais</span>
+      <span id="totalAdd" class="fw-semibold text-info">R$ 0,00</span>
+    </div>
+    <div class="d-flex justify-content-between mb-2 pt-2" style="border-top:1px solid var(--border);">
+      <span class="fw-bold">Total taxa</span>
+      <span id="totalTaxa" class="fw-bold text-warning fs-5">R$ 0,00</span>
+    </div>
+    <div class="d-flex justify-content-between">
+      <span style="font-size:.82rem; color:var(--muted);">→ Motoboy recebe</span>
+      <span id="ganhoMb" class="text-success fw-semibold">R$ 0,00</span>
+    </div>
+    <div class="d-flex justify-content-between">
+      <span style="font-size:.82rem; color:var(--muted);">→ Frota fica</span>
+      <span id="ganhoFrota" style="color:#a855f7;" class="fw-semibold">R$ 0,00</span>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <label class="form-label">Observação</label>
+    <textarea name="observacao" class="form-control" rows="2" placeholder="Observações sobre a entrega..."></textarea>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-accent"><i class="fas fa-motorcycle me-1"></i>Despachar Entrega</button>
+    <a href="{{ url_for('listar_entregas') }}" class="btn btn-surface">Cancelar</a>
+  </div>
+</form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let taxaAtual = 0, percFrota = 20;
+
+function atualizarTaxa() {
+  const sel = document.getElementById('selMotoboy');
+  const opt = sel.options[sel.selectedIndex];
+  taxaAtual = parseFloat(opt.dataset.taxa || 0);
+  percFrota = parseFloat(opt.dataset.perc || 20);
+  recalcular();
+}
+
+function recalcular() {
+  const addC = parseFloat(document.getElementById('addChuva').value) || 0;
+  const addP = parseFloat(document.getElementById('addPico').value) || 0;
+  const addN = parseFloat(document.getElementById('addNoturno').value) || 0;
+  const addF = parseFloat(document.getElementById('addFeriado').value) || 0;
+  const totalAdd   = addC + addP + addN + addF;
+  const totalTaxa  = taxaAtual + totalAdd;
+  const pFrota     = percFrota / 100;
+  const ganhoFrota = (totalTaxa * pFrota).toFixed(2);
+  const ganhoMb    = (totalTaxa - parseFloat(ganhoFrota)).toFixed(2);
+
+  document.getElementById('taxaBase').textContent   = `R$ ${taxaAtual.toFixed(2)}`;
+  document.getElementById('totalAdd').textContent    = `R$ ${totalAdd.toFixed(2)}`;
+  document.getElementById('totalTaxa').textContent   = `R$ ${totalTaxa.toFixed(2)}`;
+  document.getElementById('ganhoMb').textContent     = `R$ ${ganhoMb}`;
+  document.getElementById('ganhoFrota').textContent  = `R$ ${ganhoFrota}`;
+}
+
+function toggleIfood(val) {
+  document.getElementById('blocoIfood').style.display = val === 'ifood' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

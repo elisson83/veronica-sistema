@@ -5,109 +5,63 @@ from pathlib import Path
 from datetime import datetime
 
 AREA_TRABALHO = Path(os.environ["USERPROFILE"]) / "Desktop"
-HD_BACKUP = Path("E:/backup_veronica")
-PENDRIVE_BACKUP = Path("D:/backup_veronica")
-PROJETOS_DIR = AREA_TRABALHO / "projetos_veronica"
+PROJETO_DIR   = AREA_TRABALHO / "veronica"
 
-def criar_estrutura():
-    pastas = [
-        PROJETOS_DIR,
-        PROJETOS_DIR / "PainelGest",
-        PROJETOS_DIR / "PainelPedidos",
-        PROJETOS_DIR / "Site",
-        PROJETOS_DIR / "Outros",
-        HD_BACKUP,
-        HD_BACKUP / "projetos",
-        HD_BACKUP / "veronica_ia",
-    ]
-    for pasta in pastas:
-        pasta.mkdir(parents=True, exist_ok=True)
-    print("Estrutura de pastas criada!")
+# Destinos de backup
+HD_G = Path("G:/Backup_Veronica")   # arena x
+HD_E = Path("E:/Backup_Veronica")   # Roberta
 
-def copiar_projeto(nome_projeto, pasta_origem):
-    origem = Path(pasta_origem)
-    if not origem.exists():
-        print(f"Pasta {pasta_origem} nao encontrada!")
-        return
-    destino_desktop = PROJETOS_DIR / nome_projeto
-    if destino_desktop.exists():
-        shutil.rmtree(destino_desktop)
-    shutil.copytree(origem, destino_desktop)
-    print(f"{nome_projeto} copiado para area de trabalho!")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    destino_hd = HD_BACKUP / "projetos" / f"{nome_projeto}_{timestamp}"
+IGNORAR = shutil.ignore_patterns(
+    "__pycache__", "*.pyc", ".git", "*.db-journal",
+    "node_modules", ".env", "*.log"
+)
+
+def _copiar(origem: Path, destino: Path, nome: str):
     try:
-        shutil.copytree(origem, destino_hd)
-        print(f"Backup no HD (E:) feito!")
+        destino.mkdir(parents=True, exist_ok=True)
+        destino_final = destino / nome
+        if destino_final.exists():
+            shutil.rmtree(destino_final)
+        shutil.copytree(origem, destino_final, ignore=IGNORAR)
+        print(f"  OK -> {destino_final}")
+        return True
     except Exception as e:
-        print(f"Erro backup HD: {e}")
-    destino_pendrive = PENDRIVE_BACKUP / "projetos" / nome_projeto
-    try:
-        PENDRIVE_BACKUP.mkdir(parents=True, exist_ok=True)
-        (PENDRIVE_BACKUP / "projetos").mkdir(exist_ok=True)
-        if destino_pendrive.exists():
-            shutil.rmtree(destino_pendrive)
-        shutil.copytree(origem, destino_pendrive)
-        print(f"Backup no Pen Drive (D:) feito!")
-    except Exception as e:
-        print(f"Erro backup Pen Drive: {e}")
+        print(f"  ERRO -> {destino}: {e}")
+        return False
 
-def backup_veronica():
-    origem = AREA_TRABALHO / "veronica"
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    destino_hd = HD_BACKUP / "veronica_ia" / f"veronica_{timestamp}"
-    try:
-        shutil.copytree(origem, destino_hd,
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git", "*.db"))
-        print(f"Backup Veronica no HD feito!")
-    except Exception as e:
-        print(f"Erro backup HD: {e}")
-    destino_pendrive = PENDRIVE_BACKUP / "veronica_ia" / f"veronica_{timestamp}"
-    try:
-        PENDRIVE_BACKUP.mkdir(parents=True, exist_ok=True)
-        (PENDRIVE_BACKUP / "veronica_ia").mkdir(exist_ok=True)
-        shutil.copytree(origem, destino_pendrive,
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git", "*.db"))
-        print(f"Backup Veronica no Pen Drive feito!")
-    except Exception as e:
-        print(f"Erro backup Pen Drive: {e}")
+def backup_completo():
+    ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nome = f"veronica_{ts}"
+    print(f"\n[BACKUP] {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    print(f"  Origem : {PROJETO_DIR}")
+    print(f"  Pasta  : {nome}\n")
+    ok_g = _copiar(PROJETO_DIR, HD_G, nome)
+    ok_e = _copiar(PROJETO_DIR, HD_E, nome)
+    return ok_g, ok_e
 
-def listar_projetos():
-    print("\nProjetos na area de trabalho:")
-    if PROJETOS_DIR.exists():
-        for pasta in PROJETOS_DIR.iterdir():
-            if pasta.is_dir():
-                print(f"  {pasta.name}")
-    print("\nBackups no HD (E:):")
-    if (HD_BACKUP / "projetos").exists():
-        for pasta in (HD_BACKUP / "projetos").iterdir():
-            if pasta.is_dir():
-                print(f"  {pasta.name}")
-    print("\nBackups no Pen Drive (D:):")
-    if (PENDRIVE_BACKUP / "projetos").exists():
-        for pasta in (PENDRIVE_BACKUP / "projetos").iterdir():
-            if pasta.is_dir():
-                print(f"  {pasta.name}")
+def listar_backups():
+    for hd, label in [(HD_G, "G: arena x"), (HD_E, "E: Roberta")]:
+        print(f"\nBackups em {label} ({hd}):")
+        if hd.exists():
+            pastas = sorted(hd.iterdir(), reverse=True)
+            for p in pastas[:10]:
+                if p.is_dir():
+                    tam = sum(f.stat().st_size for f in p.rglob("*") if f.is_file())
+                    print(f"  {p.name}  ({tam//1024//1024} MB)")
+        else:
+            print("  HD nao encontrado")
 
-if len(sys.argv) > 1:
-    opcao = sys.argv[1]
-else:
-    print("\nSistema de Organizacao Veronica\n")
-    print("1 - Criar estrutura de pastas")
-    print("2 - Copiar PainelGest para projetos")
-    print("3 - Backup completo da Veronica")
-    print("4 - Listar projetos")
-    opcao = input("\nEscolha: ")
-
-if opcao == "1":
-    criar_estrutura()
-elif opcao == "2":
-    criar_estrutura()
-    copiar_projeto("PainelGest", "painelgest")
-    print("\nPainelGest organizado!")
-elif opcao == "3":
-    backup_veronica()
-elif opcao == "4":
-    listar_projetos()
-else:
-    print("Opcao invalida!")
+if __name__ == "__main__":
+    opcao = sys.argv[1] if len(sys.argv) > 1 else ""
+    if opcao == "backup":
+        ok_g, ok_e = backup_completo()
+        print("\nResultado:")
+        print(f"  HD G: (arena x)  -> {'OK' if ok_g else 'FALHOU'}")
+        print(f"  HD E: (Roberta)  -> {'OK' if ok_e else 'FALHOU'}")
+    elif opcao == "listar":
+        listar_backups()
+    else:
+        ok_g, ok_e = backup_completo()
+        print("\nResultado:")
+        print(f"  HD G: (arena x)  -> {'OK' if ok_g else 'FALHOU'}")
+        print(f"  HD E: (Roberta)  -> {'OK' if ok_e else 'FALHOU'}")

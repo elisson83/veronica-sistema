@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}Início — AppMotoboy{% endblock %}
+
+{% block content %}
+<!-- Toggle GPS -->
+<button class="gps-toggle {% if current_user.disponivel %}on{% else %}off{% endif %} mb-4" id="btnGPS" onclick="toggleGPS()">
+  <i class="fa-solid {% if current_user.disponivel %}fa-location-dot{% else %}fa-location-crosshairs{% endif %} me-2" id="iconGPS"></i>
+  <span id="textoGPS">{% if current_user.disponivel %}DISPONÍVEL — Clique para ficar Offline{% else %}OFFLINE — Clique para ficar Disponível{% endif %}</span>
+</button>
+
+<!-- Stats do dia -->
+<h5 class="section-title">Hoje — {{ hoje.strftime('%d/%m/%Y') }}</h5>
+<div class="row g-2 mb-3">
+  <div class="col-4">
+    <div class="card-dark stat-card">
+      <div class="val text-success">{{ entregues_hoje|length }}</div>
+      <div class="lbl">Entregues</div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card-dark stat-card">
+      <div class="val">{{ entregas_hoje|length }}</div>
+      <div class="lbl">Total</div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card-dark stat-card">
+      <div class="val text-warning">R$ {{ '%.0f'|format(ganhos_hoje) }}</div>
+      <div class="lbl">Ganhos</div>
+    </div>
+  </div>
+</div>
+
+<!-- Pendentes -->
+{% if pendentes %}
+<h5 class="section-title"><i class="fa-solid fa-bell me-1 text-warning"></i>Entregas Pendentes ({{ pendentes|length }})</h5>
+{% for e in pendentes %}
+<div class="card-dark mb-2" id="entrega-{{ e.id }}">
+  <div class="d-flex justify-content-between align-items-start mb-2">
+    <div>
+      <div class="fw-bold">{{ e.cliente_nome or 'Cliente' }}</div>
+      <div class="text-muted" style="font-size:.8rem;"><i class="fas fa-map-marker-alt me-1"></i>{{ e.cliente_endereco }}</div>
+    </div>
+    <span class="badge badge-pendente">Pendente</span>
+  </div>
+  {% if e.restaurante_nome %}<div style="font-size:.8rem;" class="mb-1 text-muted"><i class="fas fa-store me-1"></i>{{ e.restaurante_nome }}</div>{% endif %}
+  {% if e.codigo_ifood %}<div style="font-size:.8rem;" class="mb-1"><i class="fab fa-apple me-1 text-danger"></i>iFood: <strong>{{ e.codigo_ifood }}</strong></div>{% endif %}
+  <div class="d-flex justify-content-between align-items-center mt-2">
+    <span class="text-warning fw-bold">+ R$ {{ '%.2f'|format(e.valor_total_taxa) }}</span>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-success-custom" onclick="aceitarEntrega({{ e.id }})">Aceitar</button>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card-dark text-center py-4 text-muted">
+  <i class="fas fa-check-circle fa-2x mb-2 text-success"></i><br>
+  Nenhuma entrega pendente
+</div>
+{% endif %}
+
+<!-- Turno -->
+{% if current_user.disponivel and turno_ativo %}
+<h5 class="section-title">Turno Ativo</h5>
+<div class="card-dark text-center">
+  <div style="font-size:1.4rem; font-weight:700; color:#10b981;">{{ turno_ativo.duracao_horas }}h</div>
+  <div style="font-size:.8rem; color:#64748b;">desde {{ turno_ativo.inicio.strftime('%H:%M') }}</div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+let watchId = null;
+
+async function toggleGPS() {
+  const btn = document.getElementById('btnGPS');
+  btn.disabled = true;
+  const r = await fetch('/toggle_disponivel', { method: 'POST' });
+  const d = await r.json();
+  btn.disabled = false;
+  if (d.disponivel) {
+    btn.className = 'gps-toggle on mb-4';
+    document.getElementById('textoGPS').textContent = 'DISPONÍVEL — Clique para ficar Offline';
+    document.getElementById('iconGPS').className = 'fa-solid fa-location-dot me-2';
+    document.getElementById('badge-disp').className = 'disponivel-badge on';
+    document.getElementById('badge-disp').innerHTML = '<i class="fa-solid fa-circle-dot me-1"></i>Disponível';
+    iniciarGPS();
+  } else {
+    btn.className = 'gps-toggle off mb-4';
+    document.getElementById('textoGPS').textContent = 'OFFLINE — Clique para ficar Disponível';
+    document.getElementById('iconGPS').className = 'fa-solid fa-location-crosshairs me-2';
+    document.getElementById('badge-disp').className = 'disponivel-badge off';
+    document.getElementById('badge-disp').innerHTML = '<i class="fa-regular fa-circle me-1"></i>Offline';
+    if (watchId) navigator.geolocation.clearWatch(watchId);
+  }
+}
+
+function iniciarGPS() {
+  if (!navigator.geolocation) return;
+  watchId = navigator.geolocation.watchPosition(pos => {
+    fetch('/atualizar_gps', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+    });
+  }, null, { enableHighAccuracy: true, maximumAge: 10000 });
+}
+
+async function aceitarEntrega(id) {
+  const r = await fetch(`/entregas/${id}/aceitar`, { method: 'POST' });
+  const d = await r.json();
+  if (d.ok) location.reload();
+}
+
+{% if current_user.disponivel %}iniciarGPS();{% endif %}
+</script>
+{% endblock %}

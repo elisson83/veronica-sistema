@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Administradores — PainelFrota{% endblock %}
+{% block page_title %}Administradores ({{ adms|length }}/4){% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  {% if adms|length < 4 %}
+  <a href="{{ url_for('novo_adm') }}" class="btn btn-accent btn-sm"><i class="fas fa-plus me-1"></i>Novo Administrador</a>
+  {% else %}
+  <span class="text-muted" style="font-size:.85rem;">Limite de 4 administradores atingido</span>
+  {% endif %}
+</div>
+
+<div class="card-dark">
+  <table class="table-dark-custom w-100">
+    <thead><tr>
+      <th>Nome</th>
+      <th>Usuário</th>
+      <th>Nível</th>
+      <th>Criado em</th>
+      <th>Ações</th>
+    </tr></thead>
+    <tbody>
+    {% for adm in adms %}
+    <tr>
+      <td class="fw-semibold">{{ adm.nome }}</td>
+      <td style="color:var(--muted); font-size:.85rem;">@{{ adm.username }}</td>
+      <td><span class="badge nivel-{{ adm.nivel }}">{{ NIVEIS_ADM.get(adm.nivel, adm.nivel) }}</span></td>
+      <td style="font-size:.8rem; color:var(--muted);">{{ adm.criado_em.strftime('%d/%m/%Y') }}</td>
+      <td>
+        {% if adm.id != current_user.id %}
+        <form method="POST" action="{{ url_for('excluir_adm', aid=adm.id) }}" class="d-inline" onsubmit="return confirm('Remover {{ adm.nome }}?')">
+          <button class="btn btn-sm" style="background:#3b151533;border:1px solid #3b1515;color:#f87171;font-size:.78rem;">
+            <i class="fas fa-trash"></i>
+          </button>
+        </form>
+        {% else %}
+        <span style="font-size:.75rem; color:var(--muted);">você</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Descrição dos níveis -->
+<div class="card-dark p-3 mt-3">
+  <h6 class="mb-3" style="color:#8b5cf6; font-size:.85rem;">Níveis de Acesso</h6>
+  <div class="row g-2">
+    <div class="col-md-3"><div class="p-2" style="background:#4c1d9511;border-radius:8px;border:1px solid #4c1d95;"><div class="fw-bold" style="color:#a78bfa;font-size:.8rem;">Super ADM</div><div class="text-muted" style="font-size:.72rem;">Tudo: motoboys, financeiro, ADMs</div></div></div>
+    <div class="col-md-3"><div class="p-2" style="background:#064e3b11;border-radius:8px;border:1px solid #064e3b;"><div class="fw-bold" style="color:#6ee7b7;font-size:.8rem;">ADM Financeiro</div><div class="text-muted" style="font-size:.72rem;">Financeiro + relatórios</div></div></div>
+    <div class="col-md-3"><div class="p-2" style="background:#1e3a5f11;border-radius:8px;border:1px solid #1e3a5f;"><div class="fw-bold" style="color:#60a5fa;font-size:.8rem;">ADM Operacional</div><div class="text-muted" style="font-size:.72rem;">Motoboys + entregas</div></div></div>
+    <div class="col-md-3"><div class="p-2" style="background:#29292911;border-radius:8px;border:1px solid #333;"><div class="fw-bold" style="color:#94a3b8;font-size:.8rem;">Visualizador</div><div class="text-muted" style="font-size:.72rem;">Apenas leitura</div></div></div>
+  </div>
+</div>
+{% endblock %}

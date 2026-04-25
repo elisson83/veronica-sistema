@@ -10,7 +10,7 @@ echo.
 
 cd /d %USERPROFILE%\Desktop\veronica
 
-echo [1/4] Salvando no GitHub...
+echo [1/3] Salvando no GitHub...
 echo.
 git add .
 git commit -m "Backup automatico %date% %time%"
@@ -22,24 +22,20 @@ if %errorlevel% == 0 (
 )
 echo.
 
-echo [2/4] Backup completo da Veronica no HD (E:) e Pen Drive (D:)...
-python organizar.py 3
+echo [2/3] Backup local nos HDs (G: arena x  e  E: Roberta)...
+python organizar.py backup
 echo.
 
-echo [3/4] Backup do PainelGest no HD (E:) e Pen Drive (D:)...
-python organizar.py 2
-echo.
-
-echo [4/4] Verificando destinos...
-if exist E:\backup_veronica (
-    echo [HD E:]       OK - pasta backup_veronica encontrada
+echo [3/3] Verificando destinos...
+if exist G:\Backup_Veronica (
+    echo [HD G: arena x]  OK - encontrado
 ) else (
-    echo [HD E:]       AVISO - HD nao encontrado ou sem backup anterior
+    echo [HD G: arena x]  AVISO - HD nao encontrado
 )
-if exist D:\backup_veronica (
-    echo [Pen Drive D:] OK - pasta backup_veronica encontrada
+if exist E:\Backup_Veronica (
+    echo [HD E: Roberta]  OK - encontrado
 ) else (
-    echo [Pen Drive D:] AVISO - Pen Drive nao encontrado ou sem backup anterior
+    echo [HD E: Roberta]  AVISO - HD nao encontrado
 )
 
 echo.
@@ -47,8 +43,8 @@ echo ================================================
 echo    BACKUP CONCLUIDO!
 echo ================================================
 echo.
-echo   GitHub     : https://github.com/elisson83/veronica-ia
-echo   HD (E:)    : E:\backup_veronica\
-echo   Pen Drive  : D:\backup_veronica\
+echo   GitHub        : https://github.com/elisson83/veronica-ia
+echo   HD G: arena x : G:\Backup_Veronica\
+echo   HD E: Roberta : E:\Backup_Veronica\
 echo.
 pause

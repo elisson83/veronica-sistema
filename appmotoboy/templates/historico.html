@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Histórico — AppMotoboy{% endblock %}
+
+{% block content %}
+<h5 class="section-title">Histórico de Entregas</h5>
+
+<!-- Filtro de período -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  {% for d, label in [(1,'Hoje'),(7,'7 dias'),(15,'15 dias'),(30,'30 dias')] %}
+  <a href="?dias={{ d }}" class="badge {% if dias==d %}bg-warning text-dark{% else %}bg-secondary{% endif %} text-decoration-none" style="font-size:.8rem; padding:6px 12px;">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<!-- Resumo -->
+<div class="row g-2 mb-3">
+  <div class="col-6">
+    <div class="card-dark stat-card">
+      <div class="val text-success">{{ entregas|length }}</div>
+      <div class="lbl">Entregas</div>
+    </div>
+  </div>
+  <div class="col-6">
+    <div class="card-dark stat-card">
+      <div class="val text-warning">R$ {{ '%.2f'|format(total_ganho) }}</div>
+      <div class="lbl">Ganho em taxas</div>
+    </div>
+  </div>
+</div>
+
+{% for e in entregas %}
+<div class="card-dark mb-2">
+  <div class="d-flex justify-content-between align-items-start">
+    <div>
+      <div class="fw-bold" style="font-size:.9rem;">{{ e.cliente_nome or 'Cliente' }}</div>
+      <div class="text-muted" style="font-size:.75rem;">{{ e.cliente_endereco }}</div>
+      {% if e.restaurante_nome %}<div class="text-muted" style="font-size:.75rem;"><i class="fas fa-store me-1"></i>{{ e.restaurante_nome }}</div>{% endif %}
+    </div>
+    <div class="text-end">
+      <div class="text-warning fw-bold">+ R$ {{ '%.2f'|format(e.valor_total_taxa) }}</div>
+      <div class="text-muted" style="font-size:.72rem;">{{ e.entregue_em.strftime('%d/%m %H:%M') if e.entregue_em }}</div>
+      {% if e.duracao_minutos %}<div class="text-muted" style="font-size:.72rem;"><i class="fas fa-clock me-1"></i>{{ e.duracao_minutos }} min</div>{% endif %}
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card-dark text-center py-5 text-muted">
+  <i class="fas fa-clock-rotate-left fa-2x mb-2"></i><br>Nenhuma entrega no período
+</div>
+{% endfor %}
+{% endblock %}

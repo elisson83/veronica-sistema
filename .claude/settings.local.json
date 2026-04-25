@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(pip install *)",
+      "Bash(python -c ' *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(python organizar.py 3)",
+      "Bash(python organizar.py 2)",
+      "Bash(npm i *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app.py'\\).read\\(\\)\\); print\\('Sintaxe OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app.py', encoding='utf-8'\\).read\\(\\)\\); print\\('Sintaxe OK'\\)\")",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(sed \"s/render_template\\('//\")",
+      "Bash(sed \"s/'$//\")",
+      "Bash(python -c \"import app; print\\('OK - app importado com sucesso'\\)\")",
+      "Bash(mkdir -p \"/e/Backup_Veronica\")",
+      "Bash(cp -r \"C:/Users/Usuário/Desktop/veronica/.\" \"/e/Backup_Veronica/\")",
+      "Bash(mkdir -p \"/d/Backup_Veronica\")",
+      "Bash(cp -r \"C:/Users/Usuário/Desktop/veronica/.\" \"/d/Backup_Veronica/\")"
+    ]
+  }
+}

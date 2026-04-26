@@ -10,6 +10,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
 from functools import wraps
+from apscheduler.schedulers.background import BackgroundScheduler
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -899,4 +900,13 @@ def migrate_db():
 
 if __name__ == '__main__':
     migrate_db()
-    app.run(port=5004, debug=True, use_reloader=False)
+    import logging
+    logging.getLogger('apscheduler').setLevel(logging.WARNING)
+    scheduler = BackgroundScheduler()
+    # Fechamento automático todo dia à meia-noite
+    scheduler.add_job(fechamento_automatico, 'cron', hour=0, minute=5, id='fechamento_diario')
+    scheduler.start()
+    try:
+        app.run(port=5004, debug=True, use_reloader=False)
+    finally:
+        scheduler.shutdown()

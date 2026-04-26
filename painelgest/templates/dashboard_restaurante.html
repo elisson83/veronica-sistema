@@ -196,6 +196,38 @@
       </div>
     </div>
 
+    <!-- Status de Pagamentos -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <!-- Mercado Pago -->
+      <div style="padding:14px 16px;background:{% if mp_ativo %}rgba(34,197,94,.08){% else %}rgba(234,179,8,.06){% endif %};border:1px solid {% if mp_ativo %}rgba(34,197,94,.2){% else %}rgba(234,179,8,.15){% endif %};border-radius:12px">
+        <div style="font-size:12px;font-weight:700;{% if mp_ativo %}color:#4ade80{% else %}color:#facc15{% endif %};margin-bottom:6px">
+          <i class="fas fa-{% if mp_ativo %}bolt{% else %}triangle-exclamation{% endif %} me-1"></i>
+          Mercado Pago Automático
+        </div>
+        {% if mp_ativo %}
+        <div style="font-size:11px;color:#86efac">Ativo — clientes pagam online com cartão, PIX ou saldo MP. Confirmação automática.</div>
+        {% else %}
+        <div style="font-size:11px;color:#fde68a">Inativo — pagamentos online não disponíveis. Configure o token com o administrador.</div>
+        {% endif %}
+      </div>
+      <!-- PIX Manual -->
+      <div style="padding:14px 16px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:12px">
+        <div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:6px">
+          <i class="fas fa-qrcode me-1"></i>PIX Manual
+        </div>
+        {% if restaurante.chave_pix %}
+        <div style="font-size:11px;color:#fde68a">
+          Ativo — chave: <strong style="color:#fbbf24">{{ restaurante.chave_pix }}</strong><br>
+          Cliente escaneia e transfere manualmente.
+        </div>
+        {% else %}
+        <div style="font-size:11px;color:var(--muted)">
+          Sem chave configurada. <a href="{{ url_for('editar_perfil_restaurante') }}" style="color:#fbbf24;">Configurar →</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
     <!-- Ações Rápidas -->
     <div class="quick-grid">
       <a href="{{ url_for('restaurante_kanban') }}" class="quick-card">
@@ -217,6 +249,13 @@
         <div>
           <div style="font-size:14px;font-weight:600">Perfil</div>
           <div style="font-size:11px;color:var(--muted)">Logo, cores e pagamentos</div>
+        </div>
+      </a>
+      <a href="{{ url_for('vagas_restaurante') }}" class="quick-card">
+        <i class="fas fa-motorcycle" style="color:#06b6d4"></i>
+        <div>
+          <div style="font-size:14px;font-weight:600">Motoboys</div>
+          <div style="font-size:11px;color:var(--muted)">Vagas, parceiros e NF</div>
         </div>
       </a>
     </div>
@@ -285,8 +324,37 @@
       </div>
     </div>
 
+    <!-- Conectar à Frota de Entrega -->
+    <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.18);border-radius:12px;padding:16px 20px;margin-top:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <i class="fas fa-truck-fast" style="color:#a78bfa;font-size:1.1rem"></i>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#a78bfa">Conectar ao PainelFrota</div>
+          <div style="font-size:11px;color:var(--muted)">Integre com uma frota de entrega para gerenciar motoboys</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px">
+        <strong style="color:var(--text)">Como funciona:</strong><br>
+        1. O administrador da frota cria um perfil do seu restaurante no <strong>PainelFrota</strong> e gera um QR Code único<br>
+        2. Você escaneia o QR Code com o celular ou acessa o link<br>
+        3. Confirma a conexão — a partir disso, as entregas ficam vinculadas automaticamente<br>
+        4. O PainelFrota gerencia os motoboys, turnos e pagamentos
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="{{ url_for('vagas_restaurante') }}" class="btn btn-ghost" style="font-size:12px;padding:7px 14px">
+          <i class="fas fa-calendar-check me-1"></i>Vagas de Plantão
+        </a>
+        <a href="{{ url_for('parceiros_restaurante') }}" class="btn btn-ghost" style="font-size:12px;padding:7px 14px">
+          <i class="fab fa-whatsapp me-1"></i>Motoboys Parceiros
+        </a>
+        <a href="{{ url_for('comprovante_restaurante') }}" class="btn btn-ghost" style="font-size:12px;padding:7px 14px">
+          <i class="fas fa-file-invoice me-1"></i>Comprovante / NF
+        </a>
+      </div>
+    </div>
+
     {% if restaurante.data_vencimento %}
-    <div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:12px;padding:14px 18px;margin-top:16px;display:flex;gap:10px;align-items:center">
+    <div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:12px;padding:14px 18px;margin-top:12px;display:flex;gap:10px;align-items:center">
       <i class="fas fa-calendar-xmark" style="color:#fbbf24"></i>
       <span style="font-size:13px">Assinatura vence em: <strong style="color:#fbbf24">{{ restaurante.data_vencimento.strftime('%d/%m/%Y') }}</strong></span>
       {% if restaurante.link_pagamento %}

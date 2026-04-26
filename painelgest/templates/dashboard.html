@@ -123,6 +123,22 @@
         </div>
         {% endif %}
 
+        <!-- Status de Pagamentos -->
+        <div style="background:{% if mp_ativo %}rgba(34,197,94,.08){% else %}rgba(234,179,8,.06){% endif %};border:1px solid {% if mp_ativo %}rgba(34,197,94,.2){% else %}rgba(234,179,8,.15){% endif %};border-radius:10px;padding:12px 14px;margin-top:4px">
+          <div style="font-size:11px;font-weight:700;{% if mp_ativo %}color:#4ade80{% else %}color:#facc15{% endif %};margin-bottom:8px;text-transform:uppercase;letter-spacing:.7px">
+            <i class="fas fa-{% if mp_ativo %}bolt{% else %}triangle-exclamation{% endif %} me-1"></i>Mercado Pago
+          </div>
+          {% if mp_ativo %}
+          <div style="font-size:12px;color:#86efac">Pagamentos automáticos <strong>ativos</strong>. Clientes podem pagar online com cartão, PIX e saldo MP.</div>
+          {% else %}
+          <div style="font-size:12px;color:#fde68a">Apenas <strong>PIX manual</strong> disponível. Configure <code style="background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px">MERCADOPAGO_ACCESS_TOKEN</code> no <code>.env</code> para ativar pagamentos automáticos.</div>
+          {% endif %}
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;color:var(--muted)">
+            <div><i class="fas fa-bolt me-1"></i>MP Automático: <span style="color:{% if mp_ativo %}#4ade80{% else %}var(--muted){% endif %}">{% if mp_ativo %}✓ Ativo{% else %}✗ Inativo{% endif %}</span></div>
+            <div><i class="fas fa-qrcode me-1"></i>PIX Manual: <span style="color:#fbbf24">✓ Sempre ativo</span></div>
+          </div>
+        </div>
+
         <!-- Stats de planos -->
         <div style="margin-top:8px">
           <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">Distribuição por plano</div>

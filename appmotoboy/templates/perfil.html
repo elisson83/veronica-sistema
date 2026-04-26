@@ -57,9 +57,28 @@
     <label class="form-label text-muted" style="font-size:.82rem;">E-mail (para receber comprovantes)</label>
     <input type="email" name="email" class="form-control" value="{{ current_user.email or '' }}" placeholder="seu@email.com" style="background:#0f0f13;border-color:#2e2e3e;color:#e2e8f0;">
   </div>
+  <!-- Explicação dos modos de pagamento -->
+  <div class="mb-3 p-3" style="background:#0f0f13;border:1px solid #2e2e3e;border-radius:10px;">
+    <div style="font-size:.78rem;font-weight:700;color:#f59e0b;margin-bottom:8px;"><i class="fas fa-info-circle me-1"></i>Como você recebe seus ganhos</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.75rem;color:#64748b;">
+      <div style="padding:8px;background:#1a1a24;border-radius:8px;border:1px solid #2e2e3e;">
+        <div style="color:#fbbf24;font-weight:600;margin-bottom:4px;"><i class="fas fa-qrcode me-1"></i>PIX Manual</div>
+        O gestor da frota calcula seus ganhos e te paga via PIX. Você recebe o valor acordado por entrega ao final do expediente.
+      </div>
+      <div style="padding:8px;background:#1a1a24;border-radius:8px;border:1px solid #2e2e3e;">
+        <div style="color:#10b981;font-weight:600;margin-bottom:4px;"><i class="fas fa-bolt me-1"></i>PIX Automático</div>
+        Se o sistema tiver fechamento automático ativo, seus ganhos são calculados à meia-noite e o pagamento é registrado nesta chave.
+      </div>
+    </div>
+  </div>
   <div class="mb-3">
-    <label class="form-label text-muted" style="font-size:.82rem;">Chave PIX</label>
-    <input type="text" name="chave_pix" class="form-control" value="{{ current_user.chave_pix or '' }}" placeholder="CPF, e-mail ou telefone" style="background:#0f0f13;border-color:#2e2e3e;color:#e2e8f0;">
+    <label class="form-label text-muted" style="font-size:.82rem;">Chave PIX <span style="color:#f59e0b;">*</span></label>
+    <input type="text" name="chave_pix" class="form-control" value="{{ current_user.chave_pix or '' }}" placeholder="CPF, e-mail, telefone ou chave aleatória" style="background:#0f0f13;border-color:{% if current_user.chave_pix %}#10b981{% else %}#f59e0b{% endif %};color:#e2e8f0;">
+    {% if not current_user.chave_pix %}
+    <div style="font-size:.72rem;color:#fbbf24;margin-top:4px;"><i class="fas fa-triangle-exclamation me-1"></i>Configure sua chave PIX para receber pagamentos automáticos.</div>
+    {% else %}
+    <div style="font-size:.72rem;color:#10b981;margin-top:4px;"><i class="fas fa-circle-check me-1"></i>Chave configurada — você receberá pagamentos nesta conta.</div>
+    {% endif %}
   </div>
 
   <h6 class="mb-3 mt-2" style="color:#f59e0b;">Alterar Senha</h6>

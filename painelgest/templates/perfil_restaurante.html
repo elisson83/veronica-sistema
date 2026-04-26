@@ -217,17 +217,80 @@
     <div class="card">
       <div class="card-header">
         <i class="fas fa-qrcode" style="color:#fbbf24"></i>
-        <span class="card-title">Pagamento Online</span>
+        <span class="card-title">Recebimento de Pagamentos</span>
       </div>
       <div class="card-body">
+
+        <!-- Status do Mercado Pago -->
+        {% if mp_ativo %}
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;margin-bottom:16px">
+          <i class="fas fa-circle-check" style="color:#4ade80;font-size:1.1rem;flex-shrink:0"></i>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#4ade80">Mercado Pago ativo</div>
+            <div style="font-size:11px;color:#86efac;margin-top:2px">Pagamentos online processados automaticamente. O valor vai direto para sua conta Mercado Pago.</div>
+          </div>
+        </div>
+        {% else %}
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:10px;margin-bottom:16px">
+          <i class="fas fa-triangle-exclamation" style="color:#facc15;font-size:1.1rem;flex-shrink:0"></i>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#facc15">Mercado Pago não configurado</div>
+            <div style="font-size:11px;color:#fde68a;margin-top:2px">Apenas PIX manual disponível. Peça ao administrador para configurar o token no .env para ativar pagamentos online.</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Comparação MP vs PIX -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+          <div style="padding:14px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px">
+            <div style="font-size:12px;font-weight:700;color:#818cf8;margin-bottom:6px">
+              <i class="fas fa-bolt me-1"></i>Mercado Pago Automático
+            </div>
+            <ul style="font-size:11px;color:var(--muted);padding-left:14px;margin:0;line-height:1.8">
+              <li>Cliente paga com cartão, PIX ou saldo MP</li>
+              <li>Confirmação instantânea e automática</li>
+              <li>Dinheiro vai direto para sua conta MP</li>
+              <li>Requer TOKEN configurado pelo admin</li>
+            </ul>
+            <div style="margin-top:8px">
+              {% if mp_ativo %}
+              <span style="font-size:11px;background:#064e3b;color:#4ade80;border-radius:4px;padding:2px 8px;font-weight:600">✓ Ativo</span>
+              {% else %}
+              <span style="font-size:11px;background:#1f1f2e;color:var(--muted);border-radius:4px;padding:2px 8px">✗ Inativo</span>
+              {% endif %}
+            </div>
+          </div>
+          <div style="padding:14px;background:rgba(234,179,8,.06);border:1px solid rgba(234,179,8,.15);border-radius:10px">
+            <div style="font-size:12px;font-weight:700;color:#facc15;margin-bottom:6px">
+              <i class="fas fa-qrcode me-1"></i>PIX Manual
+            </div>
+            <ul style="font-size:11px;color:var(--muted);padding-left:14px;margin:0;line-height:1.8">
+              <li>Cliente escaneia ou digita sua chave PIX</li>
+              <li>Você confirma o recebimento manualmente</li>
+              <li>Dinheiro vai para sua conta bancária</li>
+              <li>Sempre disponível, sem configuração extra</li>
+            </ul>
+            <div style="margin-top:8px">
+              {% if restaurante.chave_pix %}
+              <span style="font-size:11px;background:#2d2416;color:#fbbf24;border-radius:4px;padding:2px 8px;font-weight:600">✓ Chave configurada</span>
+              {% else %}
+              <span style="font-size:11px;background:#1f1f2e;color:var(--muted);border-radius:4px;padding:2px 8px">⚠ Configure sua chave abaixo</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Campos -->
         <div class="grid2">
           <div class="form-group">
-            <label class="label">Chave PIX</label>
-            <input type="text" name="chave_pix" class="input" value="{{ restaurante.chave_pix or '' }}" placeholder="CPF, e-mail ou telefone">
+            <label class="label"><i class="fas fa-key me-1"></i>Chave PIX</label>
+            <input type="text" name="chave_pix" class="input" value="{{ restaurante.chave_pix or '' }}" placeholder="CPF, e-mail, telefone ou chave aleatória">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Usada quando o cliente paga via PIX manual. Aparecer no cardápio.</div>
           </div>
           <div class="form-group">
-            <label class="label">Link de Pagamento</label>
+            <label class="label"><i class="fas fa-link me-1"></i>Link de Pagamento externo</label>
             <input type="text" name="link_pagamento" class="input" value="{{ restaurante.link_pagamento or '' }}" placeholder="https://...">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Link do Mercado Pago, PagSeguro ou outro gateway externo.</div>
           </div>
         </div>
       </div>

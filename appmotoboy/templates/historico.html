@@ -13,32 +13,56 @@
 
 <!-- Resumo -->
 <div class="row g-2 mb-3">
-  <div class="col-6">
+  <div class="col-4">
     <div class="card-dark stat-card">
       <div class="val text-success">{{ entregas|length }}</div>
       <div class="lbl">Entregas</div>
     </div>
   </div>
-  <div class="col-6">
+  <div class="col-4">
     <div class="card-dark stat-card">
-      <div class="val text-warning">R$ {{ '%.2f'|format(total_ganho) }}</div>
-      <div class="lbl">Ganho em taxas</div>
+      <div class="val text-warning" style="font-size:1.2rem;">R$ {{ '%.2f'|format(total_ganho) }}</div>
+      <div class="lbl">Em taxas</div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card-dark stat-card">
+      <div class="val" style="color:#a855f7;font-size:1.2rem;">R$ {{ '%.2f'|format(total_pedidos) }}</div>
+      <div class="lbl">Valor pedidos</div>
     </div>
   </div>
 </div>
 
+<!-- Ticket médio se houver entregas -->
+{% if entregas %}
+<div class="card-dark mb-3 d-flex justify-content-between align-items-center py-2">
+  <span style="font-size:.82rem;color:#64748b;">Taxa média por entrega</span>
+  <span style="font-weight:700;color:#f59e0b;">R$ {{ '%.2f'|format(total_ganho / entregas|length) }}</span>
+</div>
+{% endif %}
+
+<!-- Lista -->
 {% for e in entregas %}
 <div class="card-dark mb-2">
   <div class="d-flex justify-content-between align-items-start">
-    <div>
+    <div style="flex:1;">
       <div class="fw-bold" style="font-size:.9rem;">{{ e.cliente_nome or 'Cliente' }}</div>
-      <div class="text-muted" style="font-size:.75rem;">{{ e.cliente_endereco }}</div>
+      <div class="text-muted" style="font-size:.75rem;"><i class="fas fa-map-marker-alt me-1"></i>{{ e.cliente_endereco }}</div>
       {% if e.restaurante_nome %}<div class="text-muted" style="font-size:.75rem;"><i class="fas fa-store me-1"></i>{{ e.restaurante_nome }}</div>{% endif %}
+      {% if e.codigo_ifood %}<div style="font-size:.73rem;"><i class="fab fa-apple me-1 text-danger"></i>iFood: <strong>{{ e.codigo_ifood }}</strong></div>{% endif %}
     </div>
-    <div class="text-end">
+    <div class="text-end" style="flex-shrink:0;margin-left:12px;">
       <div class="text-warning fw-bold">+ R$ {{ '%.2f'|format(e.valor_total_taxa) }}</div>
       <div class="text-muted" style="font-size:.72rem;">{{ e.entregue_em.strftime('%d/%m %H:%M') if e.entregue_em }}</div>
       {% if e.duracao_minutos %}<div class="text-muted" style="font-size:.72rem;"><i class="fas fa-clock me-1"></i>{{ e.duracao_minutos }} min</div>{% endif %}
+      <!-- Adicionais -->
+      {% if e.adicional_chuva > 0 or e.adicional_pico > 0 or e.adicional_noturno > 0 %}
+      <div style="margin-top:3px;">
+        {% if e.adicional_chuva > 0 %}<i class="fas fa-cloud-rain text-info" style="font-size:.7rem;" title="Chuva +R${{ '%.2f'|format(e.adicional_chuva) }}"></i>{% endif %}
+        {% if e.adicional_pico > 0 %}<i class="fas fa-fire text-warning" style="font-size:.7rem;" title="Pico +R${{ '%.2f'|format(e.adicional_pico) }}"></i>{% endif %}
+        {% if e.adicional_noturno > 0 %}<i class="fas fa-moon" style="font-size:.7rem;color:#a855f7;" title="Noturno +R${{ '%.2f'|format(e.adicional_noturno) }}"></i>{% endif %}
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>

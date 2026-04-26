@@ -15,13 +15,13 @@
   <div class="col-6">
     <div class="card-dark stat-card">
       <div class="val text-warning">R$ {{ '%.2f'|format(ganhos_semana) }}</div>
-      <div class="lbl">Essa semana ({{ qtd_semana }})</div>
+      <div class="lbl">Esta semana ({{ qtd_semana }})</div>
     </div>
   </div>
   <div class="col-6">
     <div class="card-dark stat-card">
       <div class="val">R$ {{ '%.2f'|format(ganhos_mes) }}</div>
-      <div class="lbl">Esse mês ({{ qtd_mes }})</div>
+      <div class="lbl">Este mês ({{ qtd_mes }})</div>
     </div>
   </div>
   <div class="col-6">
@@ -32,24 +32,60 @@
   </div>
 </div>
 
+<!-- Info de recebimento -->
+<div class="card-dark mb-3" style="border-color:{% if current_user.chave_pix %}#10b98133{% else %}#f59e0b33{% endif %};">
+  <div style="font-size:.78rem;font-weight:700;color:#f59e0b;margin-bottom:6px;">
+    <i class="fas fa-pix me-1"></i>Como você recebe
+  </div>
+  {% if current_user.chave_pix %}
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <div style="font-size:.82rem;color:#e2e8f0;">PIX configurado</div>
+      <div style="font-size:.75rem;color:#64748b;">{{ current_user.chave_pix }}</div>
+    </div>
+    <span style="font-size:.72rem;background:#064e3b;color:#10b981;border-radius:4px;padding:2px 8px;font-weight:600;">✓ Ativo</span>
+  </div>
+  <div style="font-size:.72rem;color:#64748b;margin-top:6px;padding-top:6px;border-top:1px solid #2e2e3e;">
+    <i class="fas fa-info-circle me-1"></i>
+    <strong>PIX Automático:</strong> seus ganhos são calculados à meia-noite e o pagamento é registrado automaticamente.
+    <strong>PIX Manual:</strong> o gestor te paga diretamente nesta chave.
+  </div>
+  {% else %}
+  <div style="font-size:.82rem;color:#fbbf24;">
+    <i class="fas fa-triangle-exclamation me-1"></i>Chave PIX não configurada
+  </div>
+  <div style="font-size:.72rem;color:#64748b;margin-top:4px;">Configure sua chave PIX no Perfil para receber pagamentos automáticos.</div>
+  <a href="{{ url_for('perfil') }}" style="display:inline-block;margin-top:8px;font-size:.75rem;background:#f59e0b22;color:#fbbf24;border:1px solid #f59e0b44;border-radius:6px;padding:4px 12px;text-decoration:none;">
+    <i class="fas fa-user me-1"></i>Ir para Perfil
+  </a>
+  {% endif %}
+</div>
+
 <!-- Últimas entregues -->
 <h5 class="section-title">Últimas Entregas Pagas</h5>
 {% for e in ultimas %}
-<div class="card-dark mb-2 d-flex justify-content-between align-items-center">
-  <div>
-    <div style="font-size:.88rem; font-weight:600;">{{ e.cliente_nome or 'Cliente' }}</div>
-    <div style="font-size:.75rem; color:#64748b;">{{ e.entregue_em.strftime('%d/%m/%Y %H:%M') if e.entregue_em }}</div>
-  </div>
-  <div class="text-end">
-    <div class="text-success fw-bold">+ R$ {{ '%.2f'|format(e.valor_total_taxa) }}</div>
-    {% if e.adicional_chuva > 0 or e.adicional_pico > 0 or e.adicional_noturno > 0 %}
-    <div style="font-size:.7rem; color:#64748b;">
-      {% if e.adicional_chuva > 0 %}<i class="fas fa-cloud-rain me-1 text-info"></i>{% endif %}
-      {% if e.adicional_pico > 0 %}<i class="fas fa-fire me-1 text-warning"></i>{% endif %}
-      {% if e.adicional_noturno > 0 %}<i class="fas fa-moon me-1"></i>{% endif %}
+<div class="card-dark mb-2">
+  <div class="d-flex justify-content-between align-items-start">
+    <div style="flex:1;">
+      <div style="font-size:.88rem;font-weight:600;">{{ e.cliente_nome or 'Cliente' }}</div>
+      <div style="font-size:.75rem;color:#64748b;">
+        <i class="fas fa-clock me-1"></i>{{ e.entregue_em.strftime('%d/%m/%Y %H:%M') if e.entregue_em }}
+        {% if e.restaurante_nome %} · <i class="fas fa-store me-1"></i>{{ e.restaurante_nome }}{% endif %}
+      </div>
     </div>
-    {% endif %}
+    <div class="text-end">
+      <div class="text-success fw-bold" style="font-size:.9rem;">+ R$ {{ '%.2f'|format(e.valor_total_taxa) }}</div>
+      <div style="font-size:.7rem;color:#64748b;margin-top:2px;">
+        base: R$ {{ '%.2f'|format(e.taxa_entrega) }}
+        {% if e.adicional_chuva > 0 %}<i class="fas fa-cloud-rain text-info ms-1"></i>{% endif %}
+        {% if e.adicional_pico > 0 %}<i class="fas fa-fire text-warning ms-1"></i>{% endif %}
+        {% if e.adicional_noturno > 0 %}<i class="fas fa-moon ms-1"></i>{% endif %}
+      </div>
+    </div>
   </div>
+  {% if e.duracao_minutos %}
+  <div style="font-size:.72rem;color:#64748b;margin-top:4px;"><i class="fas fa-route me-1"></i>{{ e.duracao_minutos }} min de entrega</div>
+  {% endif %}
 </div>
 {% else %}
 <div class="card-dark text-center py-4 text-muted">

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Escala Semanal — PainelFrota{% endblock %}
+{% block page_title %}Escala Semanal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-end mb-3">
+  <a href="{{ url_for('turnos') }}" class="btn btn-surface btn-sm"><i class="fas fa-clock me-1"></i>Ver Turnos Online</a>
+</div>
+
+<div class="card-dark" style="overflow-x:auto;">
+  <table class="table-dark-custom w-100" style="min-width:600px;">
+    <thead>
+      <tr>
+        <th style="min-width:120px;">Motoboy</th>
+        {% for dia in semana %}
+        <th style="text-align:center; {% if dia == hoje %}color:#f59e0b;{% endif %}">
+          {{ dia.strftime('%a') }}<br>
+          <span style="font-weight:400; font-size:.85em;">{{ dia.strftime('%d/%m') }}</span>
+          {% if dia == hoje %}<br><span style="font-size:.65em; color:#f59e0b;">hoje</span>{% endif %}
+        </th>
+        {% endfor %}
+        <th style="text-align:center;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for mb in motoboys %}
+    <tr>
+      <td class="fw-semibold">{{ mb.nome }}</td>
+      {% set total_mb = namespace(v=0) %}
+      {% for dia in semana %}
+      {% set horas = grade[mb.id][dia] %}
+      {% set total_mb.v = total_mb.v + horas %}
+      <td style="text-align:center; padding:10px;">
+        {% if horas > 0 %}
+        <span style="background:{% if horas >= 6 %}#064e3b{% elif horas >= 3 %}#1c3a2c{% else %}#1e3a5f{% endif %};
+          color:{% if horas >= 6 %}#6ee7b7{% elif horas >= 3 %}#34d399{% else %}#60a5fa{% endif %};
+          border-radius:6px; padding:3px 8px; font-size:.82rem; font-weight:600;">
+          {{ horas }}h
+        </span>
+        {% else %}
+        <span style="color:#2e2e3e; font-size:.78rem;">—</span>
+        {% endif %}
+      </td>
+      {% endfor %}
+      <td style="text-align:center; font-weight:700; color:{% if total_mb.v > 0 %}#f59e0b{% else %}var(--muted){% endif %};">
+        {{ total_mb.v }}h
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Legenda -->
+<div class="d-flex gap-3 mt-3 flex-wrap">
+  <div class="d-flex align-items-center gap-1" style="font-size:.78rem;">
+    <span style="background:#064e3b;color:#6ee7b7;border-radius:4px;padding:2px 8px;">6h+</span> Turno completo
+  </div>
+  <div class="d-flex align-items-center gap-1" style="font-size:.78rem;">
+    <span style="background:#1c3a2c;color:#34d399;border-radius:4px;padding:2px 8px;">3-6h</span> Meio turno
+  </div>
+  <div class="d-flex align-items-center gap-1" style="font-size:.78rem;">
+    <span style="background:#1e3a5f;color:#60a5fa;border-radius:4px;padding:2px 8px;">+0h</span> Parcial
+  </div>
+</div>
+{% endblock %}

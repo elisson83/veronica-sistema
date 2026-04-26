@@ -2,6 +2,28 @@
 {% block title %}Início — AppMotoboy{% endblock %}
 
 {% block content %}
+
+<!-- Alerta de horário de pico -->
+{% if pico_agora %}
+<div class="d-flex align-items-center gap-2 mb-3 p-3" style="background:#2d241622;border:1px solid #f59e0b33;border-radius:10px;">
+  <i class="fas fa-fire text-warning"></i>
+  <span style="font-size:.85rem; color:#fbbf24; font-weight:600;">Horário de Pico — Taxa adicional ativa!</span>
+</div>
+{% endif %}
+
+<!-- Alerta de vagas disponíveis -->
+{% if vagas_count > 0 %}
+<a href="{{ url_for('vagas') }}" style="text-decoration:none;">
+  <div class="d-flex align-items-center justify-content-between mb-3 p-3" style="background:#064e3b22;border:1px solid #10b98133;border-radius:10px;">
+    <div class="d-flex align-items-center gap-2">
+      <i class="fas fa-calendar-check text-success"></i>
+      <span style="font-size:.85rem; color:#6ee7b7; font-weight:600;">{{ vagas_count }} vaga{{ 's' if vagas_count != 1 }} de plantão abertas hoje!</span>
+    </div>
+    <i class="fas fa-arrow-right" style="color:#6ee7b7;font-size:.8rem;"></i>
+  </div>
+</a>
+{% endif %}
+
 <!-- Toggle GPS -->
 <button class="gps-toggle {% if current_user.disponivel %}on{% else %}off{% endif %} mb-4" id="btnGPS" onclick="toggleGPS()">
   <i class="fa-solid {% if current_user.disponivel %}fa-location-dot{% else %}fa-location-crosshairs{% endif %} me-2" id="iconGPS"></i>
@@ -41,7 +63,14 @@
       <div class="fw-bold">{{ e.cliente_nome or 'Cliente' }}</div>
       <div class="text-muted" style="font-size:.8rem;"><i class="fas fa-map-marker-alt me-1"></i>{{ e.cliente_endereco }}</div>
     </div>
-    <span class="badge badge-pendente">Pendente</span>
+    <div class="text-end">
+      <span class="badge badge-pendente">Pendente</span>
+      {% if e.segundos_para_expirar is not none %}
+      <div id="timer-{{ e.id }}" style="font-size:.85rem; font-weight:700; color:#ef4444; margin-top:2px;">
+        ⏱ {{ e.segundos_para_expirar }}s
+      </div>
+      {% endif %}
+    </div>
   </div>
   {% if e.restaurante_nome %}<div style="font-size:.8rem;" class="mb-1 text-muted"><i class="fas fa-store me-1"></i>{{ e.restaurante_nome }}</div>{% endif %}
   {% if e.codigo_ifood %}<div style="font-size:.8rem;" class="mb-1"><i class="fab fa-apple me-1 text-danger"></i>iFood: <strong>{{ e.codigo_ifood }}</strong></div>{% endif %}
@@ -72,7 +101,7 @@
 
 {% block scripts %}
 <script>
-let watchId = null;
+let watchId = null, gpsInterval = null;
 
 async function toggleGPS() {
   const btn = document.getElementById('btnGPS');
@@ -93,27 +122,64 @@ async function toggleGPS() {
     document.getElementById('iconGPS').className = 'fa-solid fa-location-crosshairs me-2';
     document.getElementById('badge-disp').className = 'disponivel-badge off';
     document.getElementById('badge-disp').innerHTML = '<i class="fa-regular fa-circle me-1"></i>Offline';
-    if (watchId) navigator.geolocation.clearWatch(watchId);
+    if (gpsInterval) clearInterval(gpsInterval);
   }
 }
 
-function iniciarGPS() {
+function enviarGPS() {
   if (!navigator.geolocation) return;
-  watchId = navigator.geolocation.watchPosition(pos => {
+  navigator.geolocation.getCurrentPosition(pos => {
     fetch('/atualizar_gps', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
     });
-  }, null, { enableHighAccuracy: true, maximumAge: 10000 });
+  }, null, { enableHighAccuracy: true, timeout: 5000 });
+}
+
+function iniciarGPS() {
+  enviarGPS();
+  // GPS a cada 30 segundos
+  gpsInterval = setInterval(enviarGPS, 30000);
 }
 
 async function aceitarEntrega(id) {
   const r = await fetch(`/entregas/${id}/aceitar`, { method: 'POST' });
   const d = await r.json();
-  if (d.ok) location.reload();
+  if (d.ok) {
+    location.reload();
+  } else if (d.expirada) {
+    alert('⏱ Tempo esgotado! Esta entrega expirou.');
+    location.reload();
+  }
 }
 
+// Contadores regressivos para entregas pendentes com expira_em
+{% for e in pendentes %}
+{% if e.segundos_para_expirar is not none %}
+(function() {
+  let seg = {{ e.segundos_para_expirar }};
+  const el = document.getElementById('timer-{{ e.id }}');
+  if (!el) return;
+  const iv = setInterval(() => {
+    seg--;
+    if (seg <= 0) {
+      clearInterval(iv);
+      el.textContent = '⏱ Expirado';
+      el.style.color = '#64748b';
+      document.getElementById('entrega-{{ e.id }}')?.querySelector('button')?.setAttribute('disabled','');
+    } else {
+      el.textContent = `⏱ ${seg}s`;
+      el.style.color = seg <= 5 ? '#ef4444' : '#fbbf24';
+    }
+  }, 1000);
+})();
+{% endif %}
+{% endfor %}
+
 {% if current_user.disponivel %}iniciarGPS();{% endif %}
+
+// Recarregar a cada 20s para verificar novas entregas
+setTimeout(() => location.reload(), 20000);
 </script>
 {% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Vagas de Plantão{% endblock %}
+
+{% block content %}
+<h5 class="section-title"><i class="fas fa-calendar-check me-1 text-warning"></i>Vagas Disponíveis Hoje</h5>
+
+{% if vagas %}
+{% for v in vagas %}
+<div class="card-dark mb-3">
+  <div class="d-flex justify-content-between align-items-start mb-2">
+    <div>
+      <div class="fw-bold" style="font-size:.95rem;">Plantão {{ v.horario_inicio }} – {{ v.horario_fim }}</div>
+      {% if v.observacao %}<div style="font-size:.8rem; color:#64748b;">{{ v.observacao }}</div>{% endif %}
+    </div>
+    <span class="badge bg-success">{{ v.vagas_livres }} vaga{{ 's' if v.vagas_livres != 1 }}</span>
+  </div>
+
+  <!-- Barra de progresso -->
+  <div style="font-size:.78rem; color:#64748b; margin-bottom:4px;">{{ v.vagas_preench }}/{{ v.vagas_total }} confirmados</div>
+  <div style="background:#1a1a24;border-radius:6px;height:6px;overflow:hidden;margin-bottom:12px;">
+    {% set pct = ((v.vagas_preench / v.vagas_total) * 100) | int if v.vagas_total > 0 else 0 %}
+    <div style="background:#f59e0b;width:{{ pct }}%;height:100%;border-radius:6px;"></div>
+  </div>
+
+  {% if v.vagas_livres > 0 %}
+  <form method="POST" action="{{ url_for('aceitar_vaga', vid=v.id) }}" onsubmit="return confirm('Confirmar plantão de {{ v.horario_inicio }} às {{ v.horario_fim }}?')">
+    <button class="btn btn-accent w-100"><i class="fas fa-check me-1"></i>Aceitar Plantão</button>
+  </form>
+  {% else %}
+  <button class="btn btn-surface w-100" disabled>Vagas preenchidas</button>
+  {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="card-dark text-center py-5 text-muted">
+  <i class="fas fa-calendar-times fa-2x mb-2"></i><br>
+  Nenhuma vaga disponível agora.<br>
+  <span style="font-size:.8rem;">Verifique mais tarde ou aguarde notificação.</span>
+</div>
+{% endif %}
+{% endblock %}

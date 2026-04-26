@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block title %}Motoboys Parceiros — {{ restaurante.nome }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Motoboys Parceiros</h1>
+    <p class="text-muted" style="font-size:.85rem; margin-top:4px;">Chame o parceiro mais próximo pelo WhatsApp</p>
+  </div>
+</div>
+
+<!-- Cadastrar parceiro -->
+<div class="card mb-4" style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:24px;">
+  <h6 style="color:var(--accent);font-weight:700;margin-bottom:16px;"><i class="fas fa-user-plus me-2"></i>Adicionar Parceiro</h6>
+  <form method="POST" class="row g-3 align-items-end" id="formParceiro">
+    <input type="hidden" name="acao" value="novo">
+    <div class="col-md-4">
+      <label class="form-label">Nome</label>
+      <input type="text" name="nome" class="form-control" required placeholder="João Motoboy">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">WhatsApp <span style="color:var(--muted);font-size:.75rem;">(com DDI: 5511999...)</span></label>
+      <input type="text" name="telefone" class="form-control" placeholder="5511999999999">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Latitude (GPS)</label>
+      <input type="number" name="lat" class="form-control" step="any" placeholder="-23.55" id="inpLat">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Longitude</label>
+      <input type="number" name="lng" class="form-control" step="any" placeholder="-46.63" id="inpLng">
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <button type="submit" class="btn btn-accent btn-sm"><i class="fas fa-plus me-1"></i>Adicionar</button>
+      <button type="button" class="btn btn-surface btn-sm" onclick="usarMinhaLocalizacao()"><i class="fas fa-location-dot me-1"></i>Usar minha localização</button>
+    </div>
+  </form>
+</div>
+
+<!-- Botão chamar mais próximo -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h6 style="color:var(--muted);text-transform:uppercase;font-size:.75rem;letter-spacing:.08em;margin-bottom:0;">Parceiros Cadastrados</h6>
+  <button class="btn btn-sm" style="background:#25D36633;border:1px solid #25D366;color:#25D366;" onclick="chamarProximo()">
+    <i class="fab fa-whatsapp me-1"></i>Chamar Mais Próximo
+  </button>
+</div>
+
+{% if parceiros %}
+<div class="card" style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+  <table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="border-bottom:1px solid var(--border);">
+      <th style="padding:10px 16px;font-size:.72rem;color:var(--muted);text-transform:uppercase;">Nome</th>
+      <th style="padding:10px 16px;font-size:.72rem;color:var(--muted);text-transform:uppercase;">WhatsApp</th>
+      <th style="padding:10px 16px;font-size:.72rem;color:var(--muted);text-transform:uppercase;">Distância</th>
+      <th style="padding:10px 16px;font-size:.72rem;color:var(--muted);text-transform:uppercase;">Ações</th>
+    </tr></thead>
+    <tbody>
+    {% for p in parceiros %}
+    <tr style="border-bottom:1px solid var(--border);" id="parceiro-{{ p.id }}">
+      <td style="padding:12px 16px;font-weight:600;">{{ p.nome }}</td>
+      <td style="padding:12px 16px;font-size:.85rem;color:var(--muted);">{{ p.telefone or '—' }}</td>
+      <td style="padding:12px 16px;font-size:.85rem;">
+        {% if p.distancia is not none %}
+        <span style="color:{% if p.distancia < 1 %}#10b981{% elif p.distancia < 3 %}#f59e0b{% else %}#ef4444{% endif %};">
+          {{ '%.1f'|format(p.distancia) }} km
+        </span>
+        {% else %}—{% endif %}
+      </td>
+      <td style="padding:12px 16px;">
+        <div class="d-flex gap-2">
+          {% if p.telefone %}
+          <a href="https://wa.me/{{ p.telefone }}?text=Olá {{ p.nome }}! Temos uma entrega disponível. Você pode pegar?" target="_blank"
+             class="btn btn-sm" style="background:#25D36633;border:1px solid #25D366;color:#25D366;font-size:.78rem;">
+            <i class="fab fa-whatsapp me-1"></i>Chamar
+          </a>
+          {% endif %}
+          <form method="POST" action="{{ url_for('excluir_parceiro', pid=p.id) }}" class="d-inline" onsubmit="return confirm('Remover {{ p.nome }}?')">
+            <button class="btn btn-sm" style="background:#3b151533;border:1px solid #3b1515;color:#f87171;font-size:.78rem;">
+              <i class="fas fa-trash"></i>
+            </button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card text-center py-5" style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;">
+  <i class="fas fa-users fa-2x mb-2" style="color:var(--muted);"></i>
+  <div style="color:var(--muted);">Nenhum parceiro cadastrado ainda.</div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+let minhaLat = null, minhaLng = null;
+
+function usarMinhaLocalizacao() {
+  if (!navigator.geolocation) { alert('GPS não disponível'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    minhaLat = pos.coords.latitude;
+    minhaLng = pos.coords.longitude;
+    document.getElementById('inpLat').value = minhaLat.toFixed(6);
+    document.getElementById('inpLng').value = minhaLng.toFixed(6);
+  });
+}
+
+async function chamarProximo() {
+  if (!minhaLat) {
+    // Tenta pegar GPS primeiro
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async pos => {
+        minhaLat = pos.coords.latitude;
+        minhaLng = pos.coords.longitude;
+        await _fazerChamada();
+      }, () => _fazerChamada());
+    } else {
+      await _fazerChamada();
+    }
+  } else {
+    await _fazerChamada();
+  }
+}
+
+async function _fazerChamada() {
+  const url = `{{ url_for('chamar_parceiro_proximo') }}?lat=${minhaLat||0}&lng=${minhaLng||0}&msg=${encodeURIComponent('Olá! Temos uma entrega disponível. Você pode pegar?')}`;
+  const r = await fetch(url);
+  const d = await r.json();
+  if (d.ok) {
+    const abre = confirm(`Chamar ${d.nome} (${d.distancia_km ? d.distancia_km.toFixed(1)+'km' : '?'} de distância) pelo WhatsApp?`);
+    if (abre) window.open(d.wa_link, '_blank');
+  } else {
+    alert(d.erro || 'Erro ao buscar parceiro mais próximo');
+  }
+}
+</script>
+{% endblock %}

@@ -1,10 +1,11 @@
 import os
+import math
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
-from decimal import Decimal
+from apscheduler.schedulers.background import BackgroundScheduler
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -17,6 +18,11 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+PAINELGEST_URL = os.getenv('PAINELGEST_URL', 'http://localhost:5002')
+
+HORARIO_PICO    = [(11, 14), (18, 21)]
+HORARIO_NOTURNO = (22, 6)
+
 # ─── MODELOS ─────────────────────────────────────────────────────────────────
 
 class Motoboy(UserMixin, db.Model):
@@ -25,6 +31,10 @@ class Motoboy(UserMixin, db.Model):
     username      = db.Column(db.String(50), unique=True, nullable=False)
     senha_hash    = db.Column(db.String(200), nullable=False)
     telefone      = db.Column(db.String(20))
+    email         = db.Column(db.String(120))
+    cpf_cnpj      = db.Column(db.String(20))
+    tipo_doc      = db.Column(db.String(5), default='cpf')   # cpf | mei | cnpj
+    chave_pix     = db.Column(db.String(100))
     moto_placa    = db.Column(db.String(10))
     moto_modelo   = db.Column(db.String(50))
     foto_path     = db.Column(db.String(200))
@@ -33,45 +43,62 @@ class Motoboy(UserMixin, db.Model):
     lat_atual     = db.Column(db.Float)
     lng_atual     = db.Column(db.Float)
     ultima_loc    = db.Column(db.DateTime)
-    # financeiro
-    taxa_entrega  = db.Column(db.Float, default=5.0)   # valor por entrega
+    taxa_entrega  = db.Column(db.Float, default=5.0)
     saldo_dia     = db.Column(db.Float, default=0.0)
     saldo_total   = db.Column(db.Float, default=0.0)
     criado_em     = db.Column(db.DateTime, default=datetime.utcnow)
-    # relacionamentos
     entregas      = db.relationship('Entrega', backref='motoboy', lazy=True)
     turnos        = db.relationship('Turno', backref='motoboy', lazy=True)
 
     def set_senha(self, senha): self.senha_hash = generate_password_hash(senha)
     def check_senha(self, senha): return check_password_hash(self.senha_hash, senha)
 
+    @property
+    def entregas_ativas(self):
+        return Entrega.query.filter(
+            Entrega.motoboy_id == self.id,
+            Entrega.status.in_(['aceita', 'retirada'])
+        ).count()
+
+
 class Entrega(db.Model):
-    id              = db.Column(db.Integer, primary_key=True)
-    motoboy_id      = db.Column(db.Integer, db.ForeignKey('motoboy.id'), nullable=False)
-    restaurante_nome= db.Column(db.String(100))
-    cliente_nome    = db.Column(db.String(100))
-    cliente_endereco= db.Column(db.String(200))
-    codigo_ifood    = db.Column(db.String(30))
-    origem          = db.Column(db.String(20), default='direto')  # direto | ifood | whatsapp
-    status          = db.Column(db.String(20), default='pendente')  # pendente | aceita | retirada | entregue | cancelada
-    valor_pedido    = db.Column(db.Float, default=0.0)
-    taxa_entrega    = db.Column(db.Float, default=5.0)
-    adicional_chuva = db.Column(db.Float, default=0.0)
-    adicional_pico  = db.Column(db.Float, default=0.0)
-    adicional_noturno=db.Column(db.Float, default=0.0)
-    valor_total_taxa= db.Column(db.Float, default=5.0)
-    distancia_km    = db.Column(db.Float)
-    observacao      = db.Column(db.Text)
-    criado_em       = db.Column(db.DateTime, default=datetime.utcnow)
-    aceito_em       = db.Column(db.DateTime)
-    retirado_em     = db.Column(db.DateTime)
-    entregue_em     = db.Column(db.DateTime)
+    id               = db.Column(db.Integer, primary_key=True)
+    motoboy_id       = db.Column(db.Integer, db.ForeignKey('motoboy.id'), nullable=False)
+    restaurante_nome = db.Column(db.String(100))
+    cliente_nome     = db.Column(db.String(100))
+    cliente_endereco = db.Column(db.String(200))
+    destino_lat      = db.Column(db.Float)
+    destino_lng      = db.Column(db.Float)
+    codigo_ifood     = db.Column(db.String(30))
+    origem           = db.Column(db.String(20), default='direto')
+    status           = db.Column(db.String(20), default='pendente')
+    valor_pedido     = db.Column(db.Float, default=0.0)
+    taxa_entrega     = db.Column(db.Float, default=5.0)
+    adicional_chuva  = db.Column(db.Float, default=0.0)
+    adicional_pico   = db.Column(db.Float, default=0.0)
+    adicional_noturno= db.Column(db.Float, default=0.0)
+    valor_total_taxa = db.Column(db.Float, default=5.0)
+    distancia_km     = db.Column(db.Float)
+    observacao       = db.Column(db.Text)
+    expira_em        = db.Column(db.DateTime)   # 15s para aceitar
+    criado_em        = db.Column(db.DateTime, default=datetime.utcnow)
+    aceito_em        = db.Column(db.DateTime)
+    retirado_em      = db.Column(db.DateTime)
+    entregue_em      = db.Column(db.DateTime)
 
     @property
     def duracao_minutos(self):
         if self.entregue_em and self.aceito_em:
             return int((self.entregue_em - self.aceito_em).total_seconds() / 60)
         return None
+
+    @property
+    def segundos_para_expirar(self):
+        if self.expira_em and self.status == 'pendente':
+            delta = (self.expira_em - datetime.utcnow()).total_seconds()
+            return max(0, int(delta))
+        return None
+
 
 class Turno(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
@@ -84,6 +111,84 @@ class Turno(db.Model):
     def duracao_horas(self):
         fim = self.fim or datetime.utcnow()
         return round((fim - self.inicio).total_seconds() / 3600, 1)
+
+# ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+def _dist_km(lat1, lng1, lat2, lng2):
+    if None in (lat1, lng1, lat2, lng2):
+        return None
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng/2)**2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+def _bearing(lat1, lng1, lat2, lng2):
+    """Calcula bearing (direção) entre dois pontos."""
+    if None in (lat1, lng1, lat2, lng2):
+        return None
+    dlng = math.radians(lng2 - lng1)
+    lat1r, lat2r = math.radians(lat1), math.radians(lat2)
+    x = math.sin(dlng) * math.cos(lat2r)
+    y = math.cos(lat1r) * math.sin(lat2r) - math.sin(lat1r) * math.cos(lat2r) * math.cos(dlng)
+    return (math.degrees(math.atan2(x, y)) + 360) % 360
+
+
+def pode_receber_entrega(mb, dest_lat, dest_lng):
+    """
+    Rota inteligente: motoboy com 2 entregas ativas → não pode receber.
+    Com 1 entrega ativa → pode receber somente se destino novo está na mesma
+    direção (bearing <45°) e a menos de 500m do destino atual.
+    """
+    ativas = mb.entregas_ativas
+    if ativas >= 2:
+        return False, 'Máximo de 2 entregas simultâneas atingido'
+    if ativas == 0:
+        return True, None
+    # Tem 1 entrega ativa: verificar direção e distância
+    entrega_atual = Entrega.query.filter(
+        Entrega.motoboy_id == mb.id,
+        Entrega.status.in_(['aceita', 'retirada'])
+    ).first()
+    if not entrega_atual or not entrega_atual.destino_lat:
+        return True, None
+    dist_m = (_dist_km(entrega_atual.destino_lat, entrega_atual.destino_lng, dest_lat, dest_lng) or 1) * 1000
+    if dist_m > 500:
+        return False, f'Destino muito longe do trajeto atual ({dist_m:.0f}m)'
+    bearing_atual = _bearing(mb.lat_atual, mb.lng_atual, entrega_atual.destino_lat, entrega_atual.destino_lng)
+    bearing_novo  = _bearing(mb.lat_atual, mb.lng_atual, dest_lat, dest_lng)
+    if bearing_atual is None or bearing_novo is None:
+        return True, None
+    diff = abs(bearing_atual - bearing_novo)
+    if diff > 180:
+        diff = 360 - diff
+    if diff > 45:
+        return False, f'Direção diferente do trajeto atual ({diff:.0f}°)'
+    return True, None
+
+
+def em_horario_pico():
+    h = datetime.now().hour
+    for ini, fim in HORARIO_PICO:
+        if ini <= h < fim:
+            return True
+    return False
+
+
+def expirar_entregas_pendentes():
+    """APScheduler: cancela entregas pendentes que expiraram (15s sem aceitar)."""
+    with app.app_context():
+        agora = datetime.utcnow()
+        vencidas = Entrega.query.filter(
+            Entrega.status == 'pendente',
+            Entrega.expira_em != None,
+            Entrega.expira_em < agora
+        ).all()
+        for e in vencidas:
+            e.status = 'expirada'
+        if vencidas:
+            db.session.commit()
 
 # ─── LOGIN ────────────────────────────────────────────────────────────────────
 
@@ -120,14 +225,22 @@ def dashboard():
     ganhos_hoje    = sum(e.valor_total_taxa for e in entregues_hoje)
     turno_ativo    = Turno.query.filter_by(motoboy_id=current_user.id, ativo=True).first()
     pendentes      = Entrega.query.filter_by(motoboy_id=current_user.id, status='pendente').all()
+    pico_agora     = em_horario_pico()
+
+    # Vagas disponíveis do PainelGest
+    vagas_count = 0
+    try:
+        import requests as req_lib
+        r = req_lib.get(f'{PAINELGEST_URL}/api/vagas_disponiveis', timeout=1)
+        vagas_count = len(r.json()) if r.ok else 0
+    except Exception:
+        pass
 
     return render_template('dashboard.html',
-        entregas_hoje=entregas_hoje,
-        entregues_hoje=entregues_hoje,
-        ganhos_hoje=ganhos_hoje,
-        turno_ativo=turno_ativo,
-        pendentes=pendentes,
-        hoje=hoje
+        entregas_hoje=entregas_hoje, entregues_hoje=entregues_hoje,
+        ganhos_hoje=ganhos_hoje, turno_ativo=turno_ativo,
+        pendentes=pendentes, hoje=hoje,
+        pico_agora=pico_agora, vagas_count=vagas_count
     )
 
 # ─── GPS / DISPONIBILIDADE ────────────────────────────────────────────────────
@@ -159,6 +272,38 @@ def atualizar_gps():
     db.session.commit()
     return jsonify({'ok': True})
 
+# ─── VAGAS ────────────────────────────────────────────────────────────────────
+
+@app.route('/vagas')
+@login_required
+def vagas():
+    vagas_list = []
+    try:
+        import requests as req_lib
+        r = req_lib.get(f'{PAINELGEST_URL}/api/vagas_disponiveis', timeout=2)
+        vagas_list = r.json() if r.ok else []
+    except Exception:
+        pass
+    return render_template('vagas.html', vagas=vagas_list)
+
+@app.route('/vagas/<int:vid>/aceitar', methods=['POST'])
+@login_required
+def aceitar_vaga(vid):
+    try:
+        import requests as req_lib
+        r = req_lib.post(f'{PAINELGEST_URL}/api/vagas/{vid}/aceitar', json={
+            'motoboy_id': current_user.id,
+            'motoboy_nome': current_user.nome,
+        }, timeout=2)
+        d = r.json()
+        if d.get('ok'):
+            flash('Plantão confirmado!', 'success')
+        else:
+            flash(d.get('erro', 'Vaga não disponível'), 'danger')
+    except Exception:
+        flash('Erro ao confirmar vaga. Tente novamente.', 'danger')
+    return redirect(url_for('vagas'))
+
 # ─── ENTREGAS ─────────────────────────────────────────────────────────────────
 
 @app.route('/entregas')
@@ -177,6 +322,8 @@ def listar_entregas():
 def aceitar_entrega(eid):
     e = Entrega.query.get_or_404(eid)
     if e.motoboy_id != current_user.id: return jsonify({'erro':'não autorizado'}), 403
+    if e.expira_em and e.expira_em < datetime.utcnow():
+        return jsonify({'erro': 'Entrega expirada', 'expirada': True}), 400
     e.status   = 'aceita'
     e.aceito_em = datetime.utcnow()
     db.session.commit()
@@ -267,6 +414,29 @@ def ganhos():
         ganhos_total=ganhos_total, ultimas=ultimas
     )
 
+# ─── TURNOS SEMANAIS ─────────────────────────────────────────────────────────
+
+@app.route('/turnos')
+@login_required
+def turnos():
+    hoje    = date.today()
+    semana  = [hoje - timedelta(days=i) for i in range(6, -1, -1)]
+    dados   = []
+    for dia in semana:
+        ts = Turno.query.filter(
+            Turno.motoboy_id == current_user.id,
+            db.func.date(Turno.inicio) == dia
+        ).all()
+        horas = sum(t.duracao_horas for t in ts)
+        ents  = Entrega.query.filter(
+            Entrega.motoboy_id == current_user.id,
+            Entrega.status == 'entregue',
+            db.func.date(Entrega.entregue_em) == dia
+        ).all()
+        ganho = sum(e.valor_total_taxa for e in ents)
+        dados.append({'dia': dia, 'horas': horas, 'qtd': len(ents), 'ganho': ganho})
+    return render_template('turnos.html', dados=dados, hoje=hoje)
+
 # ─── PERFIL ───────────────────────────────────────────────────────────────────
 
 @app.route('/perfil', methods=['GET','POST'])
@@ -276,6 +446,10 @@ def perfil():
         mb = current_user
         mb.nome         = request.form.get('nome', mb.nome)
         mb.telefone     = request.form.get('telefone', mb.telefone)
+        mb.email        = request.form.get('email', mb.email)
+        mb.cpf_cnpj     = request.form.get('cpf_cnpj', mb.cpf_cnpj)
+        mb.tipo_doc     = request.form.get('tipo_doc', mb.tipo_doc)
+        mb.chave_pix    = request.form.get('chave_pix', mb.chave_pix)
         mb.moto_placa   = request.form.get('moto_placa', mb.moto_placa)
         mb.moto_modelo  = request.form.get('moto_modelo', mb.moto_modelo)
         nova_senha = request.form.get('nova_senha')
@@ -285,7 +459,7 @@ def perfil():
         flash('Perfil atualizado!', 'success')
     return render_template('perfil.html')
 
-# ─── API INTERNA (para PainelFrota) ──────────────────────────────────────────
+# ─── APIs INTERNAS ────────────────────────────────────────────────────────────
 
 @app.route('/api/motoboys_disponiveis')
 def api_motoboys_disponiveis():
@@ -295,16 +469,74 @@ def api_motoboys_disponiveis():
         'ultima_loc': mb.ultima_loc.isoformat() if mb.ultima_loc else None
     } for mb in mbs])
 
+
+@app.route('/api/motoboys')
+def api_motoboys_todos():
+    mbs = Motoboy.query.filter_by(ativo=True).all()
+    return jsonify([{
+        'id': mb.id, 'nome': mb.nome, 'telefone': mb.telefone,
+        'email': mb.email, 'cpf_cnpj': mb.cpf_cnpj, 'tipo_doc': mb.tipo_doc,
+        'chave_pix': mb.chave_pix, 'disponivel': mb.disponivel,
+    } for mb in mbs])
+
+
+@app.route('/api/motoboy/<int:mid>')
+def api_motoboy_detalhe(mid):
+    mb = Motoboy.query.get_or_404(mid)
+    return jsonify({
+        'id': mb.id, 'nome': mb.nome, 'telefone': mb.telefone,
+        'email': mb.email, 'cpf_cnpj': mb.cpf_cnpj, 'tipo_doc': mb.tipo_doc,
+        'chave_pix': mb.chave_pix,
+    })
+
+
+@app.route('/api/entregas/<int:mid>')
+def api_entregas_motoboy(mid):
+    inicio_str = request.args.get('inicio')
+    fim_str    = request.args.get('fim')
+    try:
+        inicio = datetime.fromisoformat(inicio_str) if inicio_str else datetime.utcnow() - timedelta(days=7)
+        fim    = datetime.fromisoformat(fim_str)    if fim_str    else datetime.utcnow()
+    except Exception:
+        inicio = datetime.utcnow() - timedelta(days=7)
+        fim    = datetime.utcnow()
+    ents = Entrega.query.filter(
+        Entrega.motoboy_id == mid,
+        Entrega.status == 'entregue',
+        Entrega.entregue_em >= inicio,
+        Entrega.entregue_em <= fim
+    ).all()
+    return jsonify([{
+        'id': e.id, 'cliente': e.cliente_nome, 'endereco': e.cliente_endereco,
+        'taxa': e.valor_total_taxa, 'data': e.entregue_em.strftime('%d/%m/%Y %H:%M') if e.entregue_em else '',
+        'status': e.status,
+    } for e in ents])
+
+
 @app.route('/api/nova_entrega', methods=['POST'])
 def api_nova_entrega():
+    """Cria entrega com rota inteligente: máx 2 simultâneas, 15s para aceitar."""
     data = request.get_json()
+    mb_id    = data.get('motoboy_id')
+    dest_lat = data.get('destino_lat')
+    dest_lng = data.get('destino_lng')
+
+    if mb_id:
+        mb = Motoboy.query.get(mb_id)
+        if mb:
+            pode, motivo = pode_receber_entrega(mb, dest_lat, dest_lng)
+            if not pode:
+                return jsonify({'ok': False, 'erro': motivo}), 400
+
     e = Entrega(
-        motoboy_id       = data['motoboy_id'],
-        restaurante_nome = data.get('restaurante_nome',''),
-        cliente_nome     = data.get('cliente_nome',''),
-        cliente_endereco = data.get('cliente_endereco',''),
-        codigo_ifood     = data.get('codigo_ifood',''),
-        origem           = data.get('origem','direto'),
+        motoboy_id       = mb_id,
+        restaurante_nome = data.get('restaurante_nome', ''),
+        cliente_nome     = data.get('cliente_nome', ''),
+        cliente_endereco = data.get('cliente_endereco', ''),
+        destino_lat      = dest_lat,
+        destino_lng      = dest_lng,
+        codigo_ifood     = data.get('codigo_ifood', ''),
+        origem           = data.get('origem', 'direto'),
         valor_pedido     = data.get('valor_pedido', 0),
         taxa_entrega     = data.get('taxa_entrega', 5.0),
         adicional_chuva  = data.get('adicional_chuva', 0),
@@ -312,23 +544,58 @@ def api_nova_entrega():
         adicional_noturno= data.get('adicional_noturno', 0),
         valor_total_taxa = data.get('valor_total_taxa', 5.0),
         distancia_km     = data.get('distancia_km'),
-        observacao       = data.get('observacao',''),
+        observacao       = data.get('observacao', ''),
+        expira_em        = datetime.utcnow() + timedelta(seconds=15),
     )
     db.session.add(e)
     db.session.commit()
-    return jsonify({'ok': True, 'id': e.id})
+    return jsonify({'ok': True, 'id': e.id, 'expira_em': e.expira_em.isoformat()})
 
 # ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────
 
 def migrate_db():
+    import sqlite3
+    db_path = os.path.join(BASE_DIR, 'instance', 'motoboy.db')
     with app.app_context():
         db.create_all()
+    if not os.path.exists(db_path):
+        return
+    conn   = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    def add_col(table, col, definition):
+        cursor.execute(f"PRAGMA table_info({table})")
+        cols = {r[1] for r in cursor.fetchall()}
+        if col not in cols:
+            try:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col} {definition}")
+            except Exception:
+                pass
+
+    add_col('motoboy', 'email',      'VARCHAR(120)')
+    add_col('motoboy', 'cpf_cnpj',   'VARCHAR(20)')
+    add_col('motoboy', 'tipo_doc',   "VARCHAR(5) DEFAULT 'cpf'")
+    add_col('motoboy', 'chave_pix',  'VARCHAR(100)')
+    add_col('entrega', 'destino_lat','FLOAT')
+    add_col('entrega', 'destino_lng','FLOAT')
+    add_col('entrega', 'expira_em',  'DATETIME')
+    conn.commit()
+    conn.close()
+
+    with app.app_context():
         if not Motoboy.query.filter_by(username='demo').first():
             mb = Motoboy(nome='Motoboy Demo', username='demo')
             mb.set_senha('demo123')
             db.session.add(mb)
             db.session.commit()
 
+
 if __name__ == '__main__':
     migrate_db()
-    app.run(port=5003, debug=True)
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(expirar_entregas_pendentes, 'interval', seconds=15, id='expirar_job')
+    scheduler.start()
+    try:
+        app.run(port=5003, debug=True, use_reloader=False)
+    finally:
+        scheduler.shutdown()

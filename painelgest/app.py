@@ -1,7 +1,13 @@
 import os
 import json
+import math
+import smtplib
 import logging
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, date
@@ -354,6 +360,53 @@ class PedidoKanban(db.Model):
         return f"R$ {self.total:.2f}".replace('.', ',')
 
 
+class VagaPlantao(db.Model):
+    """Vagas de plantão abertas pelo restaurante para motoboys da casa."""
+    id             = db.Column(db.Integer, primary_key=True)
+    restaurante_id = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=False)
+    data           = db.Column(db.Date, default=date.today)
+    vagas_total    = db.Column(db.Integer, default=2)
+    vagas_preench  = db.Column(db.Integer, default=0)
+    horario_inicio = db.Column(db.String(5), default='18:00')
+    horario_fim    = db.Column(db.String(5), default='23:00')
+    observacao     = db.Column(db.String(200))
+    status         = db.Column(db.String(20), default='aberta')  # aberta | fechada | encerrada
+    criado_em      = db.Column(db.DateTime, default=datetime.utcnow)
+    inscricoes     = db.relationship('InscricaoVaga', backref='vaga', lazy=True)
+
+    @property
+    def vagas_livres(self):
+        return max(0, self.vagas_total - self.vagas_preench)
+
+    @property
+    def pct_preenchido(self):
+        if self.vagas_total == 0:
+            return 0
+        return int((self.vagas_preench / self.vagas_total) * 100)
+
+
+class InscricaoVaga(db.Model):
+    """Motoboy confirmado em uma vaga de plantão."""
+    id           = db.Column(db.Integer, primary_key=True)
+    vaga_id      = db.Column(db.Integer, db.ForeignKey('vaga_plantao.id'), nullable=False)
+    motoboy_id   = db.Column(db.Integer)
+    motoboy_nome = db.Column(db.String(100))
+    aceito_em    = db.Column(db.DateTime, default=datetime.utcnow)
+    status       = db.Column(db.String(20), default='confirmado')  # confirmado | cancelado
+
+
+class MotoboyParceiro(db.Model):
+    """Motoboy parceiro (não fixo) cadastrado pelo restaurante."""
+    id             = db.Column(db.Integer, primary_key=True)
+    restaurante_id = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=False)
+    nome           = db.Column(db.String(100), nullable=False)
+    telefone       = db.Column(db.String(20))   # formato 5511999999999 para wa.me
+    lat            = db.Column(db.Float)
+    lng            = db.Column(db.Float)
+    ativo          = db.Column(db.Boolean, default=True)
+    criado_em      = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -430,6 +483,106 @@ def processar_posts_agendados():
             post.status = 'publicado' if ok else 'erro'
             post.erro = erro
             db.session.commit()
+
+
+def distancia_km(lat1, lng1, lat2, lng2):
+    """Cálculo de distância haversine entre dois pontos GPS."""
+    if None in (lat1, lng1, lat2, lng2):
+        return None
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng/2)**2
+    return round(R * 2 * math.asin(math.sqrt(a)), 2)
+
+
+def gerar_comprovante_pdf(restaurante, motoboy_dados, entregas, periodo_inicio, periodo_fim):
+    """Gera PDF de comprovante de pagamento para motoboy usando fpdf2."""
+    try:
+        from fpdf import FPDF
+    except ImportError:
+        return None
+    pdf = FPDF(format='A4')
+    pdf.add_page()
+    pdf.set_margins(20, 20, 20)
+    # Cabeçalho
+    pdf.set_font('Helvetica', 'B', 16)
+    pdf.cell(0, 10, 'COMPROVANTE DE PAGAMENTO', align='C', new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 11)
+    pdf.cell(0, 7, f'Restaurante: {restaurante.nome}', new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 7, f'Período: {periodo_inicio.strftime("%d/%m/%Y")} a {periodo_fim.strftime("%d/%m/%Y")}', new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(4)
+    # Dados do motoboy
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 8, 'DADOS DO MOTOBOY', new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(0, 6, f'Nome: {motoboy_dados.get("nome","—")}', new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 6, f'CPF/CNPJ: {motoboy_dados.get("cpf_cnpj","—")}', new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 6, f'Telefone: {motoboy_dados.get("telefone","—")}', new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(4)
+    # Tabela de entregas
+    pdf.set_font('Helvetica', 'B', 11)
+    pdf.cell(0, 8, 'ENTREGAS REALIZADAS', new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_fill_color(40, 40, 60)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(15, 7, '#', border=1, fill=True)
+    pdf.cell(60, 7, 'Cliente', border=1, fill=True)
+    pdf.cell(35, 7, 'Data', border=1, fill=True)
+    pdf.cell(30, 7, 'Taxa', border=1, fill=True)
+    pdf.cell(0, 7, 'Status', border=1, fill=True, new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 9)
+    pdf.set_text_color(0, 0, 0)
+    total = 0.0
+    for i, e in enumerate(entregas, 1):
+        taxa = e.get('taxa', 0)
+        total += taxa
+        fill = (i % 2 == 0)
+        pdf.set_fill_color(240, 240, 250) if fill else pdf.set_fill_color(255, 255, 255)
+        pdf.cell(15, 6, str(i), border=1, fill=fill)
+        pdf.cell(60, 6, str(e.get('cliente',''))[:30], border=1, fill=fill)
+        pdf.cell(35, 6, str(e.get('data','')), border=1, fill=fill)
+        pdf.cell(30, 6, f"R$ {taxa:.2f}", border=1, fill=fill)
+        pdf.cell(0, 6, str(e.get('status','entregue')), border=1, fill=fill, new_x='LMARGIN', new_y='NEXT')
+    # Total
+    pdf.ln(4)
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 8, f'TOTAL A PAGAR: R$ {total:.2f}', new_x='LMARGIN', new_y='NEXT')
+    # Rodapé
+    pdf.ln(10)
+    pdf.set_font('Helvetica', 'I', 9)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 6, f'Emitido em {datetime.now().strftime("%d/%m/%Y às %H:%M")}', new_x='LMARGIN', new_y='NEXT')
+    return bytes(pdf.output())
+
+
+def enviar_email_comprovante(destinatario, assunto, corpo, pdf_bytes=None, nome_pdf='comprovante.pdf'):
+    """Envia email com comprovante PDF em anexo."""
+    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', 587))
+    smtp_user = os.environ.get('SMTP_USER', '')
+    smtp_pass = os.environ.get('SMTP_PASS', '')
+    if not smtp_user:
+        return False, 'SMTP não configurado no .env'
+    try:
+        msg = MIMEMultipart()
+        msg['From']    = smtp_user
+        msg['To']      = destinatario
+        msg['Subject'] = assunto
+        msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
+        if pdf_bytes:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(pdf_bytes)
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', f'attachment; filename="{nome_pdf}"')
+            msg.attach(part)
+        with smtplib.SMTP(smtp_host, smtp_port) as s:
+            s.starttls()
+            s.login(smtp_user, smtp_pass)
+            s.sendmail(smtp_user, destinatario, msg.as_string())
+        return True, None
+    except Exception as e:
+        return False, str(e)
 
 
 def requer_login(f):
@@ -1544,6 +1697,262 @@ def editar_perfil_restaurante():
         return redirect(url_for('editar_perfil_restaurante'))
     return render_template('perfil_restaurante.html', restaurante=restaurante,
                            formas_disponiveis=FORMAS_PAGAMENTO_DISPONIVEIS)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — VAGAS DA CASA
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/restaurante/vagas', methods=['GET', 'POST'])
+@requer_restaurante
+def vagas_restaurante():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if request.method == 'POST':
+        vagas = VagaPlantao(
+            restaurante_id = restaurante.id,
+            data           = date.today(),
+            vagas_total    = int(request.form.get('vagas_total', 2)),
+            horario_inicio = request.form.get('horario_inicio', '18:00'),
+            horario_fim    = request.form.get('horario_fim', '23:00'),
+            observacao     = request.form.get('observacao', ''),
+            status         = 'aberta',
+        )
+        db.session.add(vagas)
+        db.session.commit()
+        flash(f'Vaga aberta: {vagas.vagas_total} motoboy(s) para hoje!', 'success')
+        return redirect(url_for('vagas_restaurante'))
+
+    vagas_hoje = VagaPlantao.query.filter_by(restaurante_id=restaurante.id).order_by(VagaPlantao.criado_em.desc()).limit(10).all()
+    return render_template('vagas_restaurante.html', restaurante=restaurante, vagas_hoje=vagas_hoje)
+
+
+@app.route('/restaurante/vagas/<int:vid>/fechar', methods=['POST'])
+@requer_restaurante
+def fechar_vaga(vid):
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    vaga = VagaPlantao.query.filter_by(id=vid, restaurante_id=restaurante.id).first_or_404()
+    vaga.status = 'encerrada'
+    db.session.commit()
+    flash('Vaga encerrada.', 'info')
+    return redirect(url_for('vagas_restaurante'))
+
+
+@app.route('/api/vagas_disponiveis')
+def api_vagas_disponiveis():
+    """API pública usada pelo AppMotoboy para listar vagas abertas."""
+    vagas = VagaPlantao.query.filter_by(status='aberta').filter(
+        VagaPlantao.data == date.today()
+    ).all()
+    return jsonify([{
+        'id': v.id, 'restaurante_id': v.restaurante_id,
+        'vagas_total': v.vagas_total, 'vagas_preench': v.vagas_preench,
+        'vagas_livres': v.vagas_livres, 'horario_inicio': v.horario_inicio,
+        'horario_fim': v.horario_fim, 'observacao': v.observacao,
+    } for v in vagas])
+
+
+@app.route('/api/vagas/<int:vid>/aceitar', methods=['POST'])
+def api_aceitar_vaga(vid):
+    """Motoboy aceita uma vaga — chamado pelo AppMotoboy."""
+    data = request.get_json() or {}
+    vaga = VagaPlantao.query.get_or_404(vid)
+    if vaga.status != 'aberta' or vaga.vagas_livres <= 0:
+        return jsonify({'ok': False, 'erro': 'Vaga fechada ou sem espaço'})
+    inscricao = InscricaoVaga(
+        vaga_id      = vid,
+        motoboy_id   = data.get('motoboy_id'),
+        motoboy_nome = data.get('motoboy_nome', 'Motoboy'),
+    )
+    db.session.add(inscricao)
+    vaga.vagas_preench += 1
+    if vaga.vagas_preench >= vaga.vagas_total:
+        vaga.status = 'fechada'
+    db.session.commit()
+    return jsonify({'ok': True, 'vagas_livres': vaga.vagas_livres, 'status': vaga.status})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — PARCEIROS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/restaurante/parceiros', methods=['GET', 'POST'])
+@requer_restaurante
+def parceiros_restaurante():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if request.method == 'POST':
+        acao = request.form.get('acao', 'novo')
+        if acao == 'novo':
+            p = MotoboyParceiro(
+                restaurante_id = restaurante.id,
+                nome           = request.form['nome'],
+                telefone       = request.form.get('telefone', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', ''),
+                lat            = float(request.form['lat']) if request.form.get('lat') else None,
+                lng            = float(request.form['lng']) if request.form.get('lng') else None,
+            )
+            db.session.add(p)
+            db.session.commit()
+            flash(f'Parceiro {p.nome} adicionado!', 'success')
+        return redirect(url_for('parceiros_restaurante'))
+
+    parceiros = MotoboyParceiro.query.filter_by(restaurante_id=restaurante.id, ativo=True).all()
+    # Ordena por distância do restaurante se tiver coordenadas
+    r_lat = float(request.args.get('lat', 0) or 0)
+    r_lng = float(request.args.get('lng', 0) or 0)
+    for p in parceiros:
+        p.distancia = distancia_km(r_lat, r_lng, p.lat, p.lng) if (r_lat and p.lat) else None
+    parceiros.sort(key=lambda p: (p.distancia is None, p.distancia or 0))
+    return render_template('parceiros_restaurante.html', restaurante=restaurante, parceiros=parceiros)
+
+
+@app.route('/restaurante/parceiros/<int:pid>/excluir', methods=['POST'])
+@requer_restaurante
+def excluir_parceiro(pid):
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    p = MotoboyParceiro.query.filter_by(id=pid, restaurante_id=restaurante.id).first_or_404()
+    p.ativo = False
+    db.session.commit()
+    flash('Parceiro removido.', 'info')
+    return redirect(url_for('parceiros_restaurante'))
+
+
+@app.route('/restaurante/parceiros/chamar_proximo')
+@requer_restaurante
+def chamar_parceiro_proximo():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    r_lat = float(request.args.get('lat', 0) or 0)
+    r_lng = float(request.args.get('lng', 0) or 0)
+    parceiros = MotoboyParceiro.query.filter_by(restaurante_id=restaurante.id, ativo=True).all()
+    if not parceiros:
+        return jsonify({'ok': False, 'erro': 'Nenhum parceiro cadastrado'})
+    com_dist = [(p, distancia_km(r_lat, r_lng, p.lat, p.lng) or 9999) for p in parceiros if p.telefone]
+    com_dist.sort(key=lambda x: x[1])
+    if not com_dist:
+        return jsonify({'ok': False, 'erro': 'Nenhum parceiro com telefone cadastrado'})
+    proximo, dist = com_dist[0]
+    pedido_texto = request.args.get('msg', 'Olá! Temos uma entrega disponível. Você pode pegar?')
+    wa_link = f"https://wa.me/{proximo.telefone}?text={pedido_texto}"
+    return jsonify({'ok': True, 'nome': proximo.nome, 'distancia_km': dist, 'wa_link': wa_link})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — COMPROVANTE / NOTA FISCAL
+# ══════════════════════════════════════════════════════════════════════════════
+
+MOTOBOY_API_URL = os.getenv('MOTOBOY_API_URL', 'http://localhost:5003')
+
+
+def _buscar_motoboy_api(motoboy_id):
+    """Busca dados de um motoboy via API do AppMotoboy."""
+    try:
+        import requests as req_lib
+        r = req_lib.get(f'{MOTOBOY_API_URL}/api/motoboy/{motoboy_id}', timeout=3)
+        return r.json() if r.ok else {}
+    except Exception:
+        return {}
+
+
+def _buscar_entregas_api(motoboy_id, inicio, fim):
+    """Busca entregas de um motoboy via API do AppMotoboy."""
+    try:
+        import requests as req_lib
+        r = req_lib.get(f'{MOTOBOY_API_URL}/api/entregas/{motoboy_id}',
+                        params={'inicio': inicio.isoformat(), 'fim': fim.isoformat()}, timeout=3)
+        return r.json() if r.ok else []
+    except Exception:
+        return []
+
+
+@app.route('/restaurante/comprovante', methods=['GET', 'POST'])
+@requer_restaurante
+def comprovante_restaurante():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    motoboys = []
+    try:
+        import requests as req_lib
+        r = req_lib.get(f'{MOTOBOY_API_URL}/api/motoboys_disponiveis', timeout=2)
+        # Também busca todos (não apenas disponíveis)
+        r2 = req_lib.get(f'{MOTOBOY_API_URL}/api/motoboys', timeout=2)
+        motoboys = r2.json() if r2.ok else (r.json() if r.ok else [])
+    except Exception:
+        pass
+    return render_template('comprovante_restaurante.html', restaurante=restaurante, motoboys=motoboys)
+
+
+@app.route('/restaurante/comprovante/preview')
+@requer_restaurante
+def comprovante_preview():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    motoboy_id  = request.args.get('motoboy_id', '')
+    periodo     = request.args.get('periodo', '7')
+    hoje        = date.today()
+    if periodo == '7':
+        inicio = hoje - timedelta(days=7)
+    elif periodo == '15':
+        inicio = hoje - timedelta(days=15)
+    elif periodo == '30':
+        inicio = hoje.replace(day=1)
+    else:
+        inicio = hoje - timedelta(days=7)
+    motoboy_dados = _buscar_motoboy_api(motoboy_id)
+    entregas      = _buscar_entregas_api(motoboy_id, inicio, hoje)
+    total         = sum(e.get('taxa', 0) for e in entregas)
+    return render_template('comprovante_preview.html',
+        restaurante=restaurante, motoboy=motoboy_dados,
+        entregas=entregas, total=total,
+        periodo_inicio=inicio, periodo_fim=hoje, now=datetime.now())
+
+
+@app.route('/restaurante/comprovante/pdf')
+@requer_restaurante
+def comprovante_pdf():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    motoboy_id  = request.args.get('motoboy_id', '')
+    periodo     = request.args.get('periodo', '7')
+    hoje        = date.today()
+    dias        = {'7': 7, '15': 15, '30': hoje.day - 1}.get(periodo, 7)
+    inicio      = hoje - timedelta(days=dias)
+    motoboy_dados = _buscar_motoboy_api(motoboy_id)
+    entregas      = _buscar_entregas_api(motoboy_id, inicio, hoje)
+    pdf_bytes     = gerar_comprovante_pdf(restaurante, motoboy_dados, entregas, inicio, hoje)
+    if not pdf_bytes:
+        flash('Erro ao gerar PDF. Verifique se fpdf2 está instalado.', 'danger')
+        return redirect(url_for('comprovante_restaurante'))
+    nome = f"comprovante_{motoboy_dados.get('nome','motoboy')}_{hoje.strftime('%Y%m%d')}.pdf".replace(' ', '_')
+    resp = make_response(pdf_bytes)
+    resp.headers['Content-Type']        = 'application/pdf'
+    resp.headers['Content-Disposition'] = f'attachment; filename="{nome}"'
+    return resp
+
+
+@app.route('/restaurante/comprovante/email', methods=['POST'])
+@requer_restaurante
+def comprovante_email():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    motoboy_id  = request.form.get('motoboy_id', '')
+    periodo     = request.form.get('periodo', '7')
+    email_dest  = request.form.get('email', '')
+    hoje        = date.today()
+    dias        = {'7': 7, '15': 15, '30': hoje.day - 1}.get(periodo, 7)
+    inicio      = hoje - timedelta(days=dias)
+    motoboy_dados = _buscar_motoboy_api(motoboy_id)
+    entregas      = _buscar_entregas_api(motoboy_id, inicio, hoje)
+    pdf_bytes     = gerar_comprovante_pdf(restaurante, motoboy_dados, entregas, inicio, hoje)
+    destino       = email_dest or motoboy_dados.get('email', '')
+    if not destino:
+        flash('E-mail de destino não informado.', 'danger')
+        return redirect(url_for('comprovante_restaurante'))
+    ok, erro = enviar_email_comprovante(
+        destino,
+        f'Comprovante {restaurante.nome} — {inicio.strftime("%d/%m")} a {hoje.strftime("%d/%m/%Y")}',
+        f'Segue em anexo o comprovante de pagamento do período {inicio.strftime("%d/%m/%Y")} a {hoje.strftime("%d/%m/%Y")}.',
+        pdf_bytes,
+        f'comprovante_{hoje.strftime("%Y%m%d")}.pdf'
+    )
+    if ok:
+        flash(f'Comprovante enviado para {destino}!', 'success')
+    else:
+        flash(f'Erro ao enviar e-mail: {erro}', 'danger')
+    return redirect(url_for('comprovante_restaurante'))
 
 
 # ══════════════════════════════════════════════════════════════════════════════

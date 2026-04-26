@@ -40,7 +40,29 @@
     </div>
   </div>
 
-  <h6 class="mb-3 mt-4" style="color:#f59e0b;">Alterar Senha</h6>
+  <h6 class="mb-3 mt-4" style="color:#f59e0b;">Dados Fiscais (MEI / Nota Fiscal)</h6>
+  <div class="mb-3">
+    <label class="form-label text-muted" style="font-size:.82rem;">Tipo de documento</label>
+    <select name="tipo_doc" class="form-control" style="background:#0f0f13;border-color:#2e2e3e;color:#e2e8f0;">
+      <option value="cpf" {% if current_user.tipo_doc == 'cpf' %}selected{% endif %}>CPF (Pessoa Física)</option>
+      <option value="mei" {% if current_user.tipo_doc == 'mei' %}selected{% endif %}>MEI (Microempreendedor)</option>
+      <option value="cnpj" {% if current_user.tipo_doc == 'cnpj' %}selected{% endif %}>CNPJ (Empresa)</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label text-muted" style="font-size:.82rem;">CPF / CNPJ</label>
+    <input type="text" name="cpf_cnpj" class="form-control" value="{{ current_user.cpf_cnpj or '' }}" placeholder="000.000.000-00" style="background:#0f0f13;border-color:#2e2e3e;color:#e2e8f0;">
+  </div>
+  <div class="mb-3">
+    <label class="form-label text-muted" style="font-size:.82rem;">E-mail (para receber comprovantes)</label>
+    <input type="email" name="email" class="form-control" value="{{ current_user.email or '' }}" placeholder="seu@email.com" style="background:#0f0f13;border-color:#2e2e3e;color:#e2e8f0;">
+  </div>
+  <div class="mb-3">
+    <label class="form-label text-muted" style="font-size:.82rem;">Chave PIX</label>
+    <input type="text" name="chave_pix" class="form-control" value="{{ current_user.chave_pix or '' }}" placeholder="CPF, e-mail ou telefone" style="background:#0f0f13;border-color:#2e2e3e;color:#e2e8f0;">
+  </div>
+
+  <h6 class="mb-3 mt-2" style="color:#f59e0b;">Alterar Senha</h6>
   <div class="mb-3">
     <label class="form-label text-muted" style="font-size:.82rem;">Nova senha (deixe vazio para manter)</label>
     <input type="password" name="nova_senha" class="form-control" placeholder="••••••" style="background:#0f0f13;border-color:#2e2e3e;color:#e2e8f0;">

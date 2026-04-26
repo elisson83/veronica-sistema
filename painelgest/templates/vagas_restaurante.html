@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Vagas da Casa — {{ restaurante.nome }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Vagas da Casa</h1>
+    <p class="text-muted" style="font-size:.85rem; margin-top:4px;">Defina quantos motoboys você precisa esta noite</p>
+  </div>
+</div>
+
+<!-- Formulário rápido para abrir vaga -->
+<div class="card mb-4" style="background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:24px;">
+  <h6 style="color:var(--accent); font-weight:700; margin-bottom:16px;"><i class="fas fa-plus-circle me-2"></i>Abrir Vaga Para Hoje</h6>
+  <form method="POST" class="row g-3 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label">Nº de Motoboys</label>
+      <input type="number" name="vagas_total" class="form-control" value="2" min="1" max="10">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Início</label>
+      <input type="time" name="horario_inicio" class="form-control" value="18:00">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Fim</label>
+      <input type="time" name="horario_fim" class="form-control" value="23:00">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Observação</label>
+      <input type="text" name="observacao" class="form-control" placeholder="Ex: movimentado hoje">
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-accent"><i class="fas fa-bell me-2"></i>Notificar Motoboys</button>
+    </div>
+  </form>
+</div>
+
+<!-- Lista de vagas do dia -->
+<h6 style="color:var(--muted); text-transform:uppercase; font-size:.75rem; letter-spacing:.08em; margin-bottom:12px;">Vagas Recentes</h6>
+
+{% if vagas_hoje %}
+<div class="row g-3">
+{% for vaga in vagas_hoje %}
+<div class="col-md-6">
+  <div class="card" style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div>
+        <div class="fw-bold">{{ vaga.data.strftime('%d/%m/%Y') }} — {{ vaga.horario_inicio }} às {{ vaga.horario_fim }}</div>
+        {% if vaga.observacao %}<div style="font-size:.8rem; color:var(--muted);">{{ vaga.observacao }}</div>{% endif %}
+      </div>
+      <span class="badge {% if vaga.status == 'aberta' %}bg-success{% elif vaga.status == 'fechada' %}bg-primary{% else %}bg-secondary{% endif %}">
+        {{ vaga.status|capitalize }}
+      </span>
+    </div>
+
+    <!-- Barra de progresso -->
+    <div class="mb-2" style="font-size:.82rem; color:var(--muted);">{{ vaga.vagas_preench }}/{{ vaga.vagas_total }} motoboys confirmados</div>
+    <div style="background:#2a2a3a; border-radius:6px; height:8px; overflow:hidden;" class="mb-3">
+      <div style="background:{% if vaga.pct_preenchido >= 100 %}var(--success){% else %}var(--accent){% endif %};width:{{ vaga.pct_preenchido }}%;height:100%;border-radius:6px;transition:width .4s;"></div>
+    </div>
+
+    <!-- Inscritos -->
+    {% if vaga.inscricoes %}
+    <div style="font-size:.8rem;">
+      {% for i in vaga.inscricoes %}
+      {% if i.status == 'confirmado' %}
+      <span class="badge me-1 mb-1" style="background:#064e3b33;color:#6ee7b7;border:1px solid #064e3b;">
+        <i class="fas fa-check me-1"></i>{{ i.motoboy_nome }}
+      </span>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if vaga.status == 'aberta' %}
+    <div class="mt-3">
+      <form method="POST" action="{{ url_for('fechar_vaga', vid=vaga.id) }}" class="d-inline" onsubmit="return confirm('Encerrar esta vaga?')">
+        <button class="btn btn-sm" style="background:#3b151533;border:1px solid #3b1515;color:#f87171;font-size:.78rem;">
+          <i class="fas fa-lock me-1"></i>Encerrar Vaga
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card text-center py-5" style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;">
+  <i class="fas fa-motorcycle fa-2x mb-2" style="color:var(--muted);"></i>
+  <div style="color:var(--muted);">Nenhuma vaga aberta ainda. Abra uma vaga acima para notificar seus motoboys!</div>
+</div>
+{% endif %}
+{% endblock %}

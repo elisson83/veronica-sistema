@@ -103,6 +103,17 @@
     <i class="fas fa-book-open"></i> Cardápio
   </a>
 
+  <div class="nav-group">Motoboys</div>
+  <a href="{{ url_for('vagas_restaurante') }}" class="nav-item">
+    <i class="fas fa-calendar-check"></i> Vagas da Casa
+  </a>
+  <a href="{{ url_for('parceiros_restaurante') }}" class="nav-item">
+    <i class="fab fa-whatsapp"></i> Parceiros
+  </a>
+  <a href="{{ url_for('comprovante_restaurante') }}" class="nav-item">
+    <i class="fas fa-file-invoice"></i> Comprovante / NF
+  </a>
+
   <div class="nav-group">Configurações</div>
   <a href="{{ url_for('editar_perfil_restaurante') }}" class="nav-item">
     <i class="fas fa-sliders"></i> Perfil &amp; Configurações

@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Minha Semana — AppMotoboy{% endblock %}
+
+{% block content %}
+<h5 class="section-title"><i class="fas fa-calendar-week me-1"></i>Minha Semana</h5>
+
+<div class="row g-2 mb-4">
+  {% for d in dados %}
+  <div class="col-6">
+    <div class="card-dark {% if d.dia == hoje %}border border-warning{% endif %}" style="{% if d.dia == hoje %}border-color:#f59e0b!important;{% endif %}">
+      <div style="font-size:.75rem; color:{% if d.dia == hoje %}#f59e0b{% else %}#64748b{% endif %}; text-transform:uppercase; font-weight:600;">
+        {{ d.dia.strftime('%a %d/%m') }}
+        {% if d.dia == hoje %}<span style="font-size:.65rem;"> HOJE</span>{% endif %}
+      </div>
+      <div class="mt-1 d-flex justify-content-between align-items-center">
+        <div>
+          <div style="font-size:1.1rem; font-weight:700; color:{% if d.ganho > 0 %}#10b981{% else %}#475569{% endif %};">
+            R$ {{ '%.0f'|format(d.ganho) }}
+          </div>
+          <div style="font-size:.72rem; color:#64748b;">{{ d.qtd }} entrega{{ 's' if d.qtd != 1 }}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:.85rem; color:#94a3b8; font-weight:600;">{{ '%.1f'|format(d.horas) }}h</div>
+          <div style="font-size:.7rem; color:#64748b;">online</div>
+        </div>
+      </div>
+      {% if d.qtd > 0 %}
+      <div style="margin-top:6px;">
+        <div style="background:#1a1a24;border-radius:4px;height:4px;overflow:hidden;">
+          {% set max_qtd = dados|map(attribute='qtd')|max %}
+          {% set pct = ((d.qtd / max_qtd) * 100) | int if max_qtd > 0 else 0 %}
+          <div style="background:#f59e0b;width:{{ pct }}%;height:100%;border-radius:4px;"></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Totais da semana -->
+{% set total_ganho = dados|sum(attribute='ganho') %}
+{% set total_qtd   = dados|sum(attribute='qtd') %}
+{% set total_horas = dados|sum(attribute='horas') %}
+
+<div class="card-dark">
+  <h6 class="mb-3" style="color:#f59e0b;">Resumo Semanal</h6>
+  <div class="d-flex justify-content-between mb-2">
+    <span class="text-muted" style="font-size:.85rem;">Total ganho</span>
+    <span class="fw-bold text-success">R$ {{ '%.2f'|format(total_ganho) }}</span>
+  </div>
+  <div class="d-flex justify-content-between mb-2">
+    <span class="text-muted" style="font-size:.85rem;">Entregas realizadas</span>
+    <span class="fw-bold">{{ total_qtd }}</span>
+  </div>
+  <div class="d-flex justify-content-between mb-2">
+    <span class="text-muted" style="font-size:.85rem;">Horas online</span>
+    <span class="fw-bold">{{ '%.1f'|format(total_horas) }}h</span>
+  </div>
+  {% if total_horas > 0 and total_ganho > 0 %}
+  <div class="d-flex justify-content-between">
+    <span class="text-muted" style="font-size:.85rem;">Ganho por hora</span>
+    <span class="fw-bold" style="color:#a855f7;">R$ {{ '%.2f'|format(total_ganho / total_horas) }}</span>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Turnos — PainelFrota{% endblock %}
+{% block page_title %}Turnos — Quem está Online{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-end mb-3">
+  <a href="{{ url_for('escala') }}" class="btn btn-surface btn-sm"><i class="fas fa-calendar-week me-1"></i>Ver Escala Semanal</a>
+</div>
+
+<div class="row g-3">
+{% for mb in motoboys %}
+<div class="col-md-4 col-6">
+  <div class="card-dark p-3 text-center">
+    <div style="width:48px;height:48px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;background:{% if mb.id in mb_ativos_ids %}#064e3b{% else %}#1a1a24{% endif %};border:2px solid {% if mb.id in mb_ativos_ids %}var(--success){% else %}var(--border){% endif %};">
+      <i class="fas fa-motorcycle" style="color:{% if mb.id in mb_ativos_ids %}#10b981{% else %}var(--muted){% endif %};"></i>
+    </div>
+    <div class="fw-semibold" style="font-size:.9rem;">{{ mb.nome }}</div>
+    <div class="mt-1 mb-3">
+      {% if mb.id in mb_ativos_ids %}
+      {% set t = ativos|selectattr('motoboy_id','eq',mb.id)|first %}
+      <span class="badge" style="background:#064e3b33;color:#10b981;border:1px solid #064e3b;">
+        <i class="fas fa-circle-dot me-1"></i>Online {{ t.duracao_horas }}h
+      </span>
+      {% else %}
+      <span class="badge" style="background:#1a1a2433;color:var(--muted);border:1px solid var(--border);">Offline</span>
+      {% endif %}
+    </div>
+    {% if current_user.nivel in ['super','operacional'] %}
+    {% if mb.id in mb_ativos_ids %}
+    <form method="POST" action="{{ url_for('encerrar_turno', mid=mb.id) }}">
+      <button class="btn btn-sm w-100" style="background:#3b151533;border:1px solid #3b1515;color:#f87171;font-size:.78rem;">
+        <i class="fas fa-stop me-1"></i>Encerrar
+      </button>
+    </form>
+    {% else %}
+    <form method="POST" action="{{ url_for('iniciar_turno', mid=mb.id) }}">
+      <button class="btn btn-sm w-100" style="background:#064e3b33;border:1px solid #064e3b;color:#10b981;font-size:.78rem;">
+        <i class="fas fa-play me-1"></i>Iniciar Turno
+      </button>
+    </form>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -477,6 +477,67 @@ def relatorios():
     mes    = stats(inicio_mes)
     return render_template('relatorios.html', semana=semana, mes=mes, hoje=hoje)
 
+# ─── TURNOS E ESCALA ─────────────────────────────────────────────────────────
+
+@app.route('/turnos')
+@login_required
+def turnos():
+    hoje  = date.today()
+    ativos = TurnoFrota.query.filter_by(ativo=True).all()
+    mb_ativos_ids = {t.motoboy_id for t in ativos}
+    motoboys = MotoboyFrota.query.filter_by(ativo=True).all()
+    return render_template('turnos.html',
+        motoboys=motoboys, mb_ativos_ids=mb_ativos_ids,
+        ativos=ativos, hoje=hoje, NIVEIS_ADM=NIVEIS_ADM)
+
+
+@app.route('/turnos/<int:mid>/iniciar', methods=['POST'])
+@login_required
+@requer_nivel('super','operacional')
+def iniciar_turno(mid):
+    ativo = TurnoFrota.query.filter_by(motoboy_id=mid, ativo=True).first()
+    if not ativo:
+        t = TurnoFrota(motoboy_id=mid, dia=date.today())
+        db.session.add(t)
+        db.session.commit()
+        flash('Turno iniciado!', 'success')
+    else:
+        flash('Motoboy já tem turno ativo.', 'warning')
+    return redirect(url_for('turnos'))
+
+
+@app.route('/turnos/<int:mid>/encerrar', methods=['POST'])
+@login_required
+@requer_nivel('super','operacional')
+def encerrar_turno(mid):
+    t = TurnoFrota.query.filter_by(motoboy_id=mid, ativo=True).first()
+    if t:
+        t.fim   = datetime.utcnow()
+        t.ativo = False
+        db.session.commit()
+        flash('Turno encerrado.', 'info')
+    return redirect(url_for('turnos'))
+
+
+@app.route('/escala')
+@login_required
+def escala():
+    hoje   = date.today()
+    semana = [hoje - timedelta(days=i) for i in range(6, -1, -1)]
+    motoboys = MotoboyFrota.query.filter_by(ativo=True).all()
+    # Monta grade: {motoboy_id: {dia: horas_trabalhadas}}
+    grade = {}
+    for mb in motoboys:
+        grade[mb.id] = {}
+        for dia in semana:
+            ts = TurnoFrota.query.filter_by(motoboy_id=mb.id, dia=dia).all()
+            horas = sum(t.fim and round((t.fim - t.inicio).total_seconds()/3600,1) or 0 for t in ts)
+            grade[mb.id][dia] = round(horas, 1)
+    return render_template('escala.html',
+        motoboys=motoboys, semana=semana, grade=grade,
+        hoje=hoje, NIVEIS_ADM=NIVEIS_ADM)
+
+
 # ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────
 
 def migrate_db():

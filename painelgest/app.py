@@ -1,7 +1,9 @@
 import os
+import io
 import json
 import math
 import smtplib
+import secrets
 import logging
 from dotenv import load_dotenv
 
@@ -221,6 +223,8 @@ class Restaurante(db.Model):
     instagram            = db.Column(db.String(100), nullable=True)
     facebook             = db.Column(db.String(100), nullable=True)
     whatsapp             = db.Column(db.String(30),  nullable=True)
+    token_frota          = db.Column(db.String(64),  nullable=True, unique=True)  # QR conexão com PainelFrota
+    frota_url            = db.Column(db.String(200), nullable=True)               # URL do PainelFrota conectado
 
     def __init__(self, nome, username, password, cliente_id=None):
         self.nome = nome; self.username = username
@@ -1959,6 +1963,67 @@ def comprovante_email():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# QR CODE — CONEXÃO COM PAINELFROTA
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _gerar_qr_bytes_gest(url_destino):
+    try:
+        import qrcode
+        qr = qrcode.QRCode(version=1, box_size=8, border=4)
+        qr.add_data(url_destino)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='black', back_color='white')
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+        return buf
+    except Exception:
+        return None
+
+
+@app.route('/restaurante/frota_qr')
+@requer_restaurante
+def restaurante_frota_qr():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if not restaurante.token_frota:
+        restaurante.token_frota = secrets.token_hex(16)
+        db.session.commit()
+    frota_url = os.environ.get('PAINELFROTA_URL', 'http://localhost:5004')
+    url_conexao = f"{frota_url}/conectar_gestor/{restaurante.token_frota}"
+    return render_template('qr_frota.html', restaurante=restaurante, url_conexao=url_conexao)
+
+
+@app.route('/restaurante/frota_qr.png')
+@requer_restaurante
+def restaurante_frota_qr_png():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if not restaurante.token_frota:
+        restaurante.token_frota = secrets.token_hex(16)
+        db.session.commit()
+    frota_url = os.environ.get('PAINELFROTA_URL', 'http://localhost:5004')
+    url_conexao = f"{frota_url}/conectar_gestor/{restaurante.token_frota}"
+    buf = _gerar_qr_bytes_gest(url_conexao)
+    if not buf:
+        return 'QR indisponível', 503
+    from flask import send_file
+    return send_file(buf, mimetype='image/png')
+
+
+@app.route('/api/restaurante_token/<token>')
+def api_restaurante_token(token):
+    """PainelFrota consulta dados do restaurante pelo token_frota."""
+    r = Restaurante.query.filter_by(token_frota=token).first()
+    if not r:
+        return jsonify({'ok': False}), 404
+    return jsonify({
+        'ok': True,
+        'nome': r.nome,
+        'telefone': r.telefone or '',
+        'endereco': r.endereco or '',
+    })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # BANCO — MIGRAÇÃO
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -2004,6 +2069,8 @@ def migrate_db():
     add_col('restaurante', 'instagram',            'VARCHAR(100)')
     add_col('restaurante', 'facebook',             'VARCHAR(100)')
     add_col('restaurante', 'whatsapp',             'VARCHAR(30)')
+    add_col('restaurante', 'token_frota',          'VARCHAR(64)')
+    add_col('restaurante', 'frota_url',            'VARCHAR(200)')
 
     # PostAgendado
     add_col('post_agendado', 'erro',       'TEXT')

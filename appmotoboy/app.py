@@ -38,6 +38,7 @@ class Motoboy(UserMixin, db.Model):
     moto_placa    = db.Column(db.String(10))
     moto_modelo   = db.Column(db.String(50))
     foto_path     = db.Column(db.String(200))
+    token_frota   = db.Column(db.String(64), unique=True)  # token vindo do PainelFrota
     ativo         = db.Column(db.Boolean, default=True)
     disponivel    = db.Column(db.Boolean, default=False)
     lat_atual     = db.Column(db.Float)
@@ -210,6 +211,52 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+
+# ─── REGISTRO VIA QR CODE ─────────────────────────────────────────────────────
+
+@app.route('/registrar/<token>', methods=['GET', 'POST'])
+def registrar_via_qr(token):
+    """Motoboy escaneia QR do PainelFrota e cria conta no AppMotoboy."""
+    # Verifica se já existe motoboy com esse token
+    existente = Motoboy.query.filter_by(token_frota=token).first()
+    if existente:
+        login_user(existente)
+        flash('Conta já existente — você foi conectado!', 'success')
+        return redirect(url_for('dashboard'))
+
+    # Busca info do motoboy no PainelFrota via API
+    nome_frota = ''
+    try:
+        r = __import__('requests').get(f'{PAINELGEST_URL.replace("5002","5004")}/api/motoboy_token/{token}', timeout=2)
+        if r.ok:
+            dados = r.json()
+            nome_frota = dados.get('nome', '')
+    except Exception:
+        pass
+
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        senha    = request.form['senha']
+        nome     = request.form['nome'].strip()
+        if Motoboy.query.filter_by(username=username).first():
+            flash('Esse usuário já existe. Escolha outro.', 'danger')
+            return render_template('registrar.html', token=token, nome_frota=nome_frota)
+        mb = Motoboy(
+            nome        = nome,
+            username    = username,
+            telefone    = request.form.get('telefone'),
+            token_frota = token,
+        )
+        mb.set_senha(senha)
+        db.session.add(mb)
+        db.session.commit()
+        login_user(mb)
+        flash('Conta criada e vinculada à frota!', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('registrar.html', token=token, nome_frota=nome_frota)
+
 
 # ─── DASHBOARD PRINCIPAL ──────────────────────────────────────────────────────
 
@@ -572,10 +619,11 @@ def migrate_db():
             except Exception:
                 pass
 
-    add_col('motoboy', 'email',      'VARCHAR(120)')
+    add_col('motoboy', 'email',       'VARCHAR(120)')
     add_col('motoboy', 'cpf_cnpj',   'VARCHAR(20)')
     add_col('motoboy', 'tipo_doc',   "VARCHAR(5) DEFAULT 'cpf'")
     add_col('motoboy', 'chave_pix',  'VARCHAR(100)')
+    add_col('motoboy', 'token_frota','VARCHAR(64)')
     add_col('entrega', 'destino_lat','FLOAT')
     add_col('entrega', 'destino_lng','FLOAT')
     add_col('entrega', 'expira_em',  'DATETIME')

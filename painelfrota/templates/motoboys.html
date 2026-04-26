@@ -82,6 +82,7 @@
             {% if current_user.nivel in ['super','operacional'] %}
             <td>
               <a href="{{ url_for('editar_motoboy', mid=mb.id) }}" class="btn btn-surface btn-sm me-1" title="Editar"><i class="fas fa-edit"></i></a>
+              <a href="{{ url_for('motoboy_qr', mid=mb.id) }}" class="btn btn-sm me-1" style="background:#8b5cf622;border:1px solid #8b5cf644;color:#a78bfa;" title="QR Code AppMotoboy"><i class="fas fa-qrcode"></i></a>
               {% if current_user.nivel == 'super' %}
               <form method="POST" action="{{ url_for('excluir_motoboy', mid=mb.id) }}" class="d-inline" onsubmit="return confirm('Desativar {{ mb.nome }}?')">
                 <button class="btn btn-sm" style="background:#3b151533;border:1px solid #3b1515;color:#f87171;" title="Desativar"><i class="fas fa-ban"></i></button>

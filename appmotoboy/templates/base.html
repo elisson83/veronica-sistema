@@ -78,8 +78,13 @@
     width: 100%; padding: 18px; border-radius: 16px; font-size: 1.1rem; font-weight: 700;
     border: 2px solid var(--border); cursor: pointer; transition: all .3s;
   }
-  .gps-toggle.on  { background: #064e3b; border-color: var(--success); color: var(--success); }
+  .gps-toggle.on  { background: linear-gradient(135deg,#064e3b,#065f46); border-color: var(--success); color: var(--success); box-shadow: 0 4px 20px rgba(16,185,129,.15); }
   .gps-toggle.off { background: var(--card); border-color: var(--border); color: var(--muted); }
+
+  /* Mini stat */
+  .mini-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+  .mini-stat .v { font-size: 1.3rem; font-weight: 700; }
+  .mini-stat .l { font-size: .7rem; color: var(--muted); }
 </style>
 {% block extra_head %}{% endblock %}
 </head>
@@ -120,7 +125,7 @@
   <a href="{{ url_for('vagas') }}" class="{% if request.endpoint=='vagas' %}active{% endif %}">
     <i class="fas fa-calendar-check"></i>Vagas
   </a>
-  <a href="{{ url_for('ganhos') }}" class="{% if request.endpoint=='ganhos' %}active{% endif %}">
+  <a href="{{ url_for('ganhos') }}" class="{% if request.endpoint in ['ganhos','historico'] %}active{% endif %}">
     <i class="fas fa-wallet"></i>Ganhos
   </a>
   <a href="{{ url_for('perfil') }}" class="{% if request.endpoint=='perfil' %}active{% endif %}">

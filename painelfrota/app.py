@@ -76,6 +76,7 @@ class MotoboyFrota(db.Model):
     moto_placa       = db.Column(db.String(10))
     moto_modelo      = db.Column(db.String(50))
     motoboy_app_id   = db.Column(db.Integer)
+    token_app        = db.Column(db.String(64), unique=True)   # token QR → AppMotoboy
     ativo            = db.Column(db.Boolean, default=True)
     parceiro         = db.Column(db.Boolean, default=False)  # True = parceiro externo
     # Remuneração
@@ -401,6 +402,31 @@ def editar_motoboy(mid):
         flash('Motoboy atualizado!', 'success')
         return redirect(url_for('motoboys'))
     return render_template('editar_motoboy.html', motoboy=mb, MODOS_REMUNERACAO=MODOS_REMUNERACAO)
+
+
+@app.route('/motoboys/<int:mid>/qr')
+@login_required
+def motoboy_qr(mid):
+    mb = MotoboyFrota.query.get_or_404(mid)
+    if not mb.token_app:
+        mb.token_app = secrets.token_hex(16)
+        db.session.commit()
+    url_reg = f"http://localhost:5003/registrar/{mb.token_app}"
+    return render_template('motoboy_qr.html', motoboy=mb, url_reg=url_reg, NIVEIS_ADM=NIVEIS_ADM)
+
+
+@app.route('/motoboys/<int:mid>/qr.png')
+@login_required
+def motoboy_qr_png(mid):
+    mb = MotoboyFrota.query.get_or_404(mid)
+    if not mb.token_app:
+        mb.token_app = secrets.token_hex(16)
+        db.session.commit()
+    url_reg = f"http://localhost:5003/registrar/{mb.token_app}"
+    buf = gerar_qr_bytes(url_reg)
+    if not buf:
+        return 'QR indisponível', 503
+    return send_file(buf, mimetype='image/png')
 
 
 @app.route('/motoboys/<int:mid>/excluir', methods=['POST'])
@@ -840,9 +866,37 @@ def relatorios():
         ).count()
         return {'total': total, 'frota': frota, 'qtd': qtd}
 
+    # Dados dos últimos 14 dias para gráfico
+    dias_labels, dias_qtd, dias_receita, dias_lucro = [], [], [], []
+    for i in range(13, -1, -1):
+        d = hoje - timedelta(days=i)
+        dias_labels.append(d.strftime('%d/%m'))
+        e_dia = EntregaFrota.query.filter(
+            EntregaFrota.status == 'entregue',
+            db.func.date(EntregaFrota.entregue_em) == d
+        ).all()
+        dias_qtd.append(len(e_dia))
+        dias_receita.append(round(sum(e.valor_total_taxa for e in e_dia), 2))
+        dias_lucro.append(round(sum(e.ganho_frota for e in e_dia), 2))
+
+    # Top motoboys do mês
+    top_motoboys = []
+    for mb in MotoboyFrota.query.filter_by(ativo=True).all():
+        qtd_mb = EntregaFrota.query.filter(
+            EntregaFrota.motoboy_id == mb.id,
+            EntregaFrota.status == 'entregue',
+            db.func.date(EntregaFrota.entregue_em) >= inicio_mes
+        ).count()
+        if qtd_mb > 0:
+            top_motoboys.append({'nome': mb.nome, 'qtd': qtd_mb})
+    top_motoboys.sort(key=lambda x: x['qtd'], reverse=True)
+
     return render_template('relatorios.html',
         semana=stats(inicio_sem), mes=stats(inicio_mes),
-        hoje=hoje, NIVEIS_ADM=NIVEIS_ADM)
+        hoje=hoje, NIVEIS_ADM=NIVEIS_ADM,
+        dias_labels=dias_labels, dias_qtd=dias_qtd,
+        dias_receita=dias_receita, dias_lucro=dias_lucro,
+        top_motoboys=top_motoboys[:5])
 
 
 # ─── QR CODE — API PÚBLICA ────────────────────────────────────────────────────
@@ -853,6 +907,71 @@ def api_qr_info(token):
     if not r:
         return jsonify({'ok': False}), 404
     return jsonify({'ok': True, 'nome': r.nome, 'taxa_padrao': r.taxa_padrao})
+
+
+@app.route('/conectar_gestor/<token>')
+def conectar_via_gestor(token):
+    """Restaurante do PainelGest escaneia QR → cria RestauranteConectado no PainelFrota."""
+    # Consulta dados no PainelGest
+    dados = {}
+    try:
+        r = requests.get(f'{PAINELGEST_URL}/api/restaurante_token/{token}', timeout=2)
+        if r.ok:
+            dados = r.json()
+    except Exception:
+        pass
+
+    if not dados.get('ok'):
+        return render_template('qr_invalido.html'), 404
+
+    # Verifica se já existe
+    existente = RestauranteConectado.query.filter_by(token_qr=token).first()
+    if existente:
+        return render_template('qr_confirmado.html', restaurante=existente)
+
+    return render_template('qr_conectar_gestor.html', dados=dados, token=token)
+
+
+@app.route('/conectar_gestor/<token>/confirmar', methods=['POST'])
+def confirmar_conexao_gestor(token):
+    dados = {}
+    try:
+        r = requests.get(f'{PAINELGEST_URL}/api/restaurante_token/{token}', timeout=2)
+        if r.ok:
+            dados = r.json()
+    except Exception:
+        pass
+    if not dados.get('ok'):
+        return render_template('qr_invalido.html'), 404
+
+    existente = RestauranteConectado.query.filter_by(token_qr=token).first()
+    if not existente:
+        novo = RestauranteConectado(
+            nome      = dados['nome'],
+            token_qr  = token,
+            telefone  = dados.get('telefone'),
+            endereco  = dados.get('endereco'),
+        )
+        db.session.add(novo)
+        db.session.commit()
+        existente = novo
+
+    return render_template('qr_confirmado.html', restaurante=existente)
+
+
+@app.route('/api/motoboy_token/<token>')
+def api_motoboy_token(token):
+    """AppMotoboy consulta dados do motoboy pelo token_app."""
+    mb = MotoboyFrota.query.filter_by(token_app=token, ativo=True).first()
+    if not mb:
+        return jsonify({'ok': False}), 404
+    return jsonify({
+        'ok': True,
+        'nome': mb.nome,
+        'telefone': mb.telefone or '',
+        'taxa_entrega': mb.taxa_entrega,
+        'modo_remuneracao': mb.modo_remuneracao,
+    })
 
 
 # ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────
@@ -884,6 +1003,7 @@ def migrate_db():
     add_col('motoboy_frota', 'modo_remuneracao',   "VARCHAR(20) DEFAULT 'corrida'")
     add_col('motoboy_frota', 'percentual_motoboy', 'FLOAT DEFAULT 80.0')
     add_col('motoboy_frota', 'valor_diaria',       'FLOAT DEFAULT 0.0')
+    add_col('motoboy_frota', 'token_app',          'VARCHAR(64)')
     add_col('entrega_frota', 'restaurante_id',     'INTEGER')
     add_col('pagamento_motoboy', 'chave_pix_dest', 'VARCHAR(100)')
     add_col('pagamento_motoboy', 'automatico',     'BOOLEAN DEFAULT 0')

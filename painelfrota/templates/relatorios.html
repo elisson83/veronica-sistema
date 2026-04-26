@@ -3,29 +3,29 @@
 {% block page_title %}Relatórios{% endblock %}
 
 {% block content %}
-<div class="row g-4">
+<div class="row g-3 mb-4">
   <!-- Semana -->
   <div class="col-md-6">
     <div class="card-dark p-4">
-      <h6 class="mb-4" style="color:#8b5cf6;"><i class="fas fa-calendar-week me-2"></i>Esta Semana</h6>
-      <div class="d-flex justify-content-between mb-3">
-        <span class="text-muted">Entregas realizadas</span>
-        <span class="fw-bold">{{ semana.qtd }}</span>
-      </div>
-      <div class="d-flex justify-content-between mb-3">
-        <span class="text-muted">Faturamento total</span>
-        <span class="fw-bold text-warning">R$ {{ '%.2f'|format(semana.total) }}</span>
-      </div>
-      <div class="d-flex justify-content-between mb-3">
-        <span class="text-muted">Receita da frota</span>
-        <span class="fw-bold" style="color:#a855f7;">R$ {{ '%.2f'|format(semana.frota) }}</span>
+      <h6 class="mb-3" style="color:#8b5cf6;"><i class="fas fa-calendar-week me-2"></i>Esta Semana</h6>
+      <div class="row g-2 text-center">
+        <div class="col-4">
+          <div style="font-size:1.6rem;font-weight:700;color:#f59e0b;">{{ semana.qtd }}</div>
+          <div style="font-size:.72rem;color:#64748b;">entregas</div>
+        </div>
+        <div class="col-4">
+          <div style="font-size:1.3rem;font-weight:700;color:#fbbf24;">R$ {{ '%.0f'|format(semana.total) }}</div>
+          <div style="font-size:.72rem;color:#64748b;">faturado</div>
+        </div>
+        <div class="col-4">
+          <div style="font-size:1.3rem;font-weight:700;color:#a855f7;">R$ {{ '%.0f'|format(semana.frota) }}</div>
+          <div style="font-size:.72rem;color:#64748b;">lucro frota</div>
+        </div>
       </div>
       {% if semana.qtd > 0 %}
-      <div class="pt-3 border-top" style="border-color:var(--border)!important;">
-        <div class="d-flex justify-content-between">
-          <span class="text-muted">Ticket médio</span>
-          <span class="fw-semibold">R$ {{ '%.2f'|format(semana.total / semana.qtd) }}</span>
-        </div>
+      <div class="mt-3 pt-3 border-top d-flex justify-content-between" style="border-color:var(--border)!important;">
+        <span class="text-muted" style="font-size:.82rem;">Ticket médio</span>
+        <span class="fw-bold">R$ {{ '%.2f'|format(semana.total / semana.qtd) }}</span>
       </div>
       {% endif %}
     </div>
@@ -34,32 +34,125 @@
   <!-- Mês -->
   <div class="col-md-6">
     <div class="card-dark p-4">
-      <h6 class="mb-4" style="color:#06b6d4;"><i class="fas fa-calendar-days me-2"></i>Este Mês ({{ hoje.strftime('%B/%Y') }})</h6>
-      <div class="d-flex justify-content-between mb-3">
-        <span class="text-muted">Entregas realizadas</span>
-        <span class="fw-bold">{{ mes.qtd }}</span>
-      </div>
-      <div class="d-flex justify-content-between mb-3">
-        <span class="text-muted">Faturamento total</span>
-        <span class="fw-bold text-warning">R$ {{ '%.2f'|format(mes.total) }}</span>
-      </div>
-      <div class="d-flex justify-content-between mb-3">
-        <span class="text-muted">Receita da frota</span>
-        <span class="fw-bold" style="color:#a855f7;">R$ {{ '%.2f'|format(mes.frota) }}</span>
-      </div>
-      {% if mes.qtd > 0 %}
-      <div class="pt-3 border-top" style="border-color:var(--border)!important;">
-        <div class="d-flex justify-content-between">
-          <span class="text-muted">Ticket médio</span>
-          <span class="fw-semibold">R$ {{ '%.2f'|format(mes.total / mes.qtd) }}</span>
+      <h6 class="mb-3" style="color:#06b6d4;"><i class="fas fa-calendar-days me-2"></i>{{ hoje.strftime('%B/%Y') }}</h6>
+      <div class="row g-2 text-center">
+        <div class="col-4">
+          <div style="font-size:1.6rem;font-weight:700;color:#f59e0b;">{{ mes.qtd }}</div>
+          <div style="font-size:.72rem;color:#64748b;">entregas</div>
         </div>
-        <div class="d-flex justify-content-between mt-2">
-          <span class="text-muted">Margem da frota</span>
-          <span class="fw-semibold text-success">{{ '%.1f'|format((mes.frota / mes.total * 100) if mes.total > 0 else 0) }}%</span>
+        <div class="col-4">
+          <div style="font-size:1.3rem;font-weight:700;color:#fbbf24;">R$ {{ '%.0f'|format(mes.total) }}</div>
+          <div style="font-size:.72rem;color:#64748b;">faturado</div>
         </div>
+        <div class="col-4">
+          <div style="font-size:1.3rem;font-weight:700;color:#a855f7;">R$ {{ '%.0f'|format(mes.frota) }}</div>
+          <div style="font-size:.72rem;color:#64748b;">lucro frota</div>
+        </div>
+      </div>
+      {% if mes.qtd > 0 and mes.total > 0 %}
+      <div class="mt-3 pt-3 border-top d-flex justify-content-between" style="border-color:var(--border)!important;">
+        <span class="text-muted" style="font-size:.82rem;">Margem da frota</span>
+        <span class="fw-bold text-success">{{ '%.1f'|format(mes.frota / mes.total * 100) }}%</span>
       </div>
       {% endif %}
     </div>
   </div>
 </div>
+
+<!-- Gráfico de entregas últimos 14 dias -->
+<div class="card-dark p-4 mb-4">
+  <h6 class="mb-3" style="color:#f59e0b;"><i class="fas fa-chart-bar me-2"></i>Entregas — Últimos 14 Dias</h6>
+  <canvas id="chartEntregas" height="100"></canvas>
+</div>
+
+<!-- Gráfico de receita -->
+<div class="card-dark p-4 mb-4">
+  <h6 class="mb-3" style="color:#10b981;"><i class="fas fa-chart-line me-2"></i>Receita vs Lucro — Últimos 14 Dias</h6>
+  <canvas id="chartReceita" height="100"></canvas>
+</div>
+
+<!-- Top motoboys -->
+{% if top_motoboys %}
+<div class="card-dark p-4">
+  <h6 class="mb-3" style="color:#a855f7;"><i class="fas fa-trophy me-2"></i>Top Motoboys do Mês</h6>
+  {% for mb in top_motoboys %}
+  <div class="d-flex align-items-center gap-3 mb-3">
+    <div style="width:28px;height:28px;border-radius:50%;background:{% if loop.index==1 %}#2d2416{% elif loop.index==2 %}#1a1a24{% else %}#16161e{% endif %};border:1px solid {% if loop.index==1 %}#f59e0b{% elif loop.index==2 %}#94a3b8{% else %}#475569{% endif %};display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:{% if loop.index==1 %}#f59e0b{% elif loop.index==2 %}#94a3b8{% else %}#475569{% endif %};">
+      {{ loop.index }}
+    </div>
+    <div style="flex:1;">
+      <div style="font-size:.88rem;font-weight:600;">{{ mb.nome }}</div>
+      <div style="height:4px;background:#1a1a24;border-radius:4px;margin-top:4px;overflow:hidden;">
+        {% set max_qtd = top_motoboys|map(attribute='qtd')|max %}
+        <div style="width:{{ (mb.qtd / max_qtd * 100)|int }}%;height:100%;background:{% if loop.index==1 %}#f59e0b{% elif loop.index==2 %}#94a3b8{% else %}#8b5cf6{% endif %};border-radius:4px;"></div>
+      </div>
+    </div>
+    <div style="font-size:.88rem;font-weight:700;color:#f59e0b;min-width:50px;text-align:right;">{{ mb.qtd }} ent.</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const labels   = {{ dias_labels | tojson }};
+const qtdData  = {{ dias_qtd | tojson }};
+const recData  = {{ dias_receita | tojson }};
+const lucData  = {{ dias_lucro | tojson }};
+
+const defaults = {
+  responsive: true,
+  plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1a1a24' } },
+    y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1a1a24' } }
+  }
+};
+
+new Chart(document.getElementById('chartEntregas'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Entregas',
+      data: qtdData,
+      backgroundColor: 'rgba(245,158,11,0.7)',
+      borderColor: '#f59e0b',
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: { ...defaults }
+});
+
+new Chart(document.getElementById('chartReceita'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: 'Receita Total',
+        data: recData,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.1)',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 3,
+      },
+      {
+        label: 'Lucro Frota',
+        data: lucData,
+        borderColor: '#a855f7',
+        backgroundColor: 'rgba(168,85,247,0.1)',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 3,
+      }
+    ]
+  },
+  options: { ...defaults }
+});
+</script>
 {% endblock %}

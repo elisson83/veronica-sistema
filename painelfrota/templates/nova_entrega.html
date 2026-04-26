@@ -39,7 +39,13 @@
   <div class="row g-3 mb-4">
     <div class="col-md-5">
       <label class="form-label">Restaurante</label>
-      <input type="text" name="restaurante_nome" class="form-control" placeholder="Nome do restaurante">
+      <select name="restaurante_id" class="form-select" onchange="preencherRestaurante(this)">
+        <option value="">— Nenhum vinculado —</option>
+        {% for r in restaurantes %}
+        <option value="{{ r.id }}" data-nome="{{ r.nome }}" data-taxa="{{ r.taxa_padrao }}">{{ r.nome }}</option>
+        {% endfor %}
+      </select>
+      <input type="text" name="restaurante_nome" id="restNome" class="form-control mt-1" placeholder="Nome (ou digite manualmente)">
     </div>
     <div class="col-md-7">
       <label class="form-label">Nome do Cliente</label>
@@ -165,6 +171,18 @@ function recalcular() {
 
 function toggleIfood(val) {
   document.getElementById('blocoIfood').style.display = val === 'ifood' ? 'block' : 'none';
+}
+
+function preencherRestaurante(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  if (opt.value) {
+    document.getElementById('restNome').value = opt.dataset.nome || '';
+    const taxa = parseFloat(opt.dataset.taxa || 0);
+    if (taxa > 0) {
+      taxaAtual = taxa;
+      recalcular();
+    }
+  }
 }
 </script>
 {% endblock %}

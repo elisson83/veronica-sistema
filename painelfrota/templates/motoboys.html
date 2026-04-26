@@ -1,57 +1,178 @@
 {% extends 'base.html' %}
 {% block title %}Motoboys — PainelFrota{% endblock %}
-{% block page_title %}Motoboys ({{ motoboys|length }}/50){% endblock %}
+{% block page_title %}Motoboys{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   {% if current_user.nivel in ['super','operacional'] %}
-  <a href="{{ url_for('novo_motoboy') }}" class="btn btn-accent btn-sm"><i class="fas fa-plus me-1"></i>Cadastrar Motoboy</a>
-  {% else %}
-  <span></span>
-  {% endif %}
+  <a href="{{ url_for('novo_motoboy') }}" class="btn btn-accent btn-sm"><i class="fas fa-plus me-1"></i>Cadastrar</a>
+  {% else %}<span></span>{% endif %}
+  <div class="d-flex gap-2 align-items-center">
+    <span style="font-size:.8rem; color:var(--muted);">{{ motoboys|length }}/50 fixos · {{ parceiros|length }} parceiros</span>
+  </div>
 </div>
 
-<div class="card-dark">
-  <table class="table-dark-custom w-100">
-    <thead><tr>
-      <th>Nome</th>
-      <th>Telefone</th>
-      <th>Moto</th>
-      <th>Taxa/entrega</th>
-      <th>% Frota</th>
-      <th>Status</th>
-      {% if current_user.nivel in ['super','operacional'] %}<th>Ações</th>{% endif %}
-    </tr></thead>
-    <tbody>
-      {% for mb in motoboys %}
-      <tr>
-        <td class="fw-semibold">{{ mb.nome }}</td>
-        <td style="font-size:.85rem; color:var(--muted);">{{ mb.telefone or '—' }}</td>
-        <td style="font-size:.83rem;">{{ mb.moto_modelo or '' }} {% if mb.moto_placa %}<span class="badge bg-secondary">{{ mb.moto_placa }}</span>{% endif %}</td>
-        <td class="text-warning fw-bold">R$ {{ '%.2f'|format(mb.taxa_entrega) }}</td>
-        <td style="color:#a855f7;">{{ mb.percentual_frota }}%</td>
-        <td>
-          {% if mb.ativo %}
-          <span class="badge" style="background:#064e3b33;color:#6ee7b7;border:1px solid #064e3b;">Ativo</span>
+<!-- Abas -->
+<ul class="nav mb-3" style="border-bottom:1px solid var(--border);">
+  <li class="nav-item">
+    <a class="nav-link active" id="tab-fixos" data-bs-toggle="tab" href="#tab-fixos-pane"
+       style="color:var(--accent); border-bottom:2px solid var(--accent); padding:8px 16px; font-size:.88rem; font-weight:600;">
+      <i class="fas fa-motorcycle me-1"></i>Fixos ({{ motoboys|length }})
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" id="tab-parc" data-bs-toggle="tab" href="#tab-parc-pane"
+       style="color:var(--muted); padding:8px 16px; font-size:.88rem; font-weight:600;">
+      <i class="fas fa-handshake me-1"></i>Parceiros ({{ parceiros|length }})
+    </a>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <!-- Fixos -->
+  <div class="tab-pane fade show active" id="tab-fixos-pane">
+    <div class="card-dark">
+      <table class="table-dark-custom w-100">
+        <thead><tr>
+          <th>Nome</th>
+          <th>Telefone</th>
+          <th>Moto</th>
+          <th>Remuneração</th>
+          <th>Taxa / %</th>
+          <th>PIX</th>
+          <th>Status</th>
+          {% if current_user.nivel in ['super','operacional'] %}<th>Ações</th>{% endif %}
+        </tr></thead>
+        <tbody>
+          {% for mb in motoboys %}
+          <tr>
+            <td class="fw-semibold">{{ mb.nome }}</td>
+            <td style="font-size:.83rem; color:var(--muted);">{{ mb.telefone or '—' }}</td>
+            <td style="font-size:.82rem;">{{ mb.moto_modelo or '' }}{% if mb.moto_placa %} <span class="badge bg-secondary" style="font-size:.7rem;">{{ mb.moto_placa }}</span>{% endif %}</td>
+            <td>
+              {% if mb.modo_remuneracao == 'corrida' %}
+              <span class="badge" style="background:#1e3a5f33;color:#60a5fa;border:1px solid #1e3a5f;">Por corrida</span>
+              {% elif mb.modo_remuneracao == 'porcentagem' %}
+              <span class="badge" style="background:#2d241633;color:#fbbf24;border:1px solid #2d2416;">% do valor</span>
+              {% elif mb.modo_remuneracao == 'diaria' %}
+              <span class="badge" style="background:#064e3b33;color:#6ee7b7;border:1px solid #064e3b;">Diária</span>
+              {% else %}
+              <span class="badge" style="background:#4c1d9533;color:#a78bfa;border:1px solid #4c1d95;">Misto</span>
+              {% endif %}
+            </td>
+            <td style="font-size:.83rem;">
+              {% if mb.modo_remuneracao in ['corrida','misto'] %}
+              <span class="text-warning fw-bold">R$ {{ '%.2f'|format(mb.taxa_entrega) }}</span>
+              {% endif %}
+              {% if mb.modo_remuneracao in ['porcentagem','misto'] %}
+              <span style="color:#a855f7;">{{ mb.percentual_motoboy }}%</span>
+              {% endif %}
+              {% if mb.modo_remuneracao == 'diaria' %}
+              <span class="text-success">R$ {{ '%.2f'|format(mb.valor_diaria) }}/dia</span>
+              {% endif %}
+            </td>
+            <td style="font-size:.78rem; color:var(--muted);">{{ mb.chave_pix or '—' }}</td>
+            <td>
+              {% if mb.ativo %}
+              <span class="badge" style="background:#064e3b33;color:#6ee7b7;border:1px solid #064e3b;">Ativo</span>
+              {% else %}
+              <span class="badge" style="background:#3b151533;color:#f87171;border:1px solid #3b1515;">Inativo</span>
+              {% endif %}
+            </td>
+            {% if current_user.nivel in ['super','operacional'] %}
+            <td>
+              <a href="{{ url_for('editar_motoboy', mid=mb.id) }}" class="btn btn-surface btn-sm me-1" title="Editar"><i class="fas fa-edit"></i></a>
+              {% if current_user.nivel == 'super' %}
+              <form method="POST" action="{{ url_for('excluir_motoboy', mid=mb.id) }}" class="d-inline" onsubmit="return confirm('Desativar {{ mb.nome }}?')">
+                <button class="btn btn-sm" style="background:#3b151533;border:1px solid #3b1515;color:#f87171;" title="Desativar"><i class="fas fa-ban"></i></button>
+              </form>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
           {% else %}
-          <span class="badge" style="background:#3b151533;color:#f87171;border:1px solid #3b1515;">Inativo</span>
-          {% endif %}
-        </td>
-        {% if current_user.nivel in ['super','operacional'] %}
-        <td>
-          <a href="{{ url_for('editar_motoboy', mid=mb.id) }}" class="btn btn-surface btn-sm me-1"><i class="fas fa-edit"></i></a>
-          {% if current_user.nivel == 'super' %}
-          <form method="POST" action="{{ url_for('excluir_motoboy', mid=mb.id) }}" class="d-inline" onsubmit="return confirm('Desativar {{ mb.nome }}?')">
-            <button class="btn btn-sm" style="background:#3b151533;border:1px solid #3b1515;color:#f87171;"><i class="fas fa-ban"></i></button>
-          </form>
-          {% endif %}
-        </td>
-        {% endif %}
-      </tr>
-      {% else %}
-      <tr><td colspan="7" class="text-center text-muted py-5"><i class="fas fa-motorcycle fa-2x mb-2 d-block"></i>Nenhum motoboy cadastrado</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+          <tr><td colspan="8" class="text-center text-muted py-5">
+            <i class="fas fa-motorcycle fa-2x mb-2 d-block"></i>Nenhum motoboy fixo cadastrado
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Parceiros -->
+  <div class="tab-pane fade" id="tab-parc-pane">
+    <div class="card-dark">
+      <table class="table-dark-custom w-100">
+        <thead><tr>
+          <th>Nome</th>
+          <th>Telefone</th>
+          <th>Remuneração</th>
+          <th>Taxa / %</th>
+          <th>PIX</th>
+          {% if current_user.nivel in ['super','operacional'] %}<th>Ações</th>{% endif %}
+        </tr></thead>
+        <tbody>
+          {% for mb in parceiros %}
+          <tr>
+            <td class="fw-semibold">
+              {{ mb.nome }}
+              <span class="badge ms-1" style="background:#06b6d433;color:#06b6d4;border:1px solid #06b6d4;font-size:.68rem;">parceiro</span>
+            </td>
+            <td style="font-size:.83rem; color:var(--muted);">{{ mb.telefone or '—' }}</td>
+            <td>
+              {% if mb.modo_remuneracao == 'corrida' %}
+              <span class="badge" style="background:#1e3a5f33;color:#60a5fa;border:1px solid #1e3a5f;">Por corrida</span>
+              {% elif mb.modo_remuneracao == 'porcentagem' %}
+              <span class="badge" style="background:#2d241633;color:#fbbf24;border:1px solid #2d2416;">% do valor</span>
+              {% elif mb.modo_remuneracao == 'diaria' %}
+              <span class="badge" style="background:#064e3b33;color:#6ee7b7;border:1px solid #064e3b;">Diária</span>
+              {% else %}
+              <span class="badge" style="background:#4c1d9533;color:#a78bfa;border:1px solid #4c1d95;">Misto</span>
+              {% endif %}
+            </td>
+            <td style="font-size:.83rem;">
+              {% if mb.modo_remuneracao in ['corrida','misto'] %}
+              <span class="text-warning fw-bold">R$ {{ '%.2f'|format(mb.taxa_entrega) }}</span>
+              {% endif %}
+              {% if mb.modo_remuneracao in ['porcentagem','misto'] %}
+              <span style="color:#a855f7;">{{ mb.percentual_motoboy }}%</span>
+              {% endif %}
+              {% if mb.modo_remuneracao == 'diaria' %}
+              <span class="text-success">R$ {{ '%.2f'|format(mb.valor_diaria) }}/dia</span>
+              {% endif %}
+            </td>
+            <td style="font-size:.78rem; color:var(--muted);">{{ mb.chave_pix or '—' }}</td>
+            {% if current_user.nivel in ['super','operacional'] %}
+            <td>
+              <a href="{{ url_for('editar_motoboy', mid=mb.id) }}" class="btn btn-surface btn-sm me-1"><i class="fas fa-edit"></i></a>
+            </td>
+            {% endif %}
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-5">
+            <i class="fas fa-handshake fa-2x mb-2 d-block"></i>Nenhum parceiro cadastrado
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Ativar aba correta via hash ou tab click
+document.querySelectorAll('[data-bs-toggle="tab"]').forEach(el => {
+  el.addEventListener('shown.bs.tab', e => {
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(x => {
+      x.style.color = 'var(--muted)';
+      x.style.borderBottom = 'none';
+    });
+    e.target.style.color = 'var(--accent)';
+    e.target.style.borderBottom = '2px solid var(--accent)';
+  });
+});
+</script>
 {% endblock %}

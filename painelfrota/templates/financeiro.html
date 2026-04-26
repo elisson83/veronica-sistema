@@ -28,16 +28,31 @@
   </div>
 </div>
 
+<!-- Ações rápidas -->
+<div class="d-flex gap-2 mb-4 flex-wrap align-items-center">
+  <form method="POST" action="{{ url_for('executar_fechamento') }}"
+        onsubmit="return confirm('Executar fechamento automático de ontem para todos os motoboys?')">
+    <button class="btn btn-surface btn-sm">
+      <i class="fas fa-calculator me-1"></i>Fechamento Automático (ontem)
+    </button>
+  </form>
+  <span style="font-size:.78rem; color:var(--muted);">
+    Período: {{ inicio_mes.strftime('%d/%m') }} – {{ hoje.strftime('%d/%m/%Y') }}
+  </span>
+</div>
+
 <!-- Saldo por motoboy -->
 <div class="card-dark mb-4">
   <div class="p-3 border-bottom" style="border-color:var(--border)!important;">
-    <h6 class="mb-0 fw-bold">Saldo a Pagar — {{ inicio_mes.strftime('%d/%m') }} a {{ hoje.strftime('%d/%m/%Y') }}</h6>
+    <h6 class="mb-0 fw-bold">Saldo a Pagar — Mês Atual</h6>
   </div>
   <table class="table-dark-custom w-100">
     <thead><tr>
       <th>Motoboy</th>
-      <th>Ganhou no mês</th>
-      <th>Já pago</th>
+      <th>Modo</th>
+      <th>PIX</th>
+      <th>Ganhou</th>
+      <th>Pago</th>
       <th>A pagar</th>
       <th>Ação</th>
     </tr></thead>
@@ -45,7 +60,19 @@
     {% for item in motoboys_saldo %}
     <tr>
       <td class="fw-semibold">{{ item.motoboy.nome }}</td>
-      <td class="text-warning">R$ {{ '%.2f'|format(item.saldo) }}</td>
+      <td>
+        {% if item.motoboy.modo_remuneracao == 'corrida' %}
+        <span class="badge" style="background:#1e3a5f33;color:#60a5fa;border:1px solid #1e3a5f;font-size:.7rem;">corrida</span>
+        {% elif item.motoboy.modo_remuneracao == 'porcentagem' %}
+        <span class="badge" style="background:#2d241633;color:#fbbf24;border:1px solid #2d2416;font-size:.7rem;">%</span>
+        {% elif item.motoboy.modo_remuneracao == 'diaria' %}
+        <span class="badge" style="background:#064e3b33;color:#6ee7b7;border:1px solid #064e3b;font-size:.7rem;">diária</span>
+        {% else %}
+        <span class="badge" style="background:#4c1d9533;color:#a78bfa;border:1px solid #4c1d95;font-size:.7rem;">misto</span>
+        {% endif %}
+      </td>
+      <td style="font-size:.78rem; color:var(--muted);">{{ item.motoboy.chave_pix or '—' }}</td>
+      <td class="text-warning fw-bold">R$ {{ '%.2f'|format(item.saldo) }}</td>
       <td class="text-success">R$ {{ '%.2f'|format(item.pago) }}</td>
       <td class="fw-bold {% if item.a_pagar > 0 %}text-danger{% else %}text-muted{% endif %}">
         R$ {{ '%.2f'|format(item.a_pagar) }}
@@ -54,12 +81,12 @@
         {% if item.a_pagar > 0 %}
         <form method="POST" action="{{ url_for('pagar_motoboy', mid=item.motoboy.id) }}"
               onsubmit="return confirm('Registrar PIX de R$ {{ '%.2f'|format(item.a_pagar) }} para {{ item.motoboy.nome }}?')">
-          <button class="btn btn-sm" style="background:#064e3b;color:#6ee7b7;border:1px solid #064e3b;font-size:.78rem;">
-            <i class="fas fa-pix me-1"></i>PIX R$ {{ '%.2f'|format(item.a_pagar) }}
+          <button class="btn btn-sm" style="background:#064e3b;color:#6ee7b7;border:1px solid #064e3b;font-size:.75rem; white-space:nowrap;">
+            <i class="fas fa-pix me-1"></i>R$ {{ '%.2f'|format(item.a_pagar) }}
           </button>
         </form>
         {% else %}
-        <span class="text-muted" style="font-size:.78rem;">Em dia</span>
+        <span class="text-muted" style="font-size:.78rem;">Em dia ✓</span>
         {% endif %}
       </td>
     </tr>
@@ -68,27 +95,42 @@
   </table>
 </div>
 
-<!-- Pagamentos pendentes -->
-{% if pagamentos_pendentes %}
+<!-- Últimos pagamentos -->
 <div class="card-dark">
   <div class="p-3 border-bottom" style="border-color:var(--border)!important;">
-    <h6 class="mb-0 fw-bold text-warning"><i class="fas fa-clock me-1"></i>Pagamentos Pendentes</h6>
+    <h6 class="mb-0 fw-bold">Últimos Pagamentos</h6>
   </div>
   <table class="table-dark-custom w-100">
-    <thead><tr><th>Motoboy</th><th>Valor</th><th>Período</th><th>Tipo</th></tr></thead>
+    <thead><tr>
+      <th>Motoboy</th>
+      <th>Valor</th>
+      <th>Chave PIX</th>
+      <th>Período</th>
+      <th>Tipo</th>
+      <th>Pago em</th>
+    </tr></thead>
     <tbody>
-    {% for pag in pagamentos_pendentes %}
+    {% for pag in pagamentos_recentes %}
     <tr>
       <td>{{ pag.motoboy.nome }}</td>
       <td class="text-warning fw-bold">R$ {{ '%.2f'|format(pag.valor) }}</td>
+      <td style="font-size:.78rem; color:var(--muted);">{{ pag.chave_pix_dest or '—' }}</td>
       <td style="font-size:.8rem; color:var(--muted);">
-        {{ pag.periodo_inicio.strftime('%d/%m') if pag.periodo_inicio }} – {{ pag.periodo_fim.strftime('%d/%m/%Y') if pag.periodo_fim }}
+        {{ pag.periodo_inicio.strftime('%d/%m') if pag.periodo_inicio }}{% if pag.periodo_fim %} – {{ pag.periodo_fim.strftime('%d/%m/%Y') }}{% endif %}
       </td>
-      <td><span class="badge bg-info text-dark">{{ pag.tipo }}</span></td>
+      <td>
+        <span class="badge {% if pag.automatico %}badge-aceita{% else %}badge-pendente{% endif %}">
+          {{ 'Auto' if pag.automatico else 'Manual' }}
+        </span>
+      </td>
+      <td style="font-size:.8rem; color:var(--muted);">
+        {{ pag.pago_em.strftime('%d/%m %H:%M') if pag.pago_em else '—' }}
+      </td>
     </tr>
+    {% else %}
+    <tr><td colspan="6" class="text-center text-muted py-4">Nenhum pagamento registrado</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
-{% endif %}
 {% endblock %}

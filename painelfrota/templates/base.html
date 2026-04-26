@@ -128,6 +128,9 @@
     <a href="{{ url_for('turnos') }}" class="{% if request.endpoint=='turnos' or request.endpoint=='escala' %}active{% endif %}">
       <i class="fas fa-clock"></i> Turnos & Escala
     </a>
+    <a href="{{ url_for('restaurantes') }}" class="{% if 'restaurante' in request.endpoint %}active{% endif %}">
+      <i class="fas fa-store"></i> Restaurantes
+    </a>
     {% if current_user.nivel in ['super','financeiro'] %}
     <a href="{{ url_for('financeiro') }}" class="{% if request.endpoint=='financeiro' %}active{% endif %}">
       <i class="fas fa-wallet"></i> Financeiro

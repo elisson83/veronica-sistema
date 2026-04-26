@@ -1,23 +1,49 @@
 {% extends 'base.html' %}
 {% block title %}Editar Motoboy — PainelFrota{% endblock %}
-{% block page_title %}Editar Motoboy{% endblock %}
+{% block page_title %}Editar — {{ motoboy.nome }}{% endblock %}
 
 {% block content %}
-<div style="max-width:540px;">
+<div style="max-width:600px;">
 <form method="POST" class="card-dark p-4">
-  <h6 class="mb-4" style="color:#8b5cf6;">Dados do Motoboy</h6>
 
+  <h6 class="mb-3" style="color:#8b5cf6;">Dados Pessoais</h6>
   <div class="mb-3">
     <label class="form-label">Nome completo *</label>
     <input type="text" name="nome" class="form-control" value="{{ motoboy.nome }}" required>
   </div>
-  <div class="mb-3">
-    <label class="form-label">Telefone / WhatsApp</label>
-    <input type="tel" name="telefone" class="form-control" value="{{ motoboy.telefone or '' }}" placeholder="(11) 99999-9999">
-  </div>
   <div class="row g-2 mb-3">
     <div class="col-6">
-      <label class="form-label">Placa da moto</label>
+      <label class="form-label">Telefone / WhatsApp</label>
+      <input type="tel" name="telefone" class="form-control" value="{{ motoboy.telefone or '' }}">
+    </div>
+    <div class="col-6">
+      <label class="form-label">E-mail</label>
+      <input type="email" name="email" class="form-control" value="{{ motoboy.email or '' }}">
+    </div>
+  </div>
+  <div class="row g-2 mb-3">
+    <div class="col-4">
+      <label class="form-label">Tipo de doc.</label>
+      <select name="tipo_doc" class="form-select">
+        <option value="cpf" {% if motoboy.tipo_doc == 'cpf' %}selected{% endif %}>CPF</option>
+        <option value="mei" {% if motoboy.tipo_doc == 'mei' %}selected{% endif %}>MEI (CNPJ)</option>
+        <option value="cnpj" {% if motoboy.tipo_doc == 'cnpj' %}selected{% endif %}>CNPJ</option>
+      </select>
+    </div>
+    <div class="col-8">
+      <label class="form-label">CPF / CNPJ / MEI</label>
+      <input type="text" name="cpf_cnpj" class="form-control" value="{{ motoboy.cpf_cnpj or '' }}">
+    </div>
+  </div>
+  <div class="mb-4">
+    <label class="form-label">Chave PIX</label>
+    <input type="text" name="chave_pix" class="form-control" value="{{ motoboy.chave_pix or '' }}" placeholder="CPF, telefone, e-mail ou chave aleatória">
+  </div>
+
+  <h6 class="mb-3" style="color:#8b5cf6;">Moto</h6>
+  <div class="row g-2 mb-4">
+    <div class="col-6">
+      <label class="form-label">Placa</label>
       <input type="text" name="moto_placa" class="form-control" value="{{ motoboy.moto_placa or '' }}">
     </div>
     <div class="col-6">
@@ -26,22 +52,39 @@
     </div>
   </div>
 
-  <h6 class="mb-3 mt-4" style="color:#8b5cf6;">Financeiro</h6>
-  <div class="row g-2 mb-3">
-    <div class="col-6">
-      <label class="form-label">Taxa por entrega (R$)</label>
-      <input type="number" name="taxa_entrega" class="form-control" value="{{ motoboy.taxa_entrega }}" step="0.50" min="1">
+  <h6 class="mb-3" style="color:#8b5cf6;">Remuneração</h6>
+  <div class="mb-3">
+    <label class="form-label">Modo</label>
+    <select name="modo_remuneracao" class="form-select" id="modoRem" onchange="atualizarModo()">
+      {% for k, v in MODOS_REMUNERACAO.items() %}
+      <option value="{{ k }}" {% if motoboy.modo_remuneracao == k %}selected{% endif %}>{{ v }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="row g-2 mb-4">
+    <div class="col-6" id="colTaxa">
+      <label class="form-label">Taxa por corrida (R$)</label>
+      <input type="number" name="taxa_entrega" class="form-control" value="{{ motoboy.taxa_entrega }}" step="0.50" min="0">
     </div>
-    <div class="col-6">
-      <label class="form-label">% que a frota retém</label>
-      <input type="number" name="percentual_frota" class="form-control" value="{{ motoboy.percentual_frota }}" step="1" min="0" max="100">
+    <div class="col-6" id="colPerc">
+      <label class="form-label">% do motoboy</label>
+      <input type="number" name="percentual_motoboy" class="form-control" value="{{ motoboy.percentual_motoboy }}" step="1" min="0" max="100">
+    </div>
+    <div class="col-6 d-none" id="colDiaria">
+      <label class="form-label">Diária fixa (R$)</label>
+      <input type="number" name="valor_diaria" class="form-control" value="{{ motoboy.valor_diaria }}" step="5" min="0">
     </div>
   </div>
 
-  <div class="mb-4">
+  <h6 class="mb-3" style="color:#8b5cf6;">Configurações</h6>
+  <div class="mb-3 d-flex gap-3">
     <div class="form-check form-switch">
       <input class="form-check-input" type="checkbox" name="ativo" id="ativo" {% if motoboy.ativo %}checked{% endif %}>
-      <label class="form-check-label text-muted" for="ativo">Motoboy ativo</label>
+      <label class="form-check-label text-muted" for="ativo">Ativo</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" name="parceiro" id="parceiro" {% if motoboy.parceiro %}checked{% endif %}>
+      <label class="form-check-label" for="parceiro" style="color:#06b6d4;">É parceiro externo</label>
     </div>
   </div>
 
@@ -51,4 +94,16 @@
   </div>
 </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function atualizarModo() {
+  const modo = document.getElementById('modoRem').value;
+  document.getElementById('colTaxa').classList.toggle('d-none',   !['corrida','misto'].includes(modo));
+  document.getElementById('colPerc').classList.toggle('d-none',   !['porcentagem','misto'].includes(modo));
+  document.getElementById('colDiaria').classList.toggle('d-none', modo !== 'diaria');
+}
+atualizarModo();
+</script>
 {% endblock %}

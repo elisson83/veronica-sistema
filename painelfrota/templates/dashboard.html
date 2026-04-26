@@ -9,7 +9,21 @@
     <div class="card-dark stat-card">
       <div class="icon" style="background:#8b5cf622;"><i class="fas fa-motorcycle" style="color:#8b5cf6;"></i></div>
       <div class="val">{{ total_motoboys }}</div>
-      <div class="lbl">Motoboys Ativos</div>
+      <div class="lbl">Motoboys Fixos</div>
+    </div>
+  </div>
+  <div class="col-md-4 col-6">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#06b6d422;"><i class="fas fa-handshake" style="color:#06b6d4;"></i></div>
+      <div class="val" style="color:#06b6d4;">{{ total_parceiros }}</div>
+      <div class="lbl">Motoboys Parceiros</div>
+    </div>
+  </div>
+  <div class="col-md-4 col-6">
+    <div class="card-dark stat-card">
+      <div class="icon" style="background:#f59e0b22;"><i class="fas fa-store" style="color:#f59e0b;"></i></div>
+      <div class="val" style="color:#f59e0b;">{{ total_restaurantes }}</div>
+      <div class="lbl">Restaurantes</div>
     </div>
   </div>
   <div class="col-md-4 col-6">
@@ -21,23 +35,16 @@
   </div>
   <div class="col-md-4 col-6">
     <div class="card-dark stat-card">
-      <div class="icon" style="background:#06b6d422;"><i class="fas fa-box" style="color:#06b6d4;"></i></div>
-      <div class="val" style="color:#06b6d4;">{{ entregas_hoje }}</div>
+      <div class="icon" style="background:#a855f722;"><i class="fas fa-box" style="color:#a855f7;"></i></div>
+      <div class="val" style="color:#a855f7;">{{ entregas_hoje }}</div>
       <div class="lbl">Entregas Hoje</div>
     </div>
   </div>
-  <div class="col-md-6 col-6">
+  <div class="col-md-4 col-6">
     <div class="card-dark stat-card">
       <div class="icon" style="background:#f59e0b22;"><i class="fas fa-coins" style="color:#f59e0b;"></i></div>
-      <div class="val" style="color:#f59e0b;">R$ {{ '%.2f'|format(receita_hoje) }}</div>
-      <div class="lbl">Receita Hoje (frota)</div>
-    </div>
-  </div>
-  <div class="col-md-6 col-6">
-    <div class="card-dark stat-card">
-      <div class="icon" style="background:#a855f722;"><i class="fas fa-chart-line" style="color:#a855f7;"></i></div>
-      <div class="val" style="color:#a855f7;">R$ {{ '%.2f'|format(receita_mes) }}</div>
-      <div class="lbl">Receita do Mês (frota)</div>
+      <div class="val" style="color:#f59e0b; font-size:1.2rem;">R$ {{ '%.2f'|format(receita_mes) }}</div>
+      <div class="lbl">Receita do Mês</div>
     </div>
   </div>
 </div>
@@ -46,6 +53,8 @@
 <div class="d-flex gap-2 mb-4 flex-wrap">
   <a href="{{ url_for('nova_entrega') }}" class="btn btn-accent btn-sm"><i class="fas fa-plus me-1"></i>Nova Entrega</a>
   <a href="{{ url_for('listar_entregas') }}?status=pendente" class="btn btn-accent2 btn-sm"><i class="fas fa-clock me-1"></i>Pendentes</a>
+  <a href="{{ url_for('turnos') }}" class="btn btn-surface btn-sm"><i class="fas fa-users me-1"></i>Turnos</a>
+  <a href="{{ url_for('restaurantes') }}" class="btn btn-surface btn-sm"><i class="fas fa-store me-1"></i>Restaurantes</a>
   {% if current_user.nivel in ['super','financeiro'] %}
   <a href="{{ url_for('financeiro') }}" class="btn btn-surface btn-sm"><i class="fas fa-wallet me-1"></i>Financeiro</a>
   {% endif %}
@@ -63,6 +72,7 @@
       <thead><tr>
         <th>Cliente</th>
         <th>Motoboy</th>
+        <th>Restaurante</th>
         <th>Taxa</th>
         <th>Status</th>
         <th>Hora</th>
@@ -72,12 +82,13 @@
         <tr>
           <td>{{ e.cliente_nome or '—' }}</td>
           <td>{{ e.motoboy.nome if e.motoboy else '—' }}</td>
+          <td style="font-size:.8rem; color:var(--muted);">{{ e.restaurante_nome or '—' }}</td>
           <td class="text-warning fw-bold">R$ {{ '%.2f'|format(e.valor_total_taxa) }}</td>
           <td><span class="badge badge-{{ e.status }}">{{ e.status }}</span></td>
           <td style="color:var(--muted); font-size:.8rem;">{{ e.criado_em.strftime('%H:%M') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" class="text-center text-muted py-4">Nenhuma entrega ainda</td></tr>
+        <tr><td colspan="6" class="text-center text-muted py-4">Nenhuma entrega ainda</td></tr>
         {% endfor %}
       </tbody>
     </table>

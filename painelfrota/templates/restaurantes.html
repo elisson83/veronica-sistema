@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Restaurantes — PainelFrota{% endblock %}
+{% block page_title %}Restaurantes Conectados{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <p class="text-muted mb-0" style="font-size:.85rem;">Restaurantes vinculados via QR Code</p>
+  {% if current_user.nivel in ['super','operacional'] %}
+  <a href="{{ url_for('novo_restaurante') }}" class="btn btn-accent btn-sm">
+    <i class="fas fa-plus me-1"></i>Novo Restaurante
+  </a>
+  {% endif %}
+</div>
+
+{% if restaurantes %}
+<div class="row g-3">
+  {% for r in restaurantes %}
+  <div class="col-md-4 col-sm-6">
+    <div class="card-dark p-4">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <div class="fw-bold" style="font-size:.95rem;">{{ r.nome }}</div>
+          <div style="font-size:.78rem; color:var(--muted);">{{ r.endereco or 'Endereço não informado' }}</div>
+        </div>
+        <span class="badge" style="background:#064e3b33;color:#6ee7b7;border:1px solid #064e3b;">Ativo</span>
+      </div>
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-between mb-1" style="font-size:.82rem;">
+          <span style="color:var(--muted);">Telefone</span>
+          <span>{{ r.telefone or '—' }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1" style="font-size:.82rem;">
+          <span style="color:var(--muted);">Taxa padrão</span>
+          <span class="text-warning fw-bold">R$ {{ '%.2f'|format(r.taxa_padrao) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1" style="font-size:.82rem;">
+          <span style="color:var(--muted);">Conectado em</span>
+          <span>{{ r.conectado_em.strftime('%d/%m/%Y') }}</span>
+        </div>
+        <div class="d-flex justify-content-between" style="font-size:.82rem;">
+          <span style="color:var(--muted);">Última entrega</span>
+          <span>{{ r.ultima_entrega.strftime('%d/%m %H:%M') if r.ultima_entrega else '—' }}</span>
+        </div>
+      </div>
+
+      <!-- Token QR truncado -->
+      <div class="mb-3 p-2" style="background:#0a0a12; border-radius:6px; border:1px solid var(--border);">
+        <div style="font-size:.68rem; color:var(--muted); margin-bottom:2px;">Token de conexão</div>
+        <code style="font-size:.72rem; color:#a78bfa;">{{ r.token_qr[:16] }}…</code>
+      </div>
+
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('restaurante_qr', rid=r.id) }}" class="btn btn-accent btn-sm flex-fill">
+          <i class="fas fa-qrcode me-1"></i>Ver QR Code
+        </a>
+        {% if current_user.nivel == 'super' %}
+        <form method="POST" action="{{ url_for('excluir_restaurante', rid=r.id) }}"
+              onsubmit="return confirm('Desconectar {{ r.nome }}?')">
+          <button class="btn btn-sm" style="background:#3b151533;border:1px solid #3b1515;color:#f87171;">
+            <i class="fas fa-unlink"></i>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card-dark p-5 text-center">
+  <i class="fas fa-store fa-3x mb-3" style="color:var(--muted);"></i>
+  <h6 class="text-muted">Nenhum restaurante conectado</h6>
+  <p class="text-muted mb-4" style="font-size:.85rem;">Crie um novo restaurante e compartilhe o QR Code com ele.</p>
+  {% if current_user.nivel in ['super','operacional'] %}
+  <a href="{{ url_for('novo_restaurante') }}" class="btn btn-accent btn-sm">
+    <i class="fas fa-plus me-1"></i>Adicionar Restaurante
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

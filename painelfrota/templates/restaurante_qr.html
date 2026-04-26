@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}QR Code — {{ restaurante.nome }}{% endblock %}
+{% block page_title %}QR Code — {{ restaurante.nome }}{% endblock %}
+
+{% block content %}
+<div style="max-width:480px; margin:0 auto; text-align:center;">
+
+  <div class="card-dark p-4 mb-4">
+    <h5 class="mb-1 fw-bold">{{ restaurante.nome }}</h5>
+    <p class="text-muted mb-4" style="font-size:.85rem;">Escaneie o QR Code abaixo para conectar este restaurante à frota.</p>
+
+    <!-- QR Code -->
+    <div style="background:#fff; border-radius:12px; padding:16px; display:inline-block; margin-bottom:20px;">
+      <img src="{{ url_for('restaurante_qr_png', rid=restaurante.id) }}"
+           alt="QR Code" style="width:200px; height:200px; display:block;">
+    </div>
+
+    <!-- URL de conexão -->
+    <div class="mb-4 p-3" style="background:#0a0a12; border-radius:8px; border:1px solid var(--border);">
+      <div style="font-size:.72rem; color:var(--muted); margin-bottom:4px;">Link de conexão</div>
+      <code style="font-size:.75rem; color:#a78bfa; word-break:break-all;">{{ url_conexao }}</code>
+    </div>
+
+    <!-- Infos -->
+    <div class="text-start mb-4">
+      <div class="d-flex justify-content-between mb-2" style="font-size:.85rem;">
+        <span style="color:var(--muted);">Taxa padrão</span>
+        <span class="text-warning fw-bold">R$ {{ '%.2f'|format(restaurante.taxa_padrao) }}</span>
+      </div>
+      <div class="d-flex justify-content-between mb-2" style="font-size:.85rem;">
+        <span style="color:var(--muted);">Conectado em</span>
+        <span>{{ restaurante.conectado_em.strftime('%d/%m/%Y às %H:%M') }}</span>
+      </div>
+      <div class="d-flex justify-content-between" style="font-size:.85rem;">
+        <span style="color:var(--muted);">Token</span>
+        <code style="font-size:.75rem; color:#a78bfa;">{{ restaurante.token_qr }}</code>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-center">
+      <a href="{{ url_for('restaurante_qr_png', rid=restaurante.id) }}" download="qr_{{ restaurante.nome }}.png"
+         class="btn btn-accent btn-sm">
+        <i class="fas fa-download me-1"></i>Baixar PNG
+      </a>
+      <button onclick="window.print()" class="btn btn-surface btn-sm">
+        <i class="fas fa-print me-1"></i>Imprimir
+      </button>
+      <a href="{{ url_for('restaurantes') }}" class="btn btn-surface btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      </a>
+    </div>
+  </div>
+
+  <div class="alert alert-info" style="font-size:.82rem; text-align:left;">
+    <strong>Como compartilhar:</strong><br>
+    1. Mostre ou envie o QR Code ao restaurante<br>
+    2. Eles escaneiam e confirmam a conexão<br>
+    3. A partir disso, entregas ficam vinculadas automaticamente
+  </div>
+</div>
+{% endblock %}

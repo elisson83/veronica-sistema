@@ -3,21 +3,61 @@
 {% block page_title %}Cadastrar Motoboy{% endblock %}
 
 {% block content %}
-<div style="max-width:540px;">
+<div style="max-width:600px;">
 <form method="POST" class="card-dark p-4">
-  <h6 class="mb-4" style="color:#8b5cf6;">Dados do Motoboy</h6>
 
+  <!-- Tipo -->
+  <div class="mb-4 d-flex gap-3 align-items-center">
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="parceiro_tipo" id="tipoFixo" value="fixo" checked onchange="toggleTipo(this.value)">
+      <label class="form-check-label fw-semibold" for="tipoFixo" style="color:var(--accent);">Motoboy Fixo</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="parceiro_tipo" id="tipoParceiro" value="parceiro" onchange="toggleTipo(this.value)">
+      <label class="form-check-label fw-semibold" for="tipoParceiro" style="color:#06b6d4;">Motoboy Parceiro</label>
+    </div>
+    <!-- hidden field gerenciado via JS -->
+    <input type="hidden" name="_parceiro_off" id="hiddenParceiro" value="">
+  </div>
+
+  <h6 class="mb-3" style="color:#8b5cf6;">Dados Pessoais</h6>
   <div class="mb-3">
     <label class="form-label">Nome completo *</label>
     <input type="text" name="nome" class="form-control" required autofocus>
   </div>
-  <div class="mb-3">
-    <label class="form-label">Telefone / WhatsApp</label>
-    <input type="tel" name="telefone" class="form-control" placeholder="(11) 99999-9999">
-  </div>
   <div class="row g-2 mb-3">
     <div class="col-6">
-      <label class="form-label">Placa da moto</label>
+      <label class="form-label">Telefone / WhatsApp</label>
+      <input type="tel" name="telefone" class="form-control" placeholder="(11) 99999-9999">
+    </div>
+    <div class="col-6">
+      <label class="form-label">E-mail</label>
+      <input type="email" name="email" class="form-control" placeholder="email@exemplo.com">
+    </div>
+  </div>
+  <div class="row g-2 mb-3">
+    <div class="col-4">
+      <label class="form-label">Tipo de doc.</label>
+      <select name="tipo_doc" class="form-select">
+        <option value="cpf">CPF</option>
+        <option value="mei">MEI (CNPJ)</option>
+        <option value="cnpj">CNPJ</option>
+      </select>
+    </div>
+    <div class="col-8">
+      <label class="form-label">CPF / CNPJ / MEI</label>
+      <input type="text" name="cpf_cnpj" class="form-control" placeholder="000.000.000-00">
+    </div>
+  </div>
+  <div class="mb-4">
+    <label class="form-label">Chave PIX</label>
+    <input type="text" name="chave_pix" class="form-control" placeholder="CPF, telefone, e-mail ou chave aleatória">
+  </div>
+
+  <h6 class="mb-3" style="color:#8b5cf6;">Moto</h6>
+  <div class="row g-2 mb-4">
+    <div class="col-6">
+      <label class="form-label">Placa</label>
       <input type="text" name="moto_placa" class="form-control" placeholder="ABC-1234">
     </div>
     <div class="col-6">
@@ -26,16 +66,29 @@
     </div>
   </div>
 
-  <h6 class="mb-3 mt-4" style="color:#8b5cf6;">Financeiro</h6>
-  <div class="row g-2 mb-4">
-    <div class="col-6">
-      <label class="form-label">Taxa por entrega (R$)</label>
-      <input type="number" name="taxa_entrega" class="form-control" value="5.00" step="0.50" min="1">
+  <h6 class="mb-3" style="color:#8b5cf6;">Remuneração</h6>
+  <div class="mb-3">
+    <label class="form-label">Modo de remuneração</label>
+    <select name="modo_remuneracao" class="form-select" id="modoRem" onchange="atualizarModo()">
+      {% for k, v in MODOS_REMUNERACAO.items() %}
+      <option value="{{ k }}">{{ v }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div id="camposTaxa" class="row g-2 mb-4">
+    <div class="col-6" id="colTaxa">
+      <label class="form-label">Taxa por corrida (R$)</label>
+      <input type="number" name="taxa_entrega" class="form-control" value="5.00" step="0.50" min="0">
     </div>
-    <div class="col-6">
-      <label class="form-label">% que a frota retém</label>
-      <input type="number" name="percentual_frota" class="form-control" value="20" step="1" min="0" max="100">
-      <div class="form-text" style="font-size:.72rem;">Ex: 20% = frota fica R$1 de uma taxa de R$5</div>
+    <div class="col-6" id="colPerc">
+      <label class="form-label">% do motoboy</label>
+      <input type="number" name="percentual_motoboy" class="form-control" value="80" step="1" min="0" max="100">
+      <div class="form-text" style="font-size:.7rem;">Ex: 80% → frota fica 20%</div>
+    </div>
+    <div class="col-6 d-none" id="colDiaria">
+      <label class="form-label">Diária fixa (R$)</label>
+      <input type="number" name="valor_diaria" class="form-control" value="0" step="5" min="0">
     </div>
   </div>
 
@@ -45,4 +98,31 @@
   </div>
 </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleTipo(val) {
+  const f = document.getElementById('hiddenParceiro');
+  if (val === 'parceiro') {
+    f.setAttribute('name', 'parceiro');
+    f.value = 'on';
+  } else {
+    f.setAttribute('name', '_parceiro_off');
+    f.value = '';
+  }
+}
+
+function atualizarModo() {
+  const modo = document.getElementById('modoRem').value;
+  const colTaxa   = document.getElementById('colTaxa');
+  const colPerc   = document.getElementById('colPerc');
+  const colDiaria = document.getElementById('colDiaria');
+
+  colTaxa.classList.toggle('d-none',   !['corrida','misto'].includes(modo));
+  colPerc.classList.toggle('d-none',   !['porcentagem','misto'].includes(modo));
+  colDiaria.classList.toggle('d-none', !['diaria'].includes(modo));
+}
+atualizarModo();
+</script>
 {% endblock %}

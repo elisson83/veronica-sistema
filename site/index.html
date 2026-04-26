@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verônica IA — Ecossistema Completo de Gestão Inteligente</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0a0a12;
+  --surface: #13131f;
+  --card:    #1c1c2e;
+  --border:  #252535;
+  --accent:  #8b5cf6;
+  --amber:   #f59e0b;
+  --cyan:    #06b6d4;
+  --green:   #10b981;
+  --text:    #e2e8f0;
+  --muted:   #64748b;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+
+/* NAV */
+nav {
+  position: sticky; top: 0; z-index: 1000;
+  background: rgba(10,10,18,.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+.nav-logo { font-size: 1.2rem; font-weight: 800; color: var(--accent); text-decoration: none; }
+.nav-logo span { color: var(--amber); }
+.nav-link-custom { color: var(--muted); text-decoration: none; font-size: .88rem; transition: color .2s; }
+.nav-link-custom:hover { color: var(--text); }
+.btn-nav { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 600; font-size: .88rem; transition: background .2s; text-decoration: none; }
+.btn-nav:hover { background: #7c3aed; color: #fff; }
+
+/* HERO */
+.hero {
+  min-height: 90vh; display: flex; align-items: center;
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(139,92,246,.15), transparent),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(6,182,212,.08), transparent);
+  padding: 80px 0 60px;
+}
+.hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.3); border-radius: 20px; padding: 6px 16px; font-size: .82rem; color: #c4b5fd; margin-bottom: 24px; }
+.hero h1 { font-size: clamp(2.2rem, 5vw, 4rem); font-weight: 900; line-height: 1.1; margin-bottom: 20px; }
+.hero h1 span { background: linear-gradient(135deg, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.hero p { font-size: 1.15rem; color: var(--muted); max-width: 560px; line-height: 1.7; margin-bottom: 36px; }
+.btn-hero-primary { background: var(--accent); color: #fff; border: none; border-radius: 12px; padding: 16px 36px; font-size: 1.05rem; font-weight: 700; text-decoration: none; transition: all .3s; box-shadow: 0 8px 32px rgba(139,92,246,.3); }
+.btn-hero-primary:hover { background: #7c3aed; color: #fff; transform: translateY(-2px); box-shadow: 0 12px 40px rgba(139,92,246,.4); }
+.btn-hero-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 16px 36px; font-size: 1.05rem; font-weight: 600; text-decoration: none; transition: all .2s; }
+.btn-hero-secondary:hover { border-color: var(--accent); color: #c4b5fd; }
+
+/* STATS */
+.stat-row { display: flex; flex-wrap: wrap; gap: 40px; margin-top: 56px; }
+.stat-item .num { font-size: 2.2rem; font-weight: 800; color: var(--accent); }
+.stat-item .desc { font-size: .82rem; color: var(--muted); margin-top: 2px; }
+
+/* SECTIONS */
+section { padding: 80px 0; }
+.section-badge { display: inline-block; background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.25); border-radius: 20px; padding: 5px 14px; font-size: .75rem; font-weight: 600; color: #a78bfa; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+.section-title { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 800; margin-bottom: 12px; }
+.section-sub { color: var(--muted); font-size: 1.05rem; max-width: 560px; line-height: 1.7; }
+
+/* PRODUTOS */
+.produto-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+  padding: 28px; height: 100%; transition: all .3s;
+}
+.produto-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 20px 60px rgba(139,92,246,.12); }
+.produto-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 18px; }
+.produto-nome { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+.produto-desc { font-size: .88rem; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+.produto-tag { display: inline-block; background: rgba(139,92,246,.1); border: 1px solid rgba(139,92,246,.2); border-radius: 6px; padding: 3px 10px; font-size: .72rem; color: #a78bfa; font-weight: 500; margin: 2px; }
+.feature-list { list-style: none; margin-top: 16px; }
+.feature-list li { font-size: .82rem; color: var(--muted); padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+.feature-list li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
+
+/* COMO FUNCIONA */
+.step-card { text-align: center; padding: 32px 20px; }
+.step-num { width: 56px; height: 56px; border-radius: 50%; background: rgba(139,92,246,.15); border: 2px solid rgba(139,92,246,.4); display: inline-flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; color: var(--accent); margin-bottom: 20px; }
+.step-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+.step-desc { font-size: .88rem; color: var(--muted); line-height: 1.6; }
+.step-arrow { font-size: 1.5rem; color: var(--border); }
+
+/* PLANOS */
+.plano-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 24px;
+  padding: 36px 28px; height: 100%; position: relative; transition: all .3s;
+}
+.plano-card.destaque { border-color: var(--accent); background: linear-gradient(135deg, rgba(139,92,246,.08), var(--card)); }
+.plano-card:hover { transform: translateY(-4px); }
+.plano-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; border-radius: 20px; padding: 5px 18px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.plano-nome { font-size: 1rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 16px; }
+.plano-preco { font-size: 3rem; font-weight: 900; line-height: 1; }
+.plano-preco sup { font-size: 1.2rem; font-weight: 600; vertical-align: top; margin-top: 12px; }
+.plano-preco small { font-size: .9rem; font-weight: 400; color: var(--muted); }
+.plano-desc { font-size: .85rem; color: var(--muted); margin: 16px 0; line-height: 1.5; }
+.plano-features { list-style: none; margin: 20px 0 28px; }
+.plano-features li { display: flex; align-items: flex-start; gap: 10px; font-size: .85rem; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.plano-features li:last-child { border: none; }
+.plano-features li i { color: var(--green); flex-shrink: 0; margin-top: 2px; }
+.plano-features li.nao i { color: var(--muted); }
+.plano-features li.nao span { color: var(--muted); }
+.btn-plano { display: block; text-align: center; padding: 14px; border-radius: 12px; font-weight: 700; font-size: .95rem; text-decoration: none; transition: all .2s; }
+.btn-plano-outline { border: 1px solid var(--border); color: var(--text); }
+.btn-plano-outline:hover { border-color: var(--accent); color: #c4b5fd; }
+.btn-plano-filled { background: var(--accent); color: #fff; border: none; }
+.btn-plano-filled:hover { background: #7c3aed; color: #fff; }
+
+/* QR SECTION */
+.qr-section { background: linear-gradient(135deg, rgba(139,92,246,.06), rgba(6,182,212,.04)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.qr-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; text-align: center; }
+.qr-card .icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+/* CONTATO */
+.contato-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; transition: all .2s; text-decoration: none; display: block; color: var(--text); }
+.contato-card:hover { border-color: var(--accent); color: var(--text); transform: translateY(-2px); }
+
+/* FOOTER */
+footer { background: var(--surface); border-top: 1px solid var(--border); padding: 40px 0 24px; }
+.footer-logo { font-size: 1.1rem; font-weight: 800; color: var(--accent); }
+.footer-desc { font-size: .82rem; color: var(--muted); margin-top: 8px; max-width: 280px; }
+.footer-link { color: var(--muted); text-decoration: none; font-size: .83rem; display: block; margin-bottom: 8px; transition: color .2s; }
+.footer-link:hover { color: var(--text); }
+.footer-bottom { border-top: 1px solid var(--border); margin-top: 32px; padding-top: 20px; font-size: .78rem; color: var(--muted); }
+
+/* UTILS */
+.gradient-text { background: linear-gradient(135deg, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 0; }
+
+@media (max-width: 768px) {
+  .hero { padding: 60px 0 40px; }
+  .stat-row { gap: 24px; }
+  .stat-item .num { font-size: 1.6rem; }
+  section { padding: 56px 0; }
+  .plano-card { margin-bottom: 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="container d-flex align-items-center justify-content-between">
+    <a href="#" class="nav-logo"><i class="fas fa-robot me-2"></i>Verônica<span> IA</span></a>
+    <div class="d-none d-md-flex align-items-center gap-4">
+      <a href="#produtos" class="nav-link-custom">Produtos</a>
+      <a href="#planos" class="nav-link-custom">Planos</a>
+      <a href="#como-funciona" class="nav-link-custom">Como Funciona</a>
+      <a href="#contato" class="nav-link-custom">Contato</a>
+    </div>
+    <a href="#contato" class="btn-nav"><i class="fas fa-whatsapp me-1"></i>Solicitar Demo</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-7">
+        <div class="hero-badge">
+          <i class="fas fa-sparkles"></i>
+          Ecossistema Completo de IA para Delivery
+        </div>
+        <h1>Gestão Inteligente<br>do <span>Início ao Fim</span></h1>
+        <p>Do bot Telegram ao painel de frota: 6 produtos integrados que automatizam sua operação de delivery com IA, GPS em tempo real e pagamentos automáticos.</p>
+        <div class="d-flex flex-wrap gap-3">
+          <a href="#contato" class="btn-hero-primary"><i class="fas fa-rocket me-2"></i>Solicitar Demo Gratuita</a>
+          <a href="#produtos" class="btn-hero-secondary"><i class="fas fa-play me-2"></i>Ver Produtos</a>
+        </div>
+        <div class="stat-row">
+          <div class="stat-item">
+            <div class="num">6</div>
+            <div class="desc">Produtos integrados</div>
+          </div>
+          <div class="stat-item">
+            <div class="num">50+</div>
+            <div class="desc">Motoboys por frota</div>
+          </div>
+          <div class="stat-item">
+            <div class="num">24/7</div>
+            <div class="desc">Monitoramento IA</div>
+          </div>
+          <div class="stat-item">
+            <div class="num">4</div>
+            <div class="desc">Modos de remuneração</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5 d-none d-lg-block">
+        <div style="position:relative;">
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:24px;padding:28px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+              <div style="width:12px;height:12px;border-radius:50%;background:#ef4444;"></div>
+              <div style="width:12px;height:12px;border-radius:50%;background:#f59e0b;"></div>
+              <div style="width:12px;height:12px;border-radius:50%;background:#10b981;"></div>
+              <span style="font-size:.75rem;color:var(--muted);margin-left:8px;">PainelFrota — Dashboard</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+              <div style="background:#8b5cf622;border:1px solid #8b5cf644;border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:1.4rem;font-weight:800;color:#8b5cf6;">12</div>
+                <div style="font-size:.7rem;color:var(--muted);">Online</div>
+              </div>
+              <div style="background:#10b98122;border:1px solid #10b98144;border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:1.4rem;font-weight:800;color:#10b981;">38</div>
+                <div style="font-size:.7rem;color:var(--muted);">Entregas</div>
+              </div>
+              <div style="background:#f59e0b22;border:1px solid #f59e0b44;border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:1.4rem;font-weight:800;color:#f59e0b;">R$ 892</div>
+                <div style="font-size:.7rem;color:var(--muted);">Hoje</div>
+              </div>
+            </div>
+            <div style="background:#13131f;border:1px solid var(--border);border-radius:10px;padding:12px;font-size:.78rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="color:var(--muted);">João Silva</span>
+                <span style="background:#064e3b33;color:#10b981;border:1px solid #064e3b;border-radius:4px;padding:2px 8px;font-size:.68rem;">Online · 3.2km</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="color:var(--muted);">Pedro Ramos</span>
+                <span style="background:#2d241633;color:#f59e0b;border:1px solid #2d2416;border-radius:4px;padding:2px 8px;font-size:.68rem;">A caminho</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:var(--muted);">Ana Costa</span>
+                <span style="background:#064e3b33;color:#10b981;border:1px solid #064e3b;border-radius:4px;padding:2px 8px;font-size:.68rem;">Online · 1.8km</span>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;top:-20px;right:-20px;background:var(--card);border:1px solid #10b98144;border-radius:12px;padding:12px 16px;font-size:.78rem;">
+            <i class="fas fa-circle-dot" style="color:#10b981;"></i> <span style="color:#10b981;font-weight:600;">PIX automático ativo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PRODUTOS -->
+<section id="produtos">
+  <div class="container">
+    <div class="text-center mb-5">
+      <div class="section-badge">6 Produtos Integrados</div>
+      <h2 class="section-title">Tudo que você precisa<br>em um único ecossistema</h2>
+      <p class="section-sub mx-auto">Cada produto resolve um problema específico e se conecta aos outros via QR Code e APIs em tempo real.</p>
+    </div>
+
+    <div class="row g-4">
+
+      <!-- 1 Veronica IA -->
+      <div class="col-md-6 col-lg-4">
+        <div class="produto-card">
+          <div class="produto-icon" style="background:#8b5cf622;"><i class="fas fa-robot" style="color:#8b5cf6;"></i></div>
+          <div class="produto-nome">Verônica IA</div>
+          <div class="produto-desc">Assistente inteligente via Telegram com IA em cascata (Ollama → Groq → Gemini). Automatiza conteúdo, marketing, finanças e controle de PC.</div>
+          <div>
+            <span class="produto-tag"><i class="fab fa-telegram me-1"></i>Telegram Bot</span>
+            <span class="produto-tag">100+ comandos</span>
+            <span class="produto-tag">Multi-IA</span>
+          </div>
+          <ul class="feature-list">
+            <li>Geração de posts e eBooks com IA</li>
+            <li>Cotações de mercado em tempo real</li>
+            <li>Automação de PC (teclado/mouse)</li>
+            <li>Memória permanente de usuário</li>
+            <li>Análise de imagens e screenshots</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 2 PainelGest -->
+      <div class="col-md-6 col-lg-4">
+        <div class="produto-card">
+          <div class="produto-icon" style="background:#06b6d422;"><i class="fas fa-chart-pie" style="color:#06b6d4;"></i></div>
+          <div class="produto-nome">PainelGest</div>
+          <div class="produto-desc">SaaS multi-tenant para gestores de restaurantes. Controla clientes, planos, vencimentos, postagens em redes sociais e MRR.</div>
+          <div>
+            <span class="produto-tag">Super Admin</span>
+            <span class="produto-tag">Mercado Pago</span>
+            <span class="produto-tag">Multi-plano</span>
+          </div>
+          <ul class="feature-list">
+            <li>Gestão de gestores e clientes</li>
+            <li>Planos Básico / Pro / Premium</li>
+            <li>Cobrança automática via MP</li>
+            <li>Posts agendados no Instagram</li>
+            <li>Dashboard de MRR e receita</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 3 App Restaurante -->
+      <div class="col-md-6 col-lg-4">
+        <div class="produto-card">
+          <div class="produto-icon" style="background:#f59e0b22;"><i class="fas fa-store" style="color:#f59e0b;"></i></div>
+          <div class="produto-nome">App Restaurante</div>
+          <div class="produto-desc">Cardápio digital, gestão de pedidos em Kanban, perfil de rede social, vagas de plantão para motoboys e comprovantes PDF.</div>
+          <div>
+            <span class="produto-tag">Kanban</span>
+            <span class="produto-tag">Cardápio digital</span>
+            <span class="produto-tag">QR Code</span>
+          </div>
+          <ul class="feature-list">
+            <li>Cardápio digital com categorias</li>
+            <li>Pedidos em quadro Kanban</li>
+            <li>Vagas de plantão para motoboys</li>
+            <li>Comprovante PDF por período</li>
+            <li>Conexão via QR ao PainelFrota</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 4 AppMotoboy -->
+      <div class="col-md-6 col-lg-4">
+        <div class="produto-card">
+          <div class="produto-icon" style="background:#10b98122;"><i class="fas fa-motorcycle" style="color:#10b981;"></i></div>
+          <div class="produto-nome">AppMotoboy</div>
+          <div class="produto-desc">App mobile para motoboys aceitarem entregas, acompanharem ganhos e gerenciarem turnos com GPS em tempo real e rota inteligente.</div>
+          <div>
+            <span class="produto-tag">GPS Real-time</span>
+            <span class="produto-tag">Rota Inteligente</span>
+            <span class="produto-tag">PIX Auto</span>
+          </div>
+          <ul class="feature-list">
+            <li>GPS atualizado a cada 30 segundos</li>
+            <li>Máx. 2 entregas simultâneas</li>
+            <li>15s para aceitar antes de expirar</li>
+            <li>Adicionais: chuva, pico, noturno</li>
+            <li>Registro via QR Code da frota</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 5 PainelFrota -->
+      <div class="col-md-6 col-lg-4">
+        <div class="produto-card">
+          <div class="produto-icon" style="background:#a855f722;"><i class="fas fa-truck-fast" style="color:#a855f7;"></i></div>
+          <div class="produto-nome">PainelFrota</div>
+          <div class="produto-desc">Hub central de gerenciamento de frota com mapa GPS, escala semanal, 4 modos de remuneração, fechamento automático e relatórios.</div>
+          <div>
+            <span class="produto-tag">Mapa GPS</span>
+            <span class="produto-tag">4 modos pag.</span>
+            <span class="produto-tag">Chart.js</span>
+          </div>
+          <ul class="feature-list">
+            <li>Mapa em tempo real de motoboys</li>
+            <li>Corrida / % / Diária / Misto</li>
+            <li>Fechamento automático à meia-noite</li>
+            <li>Escala semanal visual</li>
+            <li>Relatórios com gráficos 14 dias</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 6 Zeus -->
+      <div class="col-md-6 col-lg-4">
+        <div class="produto-card">
+          <div class="produto-icon" style="background:#ef444422;"><i class="fas fa-shield-halved" style="color:#ef4444;"></i></div>
+          <div class="produto-nome">Zeus — Segurança</div>
+          <div class="produto-desc">Bot Telegram de monitoramento de segurança e infraestrutura. Verifica status de todos os serviços, CPU, RAM, portas e rede 24/7.</div>
+          <div>
+            <span class="produto-tag">Monitoramento</span>
+            <span class="produto-tag">Alertas</span>
+            <span class="produto-tag">24/7</span>
+          </div>
+          <ul class="feature-list">
+            <li>Status de todos os 6 serviços</li>
+            <li>Alertas de CPU e memória</li>
+            <li>Varredura de segurança de rede</li>
+            <li>Relatório completo sob demanda</li>
+            <li>Acesso restrito ao admin</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- COMO FUNCIONA -->
+<section id="como-funciona" style="background:linear-gradient(135deg,rgba(139,92,246,.04),transparent);">
+  <div class="container">
+    <div class="text-center mb-5">
+      <div class="section-badge">Simples de Usar</div>
+      <h2 class="section-title">Do zero ao lucro<br>em 3 passos</h2>
+    </div>
+    <div class="row g-4 align-items-center">
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div class="step-title">Instale em minutos</div>
+          <div class="step-desc">Execute o instalador <code style="color:#a78bfa;background:#8b5cf611;border-radius:4px;padding:1px 6px;">instalar_tudo.bat</code> e todos os sistemas sobem automaticamente com bancos criados e usuários padrão configurados.</div>
+        </div>
+      </div>
+      <div class="col-md-1 text-center d-none d-md-block">
+        <i class="fas fa-arrow-right step-arrow"></i>
+      </div>
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div class="step-title">Conecte via QR Code</div>
+          <div class="step-desc">PainelFrota gera QR para motoboys se registrarem no AppMotoboy. Restaurante gera QR para a frota conectar automaticamente. Tudo integrado com um scan.</div>
+        </div>
+      </div>
+      <div class="col-md-1 text-center d-none d-md-block">
+        <i class="fas fa-arrow-right step-arrow"></i>
+      </div>
+      <div class="col-md-2">
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div class="step-title">Lucre com automação</div>
+          <div class="step-desc">PIX automático calcula e registra pagamentos à meia-noite. Relatórios em tempo real. Verônica IA cuida do marketing enquanto você dorme.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- QR CODE SISTEMA -->
+<section class="qr-section">
+  <div class="container">
+    <div class="text-center mb-5">
+      <div class="section-badge">Sistema Integrado</div>
+      <h2 class="section-title">Conexão via QR Code</h2>
+      <p class="section-sub mx-auto">Os 3 painéis se conectam automaticamente com uma leitura de QR. Sem configuração manual, sem IPs, sem complicação.</p>
+    </div>
+    <div class="row g-4 justify-content-center">
+      <div class="col-md-4">
+        <div class="qr-card">
+          <div class="icon" style="color:#06b6d4;"><i class="fas fa-store"></i></div>
+          <div style="font-weight:700;margin-bottom:8px;">Restaurante (PainelGest)</div>
+          <div style="font-size:.83rem;color:var(--muted);">Gera QR Code no painel → Frota escaneia → Restaurante aparece automaticamente na frota</div>
+          <div style="margin-top:12px;"><i class="fas fa-arrow-down" style="color:var(--border);"></i></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="qr-card" style="border-color:rgba(139,92,246,.4);">
+          <div class="icon" style="color:#8b5cf6;"><i class="fas fa-truck-fast"></i></div>
+          <div style="font-weight:700;margin-bottom:8px;">PainelFrota (Hub Central)</div>
+          <div style="font-size:.83rem;color:var(--muted);">Gerencia restaurantes conectados + motoboys registrados. Gera QR individual para cada motoboy.</div>
+          <div style="margin-top:12px;"><i class="fas fa-arrows-left-right" style="color:var(--accent);font-size:1.2rem;"></i></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="qr-card">
+          <div class="icon" style="color:#10b981;"><i class="fas fa-motorcycle"></i></div>
+          <div style="font-weight:700;margin-bottom:8px;">Motoboy (AppMotoboy)</div>
+          <div style="font-size:.83rem;color:var(--muted);">Escaneia QR da frota → Conta criada já vinculada → Começa a receber entregas imediatamente</div>
+          <div style="margin-top:12px;"><i class="fas fa-arrow-up" style="color:var(--border);"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PLANOS -->
+<section id="planos">
+  <div class="container">
+    <div class="text-center mb-5">
+      <div class="section-badge">Planos e Preços</div>
+      <h2 class="section-title">Escolha o plano<br>ideal para o seu negócio</h2>
+      <p class="section-sub mx-auto">Todos os planos incluem suporte via Telegram e atualizações automáticas. Cancele quando quiser.</p>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+
+      <!-- Básico -->
+      <div class="col-md-4">
+        <div class="plano-card">
+          <div class="plano-nome"><i class="fas fa-seedling me-2"></i>Básico</div>
+          <div class="plano-preco"><sup>R$</sup> 99<small>,90/mês</small></div>
+          <div class="plano-desc">Ideal para restaurantes pequenos que precisam do essencial para começar.</div>
+          <ul class="plano-features">
+            <li><i class="fas fa-check"></i><span>PainelGest completo</span></li>
+            <li><i class="fas fa-check"></i><span>App Restaurante (cardápio + Kanban)</span></li>
+            <li><i class="fas fa-check"></i><span>Até 5 clientes gerenciados</span></li>
+            <li><i class="fas fa-check"></i><span>2 perfis de redes sociais</span></li>
+            <li><i class="fas fa-check"></i><span>Suporte por e-mail</span></li>
+            <li class="nao"><i class="fas fa-times"></i><span>AppMotoboy</span></li>
+            <li class="nao"><i class="fas fa-times"></i><span>PainelFrota</span></li>
+            <li class="nao"><i class="fas fa-times"></i><span>Verônica IA Bot</span></li>
+          </ul>
+          <a href="#contato" class="btn-plano btn-plano-outline">Começar agora</a>
+        </div>
+      </div>
+
+      <!-- Pro -->
+      <div class="col-md-4">
+        <div class="plano-card destaque">
+          <div class="plano-badge"><i class="fas fa-fire me-1"></i>Mais popular</div>
+          <div class="plano-nome"><i class="fas fa-rocket me-2"></i>Pro</div>
+          <div class="plano-preco" style="color:#8b5cf6;"><sup>R$</sup> 199<small>,90/mês</small></div>
+          <div class="plano-desc">Para negócios em crescimento com entrega própria e até 10 motoboys.</div>
+          <ul class="plano-features">
+            <li><i class="fas fa-check"></i><span>Tudo do Básico</span></li>
+            <li><i class="fas fa-check"></i><span>AppMotoboy (GPS + rota inteligente)</span></li>
+            <li><i class="fas fa-check"></i><span>PainelFrota (até 10 motoboys)</span></li>
+            <li><i class="fas fa-check"></i><span>QR Code inter-painéis</span></li>
+            <li><i class="fas fa-check"></i><span>Até 20 clientes gerenciados</span></li>
+            <li><i class="fas fa-check"></i><span>10 perfis de redes sociais</span></li>
+            <li><i class="fas fa-check"></i><span>Suporte prioritário</span></li>
+            <li class="nao"><i class="fas fa-times"></i><span>Verônica IA Bot</span></li>
+          </ul>
+          <a href="#contato" class="btn-plano btn-plano-filled">Começar agora</a>
+        </div>
+      </div>
+
+      <!-- Premium -->
+      <div class="col-md-4">
+        <div class="plano-card">
+          <div class="plano-nome"><i class="fas fa-crown me-2" style="color:#f59e0b;"></i>Premium</div>
+          <div class="plano-preco" style="color:#f59e0b;"><sup>R$</sup> 399<small>,90/mês</small></div>
+          <div class="plano-desc">Ecossistema completo com IA, frota ilimitada, Zeus e suporte VIP 24/7.</div>
+          <ul class="plano-features">
+            <li><i class="fas fa-check"></i><span>Tudo do Pro</span></li>
+            <li><i class="fas fa-check"></i><span>Verônica IA Bot (100+ comandos)</span></li>
+            <li><i class="fas fa-check"></i><span>Zeus — monitoramento 24/7</span></li>
+            <li><i class="fas fa-check"></i><span>PainelFrota ilimitado (50+ motoboys)</span></li>
+            <li><i class="fas fa-check"></i><span>PIX automático à meia-noite</span></li>
+            <li><i class="fas fa-check"></i><span>Clientes ilimitados</span></li>
+            <li><i class="fas fa-check"></i><span>Backup automático HD externo</span></li>
+            <li><i class="fas fa-check"></i><span>Suporte VIP via WhatsApp 24/7</span></li>
+          </ul>
+          <a href="#contato" class="btn-plano btn-plano-outline" style="border-color:#f59e0b44;color:#f59e0b;">Falar com vendas</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Nota -->
+    <div class="text-center mt-4">
+      <p style="font-size:.82rem;color:var(--muted);">
+        <i class="fas fa-lock me-1"></i> Todos os planos incluem licença vitalícia de uso local. SaaS disponível sob consulta.
+        <br>Implantação em até 24h após o pagamento. Suporte via Telegram incluído.
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- DESTAQUES TECNICOS -->
+<section style="background:linear-gradient(135deg,rgba(6,182,212,.04),transparent);">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-md-3 col-6 text-center">
+        <div style="font-size:2.5rem;color:#8b5cf6;margin-bottom:12px;"><i class="fas fa-bolt"></i></div>
+        <div style="font-weight:700;margin-bottom:6px;">IA em Cascata</div>
+        <div style="font-size:.82rem;color:var(--muted);">Ollama (local) → Groq → Gemini. Sempre online.</div>
+      </div>
+      <div class="col-md-3 col-6 text-center">
+        <div style="font-size:2.5rem;color:#10b981;margin-bottom:12px;"><i class="fas fa-location-dot"></i></div>
+        <div style="font-weight:700;margin-bottom:6px;">GPS Real-time</div>
+        <div style="font-size:.82rem;color:var(--muted);">Localização a cada 30s. Bearing e distância calculados.</div>
+      </div>
+      <div class="col-md-3 col-6 text-center">
+        <div style="font-size:2.5rem;color:#f59e0b;margin-bottom:12px;"><i class="fas fa-qrcode"></i></div>
+        <div style="font-weight:700;margin-bottom:6px;">Conexão por QR</div>
+        <div style="font-size:.82rem;color:var(--muted);">Painéis se integram com um scan. Sem configuração manual.</div>
+      </div>
+      <div class="col-md-3 col-6 text-center">
+        <div style="font-size:2.5rem;color:#06b6d4;margin-bottom:12px;"><i class="fas fa-pix"></i></div>
+        <div style="font-weight:700;margin-bottom:6px;">PIX Automático</div>
+        <div style="font-size:.82rem;color:var(--muted);">Pagamento de motoboys calculado e registrado à meia-noite.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CONTATO -->
+<section id="contato">
+  <div class="container">
+    <div class="text-center mb-5">
+      <div class="section-badge">Fale Conosco</div>
+      <h2 class="section-title">Pronto para começar?</h2>
+      <p class="section-sub mx-auto">Entre em contato pelo canal de sua preferência. Respondemos em até 2 horas nos dias úteis.</p>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+      <div class="col-md-4">
+        <a href="https://wa.me/5511999999999?text=Olá! Quero saber mais sobre a Verônica IA" class="contato-card" target="_blank">
+          <div style="font-size:2rem;color:#10b981;margin-bottom:12px;"><i class="fab fa-whatsapp"></i></div>
+          <div style="font-weight:700;margin-bottom:6px;">WhatsApp</div>
+          <div style="font-size:.85rem;color:var(--muted);">Clique para abrir conversa. Atendimento imediato.</div>
+          <div style="margin-top:12px;font-size:.78rem;color:#10b981;"><i class="fas fa-arrow-right me-1"></i>Solicitar demo</div>
+        </a>
+      </div>
+      <div class="col-md-4">
+        <a href="https://t.me/veronica_assistente_bot" class="contato-card" target="_blank">
+          <div style="font-size:2rem;color:#06b6d4;margin-bottom:12px;"><i class="fab fa-telegram"></i></div>
+          <div style="font-weight:700;margin-bottom:6px;">Telegram</div>
+          <div style="font-size:.85rem;color:var(--muted);">@veronica_assistente_bot — Teste a IA agora mesmo.</div>
+          <div style="margin-top:12px;font-size:.78rem;color:#06b6d4;"><i class="fas fa-arrow-right me-1"></i>Abrir bot</div>
+        </a>
+      </div>
+      <div class="col-md-4">
+        <a href="mailto:contato@veronicaia.com.br" class="contato-card">
+          <div style="font-size:2rem;color:#8b5cf6;margin-bottom:12px;"><i class="fas fa-envelope"></i></div>
+          <div style="font-weight:700;margin-bottom:6px;">E-mail</div>
+          <div style="font-size:.85rem;color:var(--muted);">tradermilionarioemds@gmail.com — Para propostas e suporte.</div>
+          <div style="margin-top:12px;font-size:.78rem;color:#8b5cf6;"><i class="fas fa-arrow-right me-1"></i>Enviar e-mail</div>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="footer-logo"><i class="fas fa-robot me-2"></i>Verônica <span style="color:#f59e0b;">IA</span></div>
+        <div class="footer-desc">Ecossistema completo de gestão inteligente para delivery. Do bot Telegram ao painel de frota, tudo integrado.</div>
+      </div>
+      <div class="col-md-2">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:12px;color:var(--text);">Produtos</div>
+        <a href="#produtos" class="footer-link">Verônica IA</a>
+        <a href="#produtos" class="footer-link">PainelGest</a>
+        <a href="#produtos" class="footer-link">App Restaurante</a>
+        <a href="#produtos" class="footer-link">AppMotoboy</a>
+        <a href="#produtos" class="footer-link">PainelFrota</a>
+        <a href="#produtos" class="footer-link">Zeus</a>
+      </div>
+      <div class="col-md-2">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:12px;color:var(--text);">Planos</div>
+        <a href="#planos" class="footer-link">Básico — R$ 99,90</a>
+        <a href="#planos" class="footer-link">Pro — R$ 199,90</a>
+        <a href="#planos" class="footer-link">Premium — R$ 399,90</a>
+      </div>
+      <div class="col-md-4">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:12px;color:var(--text);">Stack Tecnológico</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">Python 3.11</span>
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">Flask</span>
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">SQLite</span>
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">Bootstrap 5</span>
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">Groq</span>
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">Gemini</span>
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">Ollama</span>
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">Telegram API</span>
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">Mercado Pago</span>
+          <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--muted);">Chart.js</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom d-flex justify-content-between flex-wrap gap-2">
+      <span>© 2026 Verônica IA — Elisson. Todos os direitos reservados.</span>
+      <span>Desenvolvido com <i class="fas fa-heart" style="color:#ef4444;"></i> e Python</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+  });
+});
+</script>
+</body>
+</html>

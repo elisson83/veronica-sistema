@@ -1,44 +1,63 @@
 @echo off
-title Verônica IA - Iniciando...
+title Verônica IA — Iniciando todos os serviços
 chcp 65001 > nul
+color 0A
 echo.
-echo ================================================
-echo    VERONICA IA — Subindo todos os servicos...
-echo ================================================
+echo  ╔══════════════════════════════════════════════════════════╗
+echo  ║          VERÔNICA IA — INICIANDO ECOSSISTEMA             ║
+echo  ║  6 Produtos · IA em Cascata · GPS Real-time · PIX Auto   ║
+echo  ╚══════════════════════════════════════════════════════════╝
 echo.
 
-echo [1/6] Ollama (LLM local)...
-start "Ollama" cmd /k "ollama run llama3"
+cd /d %USERPROFILE%\Desktop\veronica
+
+echo [1/8] Ollama (LLM local — llama3)...
+start "Ollama LLM" cmd /k "ollama run llama3"
 timeout /t 5 /nobreak > nul
 
-echo [2/6] Dashboard (porta 5000)...
-start "Dashboard" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python dashboard.py"
+echo [2/8] Dashboard Verônica (porta 5000)...
+start "Dashboard-5000" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python dashboard.py"
 timeout /t 2 /nobreak > nul
 
-echo [3/6] API Veronica (porta 5001)...
-start "API Verônica" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python api_veronica.py"
+echo [3/8] API Verônica REST (porta 5001)...
+start "API-5001" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python api_veronica.py"
 timeout /t 2 /nobreak > nul
 
-echo [4/6] PainelGest (porta 5002)...
-start "PainelGest" cmd /k "cd /d %USERPROFILE%\Desktop\veronica\painelgest && python app.py"
+echo [4/8] PainelGest — Super Admin + Restaurantes (porta 5002)...
+start "PainelGest-5002" cmd /k "cd /d %USERPROFILE%\Desktop\veronica\painelgest && python app.py"
 timeout /t 2 /nobreak > nul
 
-echo [5/6] Bot Veronica (Telegram)...
-start "Verônica Bot" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python main.py"
+echo [5/8] AppMotoboy — GPS + Entregas + Ganhos (porta 5003)...
+start "AppMotoboy-5003" cmd /k "cd /d %USERPROFILE%\Desktop\veronica\appmotoboy && python app.py"
 timeout /t 2 /nobreak > nul
 
-echo [6/6] Zeus Guardiao (Telegram)...
-start "Zeus Guardiao" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python zeus.py"
+echo [6/8] PainelFrota — Gestão de Frota (porta 5004)...
+start "PainelFrota-5004" cmd /k "cd /d %USERPROFILE%\Desktop\veronica\painelfrota && python app.py"
+timeout /t 2 /nobreak > nul
+
+echo [7/8] Verônica Bot (Telegram)...
+start "Verônica-Telegram" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python main.py"
+timeout /t 2 /nobreak > nul
+
+echo [8/8] Zeus Guardião (Segurança — Telegram)...
+start "Zeus-Telegram" cmd /k "cd /d %USERPROFILE%\Desktop\veronica && python zeus.py"
 
 echo.
-echo ================================================
-echo    TUDO INICIADO COM SUCESSO!
-echo ================================================
+echo  ╔══════════════════════════════════════════════════════════╗
+echo  ║                  TODOS OS SERVIÇOS ATIVOS!               ║
+echo  ╠══════════════════════════════════════════════════════════╣
+echo  ║  Dashboard    http://localhost:5000                      ║
+echo  ║  API REST     http://localhost:5001                      ║
+echo  ║  PainelGest   http://localhost:5002                      ║
+echo  ║  Super Admin  http://localhost:5002/super/login          ║
+echo  ║  AppMotoboy   http://localhost:5003                      ║
+echo  ║  PainelFrota  http://localhost:5004                      ║
+echo  ║  Verônica     @veronica_assistente_bot                   ║
+echo  ║  Zeus         @zeus_guardiao_bot                         ║
+echo  ╠══════════════════════════════════════════════════════════╣
+echo  ║  Site         site\index.html                            ║
+echo  ╚══════════════════════════════════════════════════════════╝
 echo.
-echo   Dashboard :  http://localhost:5000
-echo   API       :  http://localhost:5001
-echo   PainelGest:  http://localhost:5002
-echo   Veronica  :  @veronica_assistente_bot
-echo   Zeus      :  @zeus_guardiao_bot
+echo  Dica: use desligar.bat para encerrar todos os servicos.
 echo.
 pause

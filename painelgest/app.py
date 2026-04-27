@@ -726,8 +726,14 @@ def requer_login(f):
     def decorated(*args, **kwargs):
         if 'administrador' not in session:
             return redirect(url_for('login'))
-        admin = Administrador.query.filter_by(username=session['administrador']).first()
-        if admin and admin.bloqueado:
+        val = session['administrador']
+        # Suporta sessões antigas (username) e novas (email)
+        admin = (Administrador.query.filter_by(email=val).first() or
+                 Administrador.query.filter_by(username=val).first())
+        if not admin:
+            session.pop('administrador', None)
+            return redirect(url_for('login'))
+        if admin.bloqueado:
             session.pop('administrador', None)
             flash('Sua conta foi bloqueada. Entre em contato com o suporte.', 'danger')
             return redirect(url_for('login'))
@@ -803,17 +809,58 @@ def login():
     if 'administrador' in session:
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        admin = Administrador.query.filter_by(username=username).first()
+        email    = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        admin = Administrador.query.filter(
+            db.func.lower(Administrador.email) == email
+        ).first()
         if admin and check_password_hash(admin.password, password):
             if admin.bloqueado:
                 flash('Conta bloqueada. Entre em contato com o suporte.', 'danger')
                 return render_template('login.html')
-            session['administrador'] = username
+            session['administrador'] = admin.email
             return redirect(url_for('dashboard'))
-        flash('Usuário ou senha inválidos.', 'danger')
+        flash('E-mail ou senha inválidos.', 'danger')
     return render_template('login.html')
+
+
+@app.route('/cadastrar', methods=['GET', 'POST'])
+def cadastrar():
+    if 'administrador' in session:
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        nome     = request.form.get('nome', '').strip()
+        email    = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm  = request.form.get('confirm', '')
+        if not nome or not email or not password:
+            flash('Preencha todos os campos.', 'danger')
+            return render_template('cadastrar.html')
+        if password != confirm:
+            flash('As senhas não coincidem.', 'danger')
+            return render_template('cadastrar.html')
+        if len(password) < 6:
+            flash('A senha deve ter pelo menos 6 caracteres.', 'danger')
+            return render_template('cadastrar.html')
+        existente = Administrador.query.filter(db.func.lower(Administrador.email) == email).first()
+        if existente:
+            flash('Já existe uma conta com este e-mail.', 'danger')
+            return render_template('cadastrar.html')
+        username = email.split('@')[0][:30]
+        # Garantir username único
+        base = username
+        counter = 1
+        while Administrador.query.filter_by(username=username).first():
+            username = f"{base}{counter}"
+            counter += 1
+        admin = Administrador(username=username, password=password, email=email,
+                              nome_empresa=nome, plano='basico')
+        db.session.add(admin)
+        db.session.commit()
+        session['administrador'] = admin.email
+        flash(f'Bem-vindo(a), {nome}! Conta criada com sucesso.', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('cadastrar.html')
 
 
 @app.route('/logout')
@@ -1928,15 +1975,56 @@ def dono_login():
     if 'dono' in session:
         return redirect(url_for('dono_dashboard'))
     if request.method == 'POST':
-        username = request.form['username']
-        senha    = request.form['senha']
-        dono = DonoDaEmpresa.query.filter_by(username=username, ativo=True).first()
+        email = request.form.get('email', '').strip().lower()
+        senha = request.form.get('senha', '')
+        dono  = DonoDaEmpresa.query.filter(
+            db.func.lower(DonoDaEmpresa.email) == email,
+            DonoDaEmpresa.ativo == True
+        ).first()
         if dono and dono.check_senha(senha):
-            session['dono'] = username
-            _registrar_acesso(username, 'dono')
+            session['dono'] = dono.email
+            _registrar_acesso(dono.email, 'dono')
             return redirect(url_for('dono_dashboard'))
-        flash('Usuário ou senha inválidos.', 'danger')
+        flash('E-mail ou senha inválidos.', 'danger')
     return render_template('dono_login.html')
+
+
+@app.route('/dono/cadastrar', methods=['GET', 'POST'])
+def dono_cadastrar():
+    if 'dono' in session:
+        return redirect(url_for('dono_dashboard'))
+    if request.method == 'POST':
+        nome    = request.form.get('nome', '').strip()
+        email   = request.form.get('email', '').strip().lower()
+        senha   = request.form.get('senha', '')
+        confirm = request.form.get('confirm', '')
+        if not nome or not email or not senha:
+            flash('Preencha todos os campos.', 'danger')
+            return render_template('dono_cadastrar.html')
+        if senha != confirm:
+            flash('As senhas não coincidem.', 'danger')
+            return render_template('dono_cadastrar.html')
+        if len(senha) < 6:
+            flash('A senha deve ter pelo menos 6 caracteres.', 'danger')
+            return render_template('dono_cadastrar.html')
+        existente = DonoDaEmpresa.query.filter(
+            db.func.lower(DonoDaEmpresa.email) == email
+        ).first()
+        if existente:
+            flash('Já existe uma conta com este e-mail.', 'danger')
+            return render_template('dono_cadastrar.html')
+        username = email.split('@')[0][:30]
+        base = username; counter = 1
+        while DonoDaEmpresa.query.filter_by(username=username).first():
+            username = f"{base}{counter}"; counter += 1
+        d = DonoDaEmpresa(username=username, senha=senha, nome=nome, email=email)
+        db.session.add(d)
+        db.session.commit()
+        session['dono'] = d.email
+        _registrar_acesso(d.email, 'dono')
+        flash(f'Bem-vindo(a), {nome}!', 'success')
+        return redirect(url_for('dono_dashboard'))
+    return render_template('dono_cadastrar.html')
 
 
 @app.route('/dono/logout')

@@ -87,10 +87,10 @@
 
     <form method="post">
       <div class="mb-3">
-        <label class="form-label">Usuário</label>
+        <label class="form-label">E-mail</label>
         <div class="input-group">
-          <i class="fas fa-user input-icon"></i>
-          <input type="text" name="username" class="form-control" placeholder="dono" required autofocus>
+          <i class="fas fa-envelope input-icon"></i>
+          <input type="email" name="email" class="form-control" placeholder="dono@email.com" required autofocus>
         </div>
       </div>
       <div class="mb-3">
@@ -107,7 +107,11 @@
       <button type="submit" class="btn-login"><i class="fas fa-sign-in-alt"></i> Acessar Painel</button>
     </form>
 
-    <div class="links">
+    <div style="text-align:center;margin-top:14px;font-size:12px;color:#64748b">
+      Ainda não tem conta?
+      <a href="{{ url_for('dono_cadastrar') }}" style="color:#10b981;font-weight:600;text-decoration:none">Cadastrar</a>
+    </div>
+    <div class="links" style="margin-top:10px">
       <a href="{{ url_for('login') }}">Painel do Gestor</a> &nbsp;|&nbsp;
       <a href="{{ url_for('super_login') }}">Super Admin</a>
     </div>

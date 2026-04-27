@@ -56,6 +56,7 @@ class AdminFrota(UserMixin, db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     nome       = db.Column(db.String(100), nullable=False)
     username   = db.Column(db.String(50), unique=True, nullable=False)
+    email      = db.Column(db.String(120))
     senha_hash = db.Column(db.String(200), nullable=False)
     nivel      = db.Column(db.String(20), default='visualizador')
     ativo      = db.Column(db.Boolean, default=True)
@@ -295,12 +296,48 @@ def load_user(uid): return AdminFrota.query.get(int(uid))
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        adm = AdminFrota.query.filter_by(username=request.form['username']).first()
-        if adm and adm.check_senha(request.form['senha']):
+        email = request.form.get('email', '').strip().lower()
+        senha = request.form.get('senha', '')
+        adm = (AdminFrota.query.filter(db.func.lower(AdminFrota.email) == email).first() or
+               AdminFrota.query.filter_by(username=email).first())
+        if adm and adm.check_senha(senha):
             login_user(adm)
             return redirect(url_for('dashboard'))
-        flash('Usuário ou senha incorretos', 'danger')
+        flash('E-mail ou senha incorretos', 'danger')
     return render_template('login.html')
+
+
+@app.route('/cadastrar', methods=['GET', 'POST'])
+def cadastrar():
+    if request.method == 'POST':
+        nome    = request.form.get('nome', '').strip()
+        email   = request.form.get('email', '').strip().lower()
+        senha   = request.form.get('senha', '')
+        confirm = request.form.get('confirm', '')
+        if not nome or not email or not senha:
+            flash('Preencha todos os campos.', 'danger')
+            return render_template('cadastrar.html')
+        if senha != confirm:
+            flash('As senhas não coincidem.', 'danger')
+            return render_template('cadastrar.html')
+        if len(senha) < 6:
+            flash('Senha deve ter pelo menos 6 caracteres.', 'danger')
+            return render_template('cadastrar.html')
+        if AdminFrota.query.filter(db.func.lower(AdminFrota.email) == email).first():
+            flash('Já existe uma conta com este e-mail.', 'danger')
+            return render_template('cadastrar.html')
+        username = email.split('@')[0][:30]
+        base = username; counter = 1
+        while AdminFrota.query.filter_by(username=username).first():
+            username = f"{base}{counter}"; counter += 1
+        adm = AdminFrota(nome=nome, username=username, email=email, nivel='operacional')
+        adm.set_senha(senha)
+        db.session.add(adm)
+        db.session.commit()
+        login_user(adm)
+        flash(f'Bem-vindo(a), {nome}!', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('cadastrar.html')
 
 
 @app.route('/logout')
@@ -1014,6 +1051,7 @@ def migrate_db():
             except Exception:
                 pass
 
+    add_col('admin_frota',   'email',              'VARCHAR(120)')
     add_col('motoboy_frota', 'cpf_cnpj',          'VARCHAR(20)')
     add_col('motoboy_frota', 'tipo_doc',           "VARCHAR(5) DEFAULT 'cpf'")
     add_col('motoboy_frota', 'chave_pix',          'VARCHAR(100)')
@@ -1031,10 +1069,15 @@ def migrate_db():
     conn.close()
 
     with app.app_context():
-        if not AdminFrota.query.filter_by(username='admin').first():
-            a = AdminFrota(nome='Super Admin Frota', username='admin', nivel='super')
+        a = AdminFrota.query.filter_by(username='admin').first()
+        if not a:
+            a = AdminFrota(nome='Super Admin Frota', username='admin', nivel='super',
+                           email='admin@painelfrota.com')
             a.set_senha('admin123')
             db.session.add(a)
+            db.session.commit()
+        elif not a.email:
+            a.email = 'admin@painelfrota.com'
             db.session.commit()
 
 

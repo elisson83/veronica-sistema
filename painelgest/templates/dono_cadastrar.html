@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastrar — Painel do Dono</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0a0f0a; color: #e2e8f0; min-height: 100vh; display: grid; place-items: center; }
+    .card {
+      background: #111911; border: 1px solid rgba(255,255,255,.07);
+      border-radius: 20px; padding: 44px 40px; width: 420px; max-width: 95vw;
+      box-shadow: 0 25px 60px rgba(0,0,0,.4);
+    }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo-icon { width: 60px; height: 60px; background: linear-gradient(135deg,#10b981,#059669); border-radius: 18px; display: inline-grid; place-items: center; font-size: 24px; color: #fff; margin-bottom: 12px; }
+    .logo-title { font-size: 22px; font-weight: 700; }
+    .logo-title span { color: #10b981; }
+    .logo-sub { font-size: 13px; color: #64748b; margin-top: 4px; }
+    .form-label { font-size: 12px; color: #64748b; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 5px; display: block; }
+    .input-wrap { position: relative; margin-bottom: 15px; }
+    .input-wrap i.icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 13px; }
+    .form-control {
+      width: 100%; padding: 11px 40px 11px 36px;
+      background: #1a261a; border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px; color: #e2e8f0; font-size: 14px;
+      outline: none; transition: border-color .2s; font-family: 'Inter', sans-serif;
+    }
+    .form-control:focus { border-color: #10b981; }
+    .eye-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; cursor: pointer; padding: 4px; }
+    .btn-login {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg,#10b981,#059669);
+      border: none; border-radius: 10px;
+      color: #fff; font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: opacity .2s; margin-top: 4px;
+      font-family: 'Inter', sans-serif;
+    }
+    .btn-login:hover { opacity: .9; }
+    .flash-msg { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25); color: #f87171; }
+    .links { text-align: center; margin-top: 18px; font-size: 12px; color: #64748b; }
+    .links a { color: #10b981; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon"><i class="fas fa-building"></i></div>
+      <div class="logo-title">Painel<span>Dono</span></div>
+      <div class="logo-sub">Crie sua conta de proprietário</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <div class="flash-msg"><i class="fas fa-exclamation-circle"></i> {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post">
+      <label class="form-label">Seu nome</label>
+      <div class="input-wrap">
+        <i class="fas fa-user icon"></i>
+        <input type="text" name="nome" class="form-control" placeholder="Nome completo" required autofocus>
+      </div>
+      <label class="form-label">E-mail</label>
+      <div class="input-wrap">
+        <i class="fas fa-envelope icon"></i>
+        <input type="email" name="email" class="form-control" placeholder="dono@email.com" required>
+      </div>
+      <label class="form-label">Senha</label>
+      <div class="input-wrap">
+        <i class="fas fa-lock icon"></i>
+        <input type="password" id="pwd1" name="senha" class="form-control" placeholder="Mínimo 6 caracteres" required>
+        <button type="button" class="eye-btn" onclick="toggleSenha('pwd1',this)"><i class="fas fa-eye"></i></button>
+      </div>
+      <label class="form-label">Confirmar Senha</label>
+      <div class="input-wrap">
+        <i class="fas fa-lock icon"></i>
+        <input type="password" id="pwd2" name="confirm" class="form-control" placeholder="Repita a senha" required>
+        <button type="button" class="eye-btn" onclick="toggleSenha('pwd2',this)"><i class="fas fa-eye"></i></button>
+      </div>
+      <button type="submit" class="btn-login"><i class="fas fa-user-plus"></i> Criar Conta</button>
+    </form>
+
+    <div class="links">
+      Já tem conta? <a href="{{ url_for('dono_login') }}">Entrar</a>
+    </div>
+  </div>
+<script>
+function toggleSenha(id, btn) {
+  const input = document.getElementById(id);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye','fa-eye-slash'); }
+  else { input.type = 'password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
+}
+</script>
+</body>
+</html>

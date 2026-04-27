@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastrar — PainelGest</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0b0d17;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .bg-grid {
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(99,102,241,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+    .glow {
+      position: fixed;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+      top: -100px; left: 50%; transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .card {
+      position: relative; z-index: 10;
+      background: #131720;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px;
+      padding: 40px 36px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.5);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      border-radius: 12px; display: grid; place-items: center;
+      font-size: 18px; color: #fff;
+    }
+    .logo-text { font-size: 20px; font-weight: 700; }
+    .logo-text span { color: #6366f1; }
+    .title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+    .form-group { margin-bottom: 15px; }
+    .form-label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 500; color: #94a3b8; }
+    .input-wrap { position: relative; }
+    .input-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 13px; }
+    .form-input {
+      width: 100%; background: #1c2133;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px; padding: 10px 40px 10px 36px;
+      color: #e2e8f0; font-size: 14px;
+      font-family: 'Inter', sans-serif; outline: none;
+      transition: border-color .15s;
+    }
+    .form-input:focus { border-color: #6366f1; }
+    .eye-btn {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: #64748b; cursor: pointer; padding: 4px;
+    }
+    .btn-primary {
+      width: 100%; background: #6366f1; color: #fff; border: none;
+      border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 600;
+      font-family: 'Inter', sans-serif; cursor: pointer; transition: background .15s; margin-top: 6px;
+    }
+    .btn-primary:hover { background: #4f46e5; }
+    .flash-msg {
+      padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25); color: #f87171;
+    }
+    .footer-text { text-align: center; margin-top: 18px; font-size: 12px; color: #64748b; }
+    .footer-text a { color: #6366f1; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="glow"></div>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+      <div class="logo-text">Painel<span>Gest</span></div>
+    </div>
+    <div class="title">Criar conta</div>
+    <div class="subtitle">Preencha os dados para começar a usar</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <div class="flash-msg"><i class="fas fa-circle-xmark"></i> {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('cadastrar') }}">
+      <div class="form-group">
+        <label class="form-label">Nome / Empresa</label>
+        <div class="input-wrap">
+          <i class="fas fa-building"></i>
+          <input type="text" name="nome" class="form-input" placeholder="Minha Empresa Ltda" required autofocus>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <div class="input-wrap">
+          <i class="fas fa-envelope"></i>
+          <input type="email" name="email" class="form-input" placeholder="seu@email.com" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="pwd1" name="password" class="form-input" placeholder="Mínimo 6 caracteres" required>
+          <button type="button" class="eye-btn" onclick="toggleSenha('pwd1',this)"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirmar Senha</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="pwd2" name="confirm" class="form-input" placeholder="Repita a senha" required>
+          <button type="button" class="eye-btn" onclick="toggleSenha('pwd2',this)"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary"><i class="fas fa-user-plus"></i> Criar Conta</button>
+    </form>
+
+    <div class="footer-text">
+      Já tem conta? <a href="{{ url_for('login') }}">Entrar</a>
+    </div>
+  </div>
+<script>
+function toggleSenha(id, btn) {
+  const input = document.getElementById(id);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+}
+</script>
+</body>
+</html>

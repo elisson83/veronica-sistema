@@ -200,12 +200,48 @@ def load_user(uid): return Motoboy.query.get(int(uid))
 @app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
-        mb = Motoboy.query.filter_by(username=request.form['username']).first()
-        if mb and mb.check_senha(request.form['senha']):
+        email = request.form.get('email', '').strip().lower()
+        senha = request.form.get('senha', '')
+        mb = (Motoboy.query.filter(db.func.lower(Motoboy.email) == email).first() or
+              Motoboy.query.filter_by(username=email).first())
+        if mb and mb.check_senha(senha):
             login_user(mb)
             return redirect(url_for('dashboard'))
-        flash('Usuário ou senha incorretos', 'danger')
+        flash('E-mail ou senha incorretos', 'danger')
     return render_template('login.html')
+
+
+@app.route('/cadastrar', methods=['GET', 'POST'])
+def cadastrar():
+    if request.method == 'POST':
+        nome    = request.form.get('nome', '').strip()
+        email   = request.form.get('email', '').strip().lower()
+        senha   = request.form.get('senha', '')
+        confirm = request.form.get('confirm', '')
+        if not nome or not email or not senha:
+            flash('Preencha todos os campos.', 'danger')
+            return render_template('cadastrar.html')
+        if senha != confirm:
+            flash('As senhas não coincidem.', 'danger')
+            return render_template('cadastrar.html')
+        if len(senha) < 6:
+            flash('Senha deve ter pelo menos 6 caracteres.', 'danger')
+            return render_template('cadastrar.html')
+        if Motoboy.query.filter(db.func.lower(Motoboy.email) == email).first():
+            flash('Já existe uma conta com este e-mail.', 'danger')
+            return render_template('cadastrar.html')
+        username = email.split('@')[0][:30]
+        base = username; counter = 1
+        while Motoboy.query.filter_by(username=username).first():
+            username = f"{base}{counter}"; counter += 1
+        mb = Motoboy(nome=nome, username=username, email=email)
+        mb.set_senha(senha)
+        db.session.add(mb)
+        db.session.commit()
+        login_user(mb)
+        flash(f'Bem-vindo(a), {nome}!', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('cadastrar.html')
 
 @app.route('/logout')
 @login_required

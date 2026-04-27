@@ -50,7 +50,11 @@
       "Bash(robocopy \"C:\\\\\\\\Users\\\\\\\\Usuário\\\\\\\\Desktop\\\\\\\\veronica\" \"G:\\\\\\\\Backup_Veronica\" /MIR /NFL /NDL /NJH /NJS)",
       "Bash(python -c \"import os; print\\(os.environ.get\\('MERCADOPAGO_ACCESS_TOKEN', 'NAO DEFINIDA'\\)\\)\")",
       "Bash(python *)",
-      "Bash(robocopy \"C:\\\\\\\\Users\\\\\\\\Usuário\\\\\\\\Desktop\\\\\\\\veronica\" \"E:\\\\\\\\Backup_Veronica\" /MIR /NFL /NDL /NJH /NJS)"
+      "Bash(robocopy \"C:\\\\\\\\Users\\\\\\\\Usuário\\\\\\\\Desktop\\\\\\\\veronica\" \"E:\\\\\\\\Backup_Veronica\" /MIR /NFL /NDL /NJH /NJS)",
+      "Bash(python3 -m py_compile /c/Users/Usuário/Desktop/veronica/painelgest/app.py)",
+      "PowerShell(Get-Volume *)",
+      "PowerShell(Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Name -in @\\('G','E'\\) } | Select-Object Name, Description)",
+      "PowerShell(Get-WmiObject *)"
     ]
   }
 }

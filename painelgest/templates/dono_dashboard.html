@@ -3,6 +3,7 @@
 {% block topbar_title %}Dashboard{% endblock %}
 {% block topbar_sub %}Resumo em tempo real — {{ hoje.strftime('%d/%m/%Y') }}{% endblock %}
 {% block topbar_actions %}
+  <span id="ultimo-update" style="font-size:11px;color:var(--muted)"></span>
   <button class="btn-dono" onclick="atualizarKPIs()">
     <i class="fas fa-rotate"></i> Atualizar
   </button>
@@ -149,9 +150,12 @@ async function atualizarKPIs() {
     document.getElementById('kpi-vendas').textContent = 'R$ ' + d.vendas_hoje.toFixed(2);
     document.getElementById('kpi-andamento').textContent = d.em_andamento;
     document.getElementById('kpi-motoboys').textContent = d.motoboys_online;
+    const el = document.getElementById('ultimo-update');
+    if (el) el.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
   } catch(e) {}
 }
-// Atualiza a cada 30 segundos
-setInterval(atualizarKPIs, 30000);
+// Atualiza a cada 10 segundos
+atualizarKPIs();
+setInterval(atualizarKPIs, 10000);
 </script>
 {% endblock %}

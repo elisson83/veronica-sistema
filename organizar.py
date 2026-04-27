@@ -8,8 +8,8 @@ AREA_TRABALHO = Path(os.environ["USERPROFILE"]) / "Desktop"
 PROJETO_DIR   = AREA_TRABALHO / "veronica"
 
 # Destinos de backup
-HD_G = Path("G:/Backup_Veronica")   # arena x
-HD_E = Path("E:/Backup_Veronica")   # Roberta
+HD_G = Path("G:/Backup_Veronica")   # PainelGest
+HD_E = Path("E:/Backup_Veronica")   # Veronica_IA
 
 IGNORAR = shutil.ignore_patterns(
     "__pycache__", "*.pyc", ".git", "*.db-journal",
@@ -40,7 +40,7 @@ def backup_completo():
     return ok_g, ok_e
 
 def listar_backups():
-    for hd, label in [(HD_G, "G: arena x"), (HD_E, "E: Roberta")]:
+    for hd, label in [(HD_G, "G: PainelGest"), (HD_E, "E: Veronica_IA")]:
         print(f"\nBackups em {label} ({hd}):")
         if hd.exists():
             pastas = sorted(hd.iterdir(), reverse=True)
@@ -56,12 +56,12 @@ if __name__ == "__main__":
     if opcao == "backup":
         ok_g, ok_e = backup_completo()
         print("\nResultado:")
-        print(f"  HD G: (arena x)  -> {'OK' if ok_g else 'FALHOU'}")
-        print(f"  HD E: (Roberta)  -> {'OK' if ok_e else 'FALHOU'}")
+        print(f"  HD G: (PainelGest)  -> {'OK' if ok_g else 'FALHOU'}")
+        print(f"  HD E: (Veronica_IA)  -> {'OK' if ok_e else 'FALHOU'}")
     elif opcao == "listar":
         listar_backups()
     else:
         ok_g, ok_e = backup_completo()
         print("\nResultado:")
-        print(f"  HD G: (arena x)  -> {'OK' if ok_g else 'FALHOU'}")
-        print(f"  HD E: (Roberta)  -> {'OK' if ok_e else 'FALHOU'}")
+        print(f"  HD G: (PainelGest)  -> {'OK' if ok_g else 'FALHOU'}")
+        print(f"  HD E: (Veronica_IA)  -> {'OK' if ok_e else 'FALHOU'}")

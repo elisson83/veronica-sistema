@@ -1,0 +1,99 @@
+{% extends 'dono_base.html' %}
+{% block title %}Relatório — Painel do Dono{% endblock %}
+{% block topbar_title %}Relatório Financeiro{% endblock %}
+{% block topbar_sub %}Últimos 7 dias de vendas{% endblock %}
+
+{% block content %}
+<div class="kpi-grid" style="margin-bottom:24px">
+  <div class="kpi-card">
+    <div class="kpi-icon ki-amber"><i class="fas fa-dollar-sign"></i></div>
+    <div>
+      <div class="kpi-value">R$ {{ '%.2f'|format(vendas_mes) }}</div>
+      <div class="kpi-label">Vendas do Mês</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-green"><i class="fas fa-receipt"></i></div>
+    <div>
+      <div class="kpi-value">{{ pedidos_mes }}</div>
+      <div class="kpi-label">Pedidos do Mês</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-blue"><i class="fas fa-calculator"></i></div>
+    <div>
+      <div class="kpi-value">R$ {{ '%.2f'|format(vendas_mes / pedidos_mes if pedidos_mes else 0) }}</div>
+      <div class="kpi-label">Ticket Médio</div>
+    </div>
+  </div>
+</div>
+
+<div class="dono-card">
+  <div class="dono-card-header">
+    <div class="dono-card-title"><i class="fas fa-chart-bar" style="color:var(--accent);margin-right:8px"></i>Vendas — Últimos 7 dias</div>
+  </div>
+  <div class="dono-card-body">
+    <canvas id="chartVendas" height="80"></canvas>
+  </div>
+</div>
+
+<div class="dono-card" style="margin-top:16px">
+  <div class="dono-card-header">
+    <div class="dono-card-title"><i class="fas fa-table" style="color:var(--accent);margin-right:8px"></i>Detalhamento Diário</div>
+  </div>
+  <div class="dono-card-body p-0">
+    <table class="dono-table">
+      <thead><tr><th>Data</th><th>Pedidos</th><th>Vendas</th><th>Ticket Médio</th></tr></thead>
+      <tbody>
+        {% for d in dados_dias %}
+        <tr>
+          <td style="font-weight:600">{{ d.dia }}</td>
+          <td>{{ d.pedidos }}</td>
+          <td style="font-weight:600;color:var(--accent)">R$ {{ '%.2f'|format(d.total) }}</td>
+          <td style="color:var(--muted)">R$ {{ '%.2f'|format(d.total / d.pedidos if d.pedidos else 0) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const dados = {{ dados_dias|tojson }};
+const ctx = document.getElementById('chartVendas').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: dados.map(d => d.dia),
+    datasets: [{
+      label: 'Vendas (R$)',
+      data: dados.map(d => d.total),
+      backgroundColor: 'rgba(16,185,129,.4)',
+      borderColor: '#10b981',
+      borderWidth: 2,
+      borderRadius: 6,
+    }, {
+      label: 'Pedidos',
+      data: dados.map(d => d.pedidos),
+      type: 'line',
+      borderColor: '#f59e0b',
+      backgroundColor: 'transparent',
+      tension: 0.4,
+      yAxisID: 'y2',
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#94a3b8' } } },
+    scales: {
+      x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' } },
+      y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' } },
+      y2: { position: 'right', ticks: { color: '#f59e0b' }, grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endblock %}

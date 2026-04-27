@@ -67,6 +67,7 @@ class AdminFrota(UserMixin, db.Model):
 
 class MotoboyFrota(db.Model):
     id               = db.Column(db.Integer, primary_key=True)
+    codigo           = db.Column(db.String(4), unique=True)    # ex: F847
     nome             = db.Column(db.String(100), nullable=False)
     telefone         = db.Column(db.String(20))
     cpf_cnpj         = db.Column(db.String(20))
@@ -76,7 +77,7 @@ class MotoboyFrota(db.Model):
     moto_placa       = db.Column(db.String(10))
     moto_modelo      = db.Column(db.String(50))
     motoboy_app_id   = db.Column(db.Integer)
-    token_app        = db.Column(db.String(64), unique=True)   # token QR → AppMotoboy
+    token_app        = db.Column(db.String(64), unique=True)
     ativo            = db.Column(db.Boolean, default=True)
     parceiro         = db.Column(db.Boolean, default=False)  # True = parceiro externo
     # Remuneração
@@ -974,6 +975,24 @@ def api_motoboy_token(token):
     })
 
 
+@app.route('/api/stats')
+def api_stats():
+    """Super Admin consulta estatísticas desta frota."""
+    from datetime import date as _date
+    hoje = _date.today()
+    total_mb = MotoboyFrota.query.filter_by(ativo=True, parceiro=False).count()
+    corridas  = EntregaFrota.query.filter(
+        db.func.date(EntregaFrota.criado_em) == hoje,
+        EntregaFrota.status == 'entregue'
+    ).count()
+    receita = db.session.query(db.func.sum(EntregaFrota.ganho_frota)).scalar() or 0.0
+    return jsonify({
+        'total_motoboys': total_mb,
+        'corridas_hoje':  corridas,
+        'receita_total':  round(float(receita), 2),
+    })
+
+
 # ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────
 
 def migrate_db():
@@ -1004,6 +1023,7 @@ def migrate_db():
     add_col('motoboy_frota', 'percentual_motoboy', 'FLOAT DEFAULT 80.0')
     add_col('motoboy_frota', 'valor_diaria',       'FLOAT DEFAULT 0.0')
     add_col('motoboy_frota', 'token_app',          'VARCHAR(64)')
+    add_col('motoboy_frota', 'codigo',             'VARCHAR(4)')
     add_col('entrega_frota', 'restaurante_id',     'INTEGER')
     add_col('pagamento_motoboy', 'chave_pix_dest', 'VARCHAR(100)')
     add_col('pagamento_motoboy', 'automatico',     'BOOLEAN DEFAULT 0')

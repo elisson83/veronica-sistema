@@ -27,18 +27,19 @@ HORARIO_NOTURNO = (22, 6)
 
 class Motoboy(UserMixin, db.Model):
     id            = db.Column(db.Integer, primary_key=True)
+    codigo        = db.Column(db.String(4), unique=True)    # ex: M392
     nome          = db.Column(db.String(100), nullable=False)
     username      = db.Column(db.String(50), unique=True, nullable=False)
     senha_hash    = db.Column(db.String(200), nullable=False)
     telefone      = db.Column(db.String(20))
     email         = db.Column(db.String(120))
     cpf_cnpj      = db.Column(db.String(20))
-    tipo_doc      = db.Column(db.String(5), default='cpf')   # cpf | mei | cnpj
+    tipo_doc      = db.Column(db.String(5), default='cpf')
     chave_pix     = db.Column(db.String(100))
     moto_placa    = db.Column(db.String(10))
     moto_modelo   = db.Column(db.String(50))
     foto_path     = db.Column(db.String(200))
-    token_frota   = db.Column(db.String(64), unique=True)  # token vindo do PainelFrota
+    token_frota   = db.Column(db.String(64), unique=True)
     ativo         = db.Column(db.Boolean, default=True)
     disponivel    = db.Column(db.Boolean, default=False)
     lat_atual     = db.Column(db.Float)
@@ -624,6 +625,7 @@ def migrate_db():
     add_col('motoboy', 'tipo_doc',   "VARCHAR(5) DEFAULT 'cpf'")
     add_col('motoboy', 'chave_pix',  'VARCHAR(100)')
     add_col('motoboy', 'token_frota','VARCHAR(64)')
+    add_col('motoboy', 'codigo',     'VARCHAR(4)')
     add_col('entrega', 'destino_lat','FLOAT')
     add_col('entrega', 'destino_lng','FLOAT')
     add_col('entrega', 'expira_em',  'DATETIME')

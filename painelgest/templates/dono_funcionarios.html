@@ -1,0 +1,92 @@
+{% extends 'dono_base.html' %}
+{% block title %}Funcionários — Painel do Dono{% endblock %}
+{% block topbar_title %}Funcionários{% endblock %}
+{% block topbar_sub %}Gestores e operadores ativos no sistema{% endblock %}
+
+{% block content %}
+<div class="kpi-grid" style="margin-bottom:24px">
+  <div class="kpi-card">
+    <div class="kpi-icon ki-green"><i class="fas fa-user-gear"></i></div>
+    <div>
+      <div class="kpi-value">{{ admins|selectattr('status','eq','ativo')|list|length }}</div>
+      <div class="kpi-label">Gestores Ativos</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-amber"><i class="fas fa-user"></i></div>
+    <div>
+      <div class="kpi-value">{{ subs|selectattr('status','eq','ativo')|list|length }}</div>
+      <div class="kpi-label">Operadores Ativos</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-red"><i class="fas fa-user-lock"></i></div>
+    <div>
+      <div class="kpi-value">{{ admins|selectattr('status','eq','bloqueado')|list|length }}</div>
+      <div class="kpi-label">Gestores Bloqueados</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="dono-card">
+      <div class="dono-card-header">
+        <div class="dono-card-title"><i class="fas fa-user-gear" style="color:var(--accent);margin-right:8px"></i>Gestores (ADM)</div>
+      </div>
+      <div class="dono-card-body p-0">
+        <table class="dono-table">
+          <thead><tr><th>Usuário</th><th>Empresa</th><th>Plano</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for a in admins %}
+            <tr>
+              <td style="font-weight:600">{{ a.username }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ a.nome_empresa or '—' }}</td>
+              <td>
+                <span style="font-size:11px;padding:2px 8px;border-radius:20px;
+                  background:{{ 'rgba(245,158,11,.15)' if a.plano=='premium' else 'rgba(99,102,241,.12)' }};
+                  color:{{ '#fbbf24' if a.plano=='premium' else '#818cf8' }};font-weight:600">
+                  {{ a.plano|capitalize }}
+                </span>
+              </td>
+              <td>
+                <span class="badge-d {{ 'bd-green' if a.status=='ativo' else 'bd-red' }}">{{ a.status }}</span>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Nenhum gestor.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="dono-card">
+      <div class="dono-card-header">
+        <div class="dono-card-title"><i class="fas fa-user" style="color:var(--accent);margin-right:8px"></i>Operadores / Sub-Admins</div>
+      </div>
+      <div class="dono-card-body p-0">
+        <table class="dono-table">
+          <thead><tr><th>Usuário</th><th>Nível</th><th>Status</th><th>Criado</th></tr></thead>
+          <tbody>
+            {% for s in subs %}
+            <tr>
+              <td style="font-weight:600">{{ s.username }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ s.nivel|capitalize }}</td>
+              <td>
+                <span class="badge-d {{ 'bd-green' if s.status=='ativo' else 'bd-red' }}">{{ s.status }}</span>
+              </td>
+              <td style="font-size:12px;color:var(--muted)">{{ s.criado_em.strftime('%d/%m/%Y') if s.criado_em else '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Nenhum operador.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,237 @@
+{% extends 'super_base.html' %}
+{% block title %}Grupos de Motoboys — Super Admin{% endblock %}
+{% block topbar_title %}Grupos de Motoboys{% endblock %}
+{% block topbar_sub %}Visão consolidada por ADM{% endblock %}
+{% block topbar_actions %}
+  <button class="btn-accent" data-bs-toggle="modal" data-bs-target="#modalNovoGrupo">
+    <i class="fas fa-plus"></i> Novo Grupo
+  </button>
+{% endblock %}
+
+{% block content %}
+<!-- Stats rápidas -->
+<div class="stat-grid" style="margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon si-purple"><i class="fas fa-layer-group"></i></div>
+    <div>
+      <div class="stat-value">{{ grupos|length }}</div>
+      <div class="stat-label">Grupos Ativos</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-amber"><i class="fas fa-motorcycle"></i></div>
+    <div>
+      <div class="stat-value">{{ grupos|sum(attribute='total_motoboys') }}</div>
+      <div class="stat-label">Motoboys Totais</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-green"><i class="fas fa-route"></i></div>
+    <div>
+      <div class="stat-value">{{ grupos|sum(attribute='corridas_hoje') }}</div>
+      <div class="stat-label">Corridas Hoje</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-blue"><i class="fas fa-dollar-sign"></i></div>
+    <div>
+      <div class="stat-value">R$ {{ '%.2f'|format(grupos|sum(attribute='receita_total')) }}</div>
+      <div class="stat-label">Receita Total</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela de grupos -->
+<div class="pg-card">
+  <div class="pg-card-header">
+    <div class="pg-card-title"><i class="fas fa-motorcycle" style="color:var(--accent);margin-right:8px"></i>Grupos Cadastrados</div>
+  </div>
+  <div class="pg-card-body p-0">
+    {% if grupos %}
+    <table class="pg-table">
+      <thead>
+        <tr>
+          <th>Grupo</th>
+          <th>ADM Responsável</th>
+          <th>Motoboys</th>
+          <th>Corridas Hoje</th>
+          <th>Receita Total</th>
+          <th>Frota URL</th>
+          <th>Cobrança</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in grupos %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ g.nome }}</div>
+            <div style="font-size:11px;color:var(--muted)">criado {{ g.criado_em.strftime('%d/%m/%Y') }}</div>
+          </td>
+          <td>
+            <div style="font-weight:500">{{ g.admin.username if g.admin else '—' }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ g.admin.nome_empresa or '' }}</div>
+          </td>
+          <td>
+            <span style="font-size:18px;font-weight:700;color:var(--accent)">{{ g.total_motoboys }}</span>
+          </td>
+          <td>
+            <span style="font-size:18px;font-weight:700;color:#22c55e">{{ g.corridas_hoje }}</span>
+          </td>
+          <td>
+            <span style="font-weight:600">R$ {{ '%.2f'|format(g.receita_total) }}</span>
+          </td>
+          <td style="font-size:11px;color:var(--muted)">{{ g.url_frota }}</td>
+          <td>
+            {% if g.config_cobranca %}
+              <span class="badge-status bs-success">
+                {% if g.config_cobranca.tipo == 'corrida' %}R$ {{ '%.2f'|format(g.config_cobranca.valor_por_corrida) }}/corrida
+                {% else %}R$ {{ '%.2f'|format(g.config_cobranca.valor_mensal) }}/mês{% endif %}
+              </span>
+            {% else %}
+              <span class="badge-status bs-muted">Não configurado</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn-ghost" style="padding:6px 10px;font-size:12px"
+                onclick="abrirConfig({{ g.id }}, '{{ g.config_cobranca.tipo if g.config_cobranca else 'corrida' }}', {{ g.config_cobranca.valor_por_corrida if g.config_cobranca else 0.60 }}, {{ g.config_cobranca.valor_mensal if g.config_cobranca else 99.90 }}, {{ g.config_cobranca.dia_vencimento if g.config_cobranca else 10 }}, {{ g.config_cobranca.percentual_plataforma if g.config_cobranca else 40 }})">
+                <i class="fas fa-gear"></i>
+              </button>
+              <form method="post" action="{{ url_for('super_excluir_grupo', gid=g.id) }}"
+                    onsubmit="return confirm('Desativar grupo {{ g.nome }}?')">
+                <button class="btn-ghost" style="padding:6px 10px;font-size:12px;color:#f87171;border-color:rgba(239,68,68,.2)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center;padding:48px;color:var(--muted)">
+      <i class="fas fa-motorcycle" style="font-size:40px;margin-bottom:16px;display:block;opacity:.3"></i>
+      Nenhum grupo cadastrado ainda.<br>
+      <small>Clique em "Novo Grupo" para adicionar.</small>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal Novo Grupo -->
+<div class="modal fade" id="modalNovoGrupo" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h5 class="modal-title"><i class="fas fa-plus" style="color:var(--accent);margin-right:8px"></i>Novo Grupo de Motoboys</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{{ url_for('super_novo_grupo') }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" style="color:var(--muted);font-size:12px">ADM Responsável</label>
+            <select name="admin_id" class="form-select" style="background:var(--surface2);border-color:var(--border);color:var(--text)" required>
+              {% for g in gestores %}
+              <option value="{{ g.id }}">{{ g.username }}{% if g.nome_empresa %} — {{ g.nome_empresa }}{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="color:var(--muted);font-size:12px">Nome do Grupo</label>
+            <input type="text" name="nome" class="form-control" placeholder="Ex: Frota Norte SP"
+                   style="background:var(--surface2);border-color:var(--border);color:var(--text)" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="color:var(--muted);font-size:12px">URL do PainelFrota</label>
+            <input type="text" name="url_frota" value="http://localhost:5004" class="form-control"
+                   style="background:var(--surface2);border-color:var(--border);color:var(--text)">
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:var(--border)">
+          <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-accent">Criar Grupo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Configurar Cobrança -->
+<div class="modal fade" id="modalConfig" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h5 class="modal-title"><i class="fas fa-gear" style="color:var(--accent);margin-right:8px"></i>Configurar Cobrança</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="formConfig">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" style="color:var(--muted);font-size:12px">Tipo de Cobrança</label>
+            <div class="d-flex gap-3">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="tipo" value="corrida" id="tipoCorrida"> Por Corrida
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="tipo" value="fixo_mensal" id="tipoFixo"> Fixo Mensal
+              </label>
+            </div>
+          </div>
+          <div class="mb-3" id="divCorrida">
+            <label class="form-label" style="color:var(--muted);font-size:12px">Valor por Corrida (R$)</label>
+            <input type="number" name="valor_por_corrida" id="inpCorrida" step="0.01" min="0"
+                   class="form-control" style="background:var(--surface2);border-color:var(--border);color:var(--text)">
+          </div>
+          <div class="mb-3" id="divFixo" style="display:none">
+            <label class="form-label" style="color:var(--muted);font-size:12px">Valor Mensal (R$)</label>
+            <input type="number" name="valor_mensal" id="inpFixo" step="0.01" min="0"
+                   class="form-control" style="background:var(--surface2);border-color:var(--border);color:var(--text)">
+            <div class="mt-2">
+              <label class="form-label" style="color:var(--muted);font-size:12px">Dia de Vencimento</label>
+              <input type="number" name="dia_vencimento" id="inpDia" min="1" max="31"
+                     class="form-control" style="background:var(--surface2);border-color:var(--border);color:var(--text)">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="color:var(--muted);font-size:12px">
+              % Plataforma: <span id="lblPct">40</span>% &nbsp;|&nbsp; % ADM: <span id="lblAdm">60</span>%
+            </label>
+            <input type="range" name="percentual_plataforma" id="sliderPct" min="0" max="100" value="40"
+                   class="form-range" oninput="atualizarSlider(this.value)">
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:var(--border)">
+          <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-accent">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function abrirConfig(gid, tipo, vcorrida, vmensal, dia, pct) {
+  document.getElementById('formConfig').action = `/super/cobranca/${gid}/configurar`;
+  document.getElementById(tipo === 'corrida' ? 'tipoCorrida' : 'tipoFixo').checked = true;
+  document.getElementById('inpCorrida').value = vcorrida;
+  document.getElementById('inpFixo').value = vmensal;
+  document.getElementById('inpDia').value = dia;
+  document.getElementById('sliderPct').value = pct;
+  atualizarSlider(pct);
+  toggleTipo(tipo);
+  new bootstrap.Modal(document.getElementById('modalConfig')).show();
+}
+function atualizarSlider(v) {
+  document.getElementById('lblPct').textContent = v;
+  document.getElementById('lblAdm').textContent = 100 - v;
+}
+function toggleTipo(t) {
+  document.getElementById('divCorrida').style.display = t === 'corrida' ? '' : 'none';
+  document.getElementById('divFixo').style.display    = t === 'fixo_mensal' ? '' : 'none';
+}
+document.querySelectorAll('input[name="tipo"]').forEach(r => r.addEventListener('change', e => toggleTipo(e.target.value)));
+</script>
+{% endblock %}

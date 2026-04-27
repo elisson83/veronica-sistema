@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Painel do Dono</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:'Inter',sans-serif;
+      background:#0a0f0a;
+      color:#e2e8f0;
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+    }
+    .login-card {
+      background:#111911;
+      border:1px solid rgba(255,255,255,.07);
+      border-radius:20px;
+      padding:48px 40px;
+      width:380px;
+      box-shadow:0 25px 60px rgba(0,0,0,.4);
+    }
+    .login-logo {
+      text-align:center;
+      margin-bottom:32px;
+    }
+    .logo-icon {
+      width:60px; height:60px;
+      background:linear-gradient(135deg,#10b981,#059669);
+      border-radius:18px;
+      display:inline-grid; place-items:center;
+      font-size:24px; color:#fff;
+      margin-bottom:16px;
+    }
+    .logo-title { font-size:22px; font-weight:700; }
+    .logo-title span { color:#10b981; }
+    .logo-sub { font-size:13px; color:#64748b; margin-top:4px; }
+    .form-label { font-size:12px; color:#64748b; font-weight:600; letter-spacing:.5px; text-transform:uppercase; margin-bottom:6px; display:block; }
+    .form-control {
+      width:100%; padding:11px 14px;
+      background:#1a261a; border:1px solid rgba(255,255,255,.08);
+      border-radius:10px; color:#e2e8f0; font-size:14px;
+      outline:none; transition:border-color .2s;
+      font-family:'Inter',sans-serif;
+    }
+    .form-control:focus { border-color:#10b981; }
+    .input-group { position:relative; margin-bottom:16px; }
+    .input-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#64748b; }
+    .input-group .form-control { padding-left:36px; }
+    .btn-login {
+      width:100%; padding:13px;
+      background:linear-gradient(135deg,#10b981,#059669);
+      border:none; border-radius:10px;
+      color:#fff; font-size:15px; font-weight:600;
+      cursor:pointer; transition:opacity .2s; margin-top:8px;
+      font-family:'Inter',sans-serif;
+    }
+    .btn-login:hover { opacity:.9; }
+    .flash-msg {
+      display:flex; align-items:center; gap:8px;
+      padding:10px 14px; border-radius:8px;
+      font-size:13px; margin-bottom:16px;
+      background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.25); color:#f87171;
+    }
+    .links { text-align:center; margin-top:20px; font-size:12px; color:#64748b; }
+    .links a { color:#10b981; text-decoration:none; }
+    .links a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon"><i class="fas fa-building"></i></div>
+      <div class="logo-title">Painel<span>Dono</span></div>
+      <div class="logo-sub">Acesso exclusivo do proprietário</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <div class="flash-msg"><i class="fas fa-exclamation-circle"></i> {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label">Usuário</label>
+        <div class="input-group">
+          <i class="fas fa-user input-icon"></i>
+          <input type="text" name="username" class="form-control" placeholder="dono" required autofocus>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Senha</label>
+        <div class="input-group">
+          <i class="fas fa-lock input-icon"></i>
+          <input type="password" name="senha" class="form-control" placeholder="••••••••" required>
+        </div>
+      </div>
+      <button type="submit" class="btn-login"><i class="fas fa-sign-in-alt"></i> Acessar Painel</button>
+    </form>
+
+    <div class="links">
+      <a href="{{ url_for('login') }}">Painel do Gestor</a> &nbsp;|&nbsp;
+      <a href="{{ url_for('super_login') }}">Super Admin</a>
+    </div>
+  </div>
+</body>
+</html>

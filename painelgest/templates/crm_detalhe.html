@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}CRM — {{ cliente.nome_cliente }}{% endblock %}
+
+{% block content %}
+{% set seg, cor = cliente.segmento %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{{ url_for('restaurante_crm') }}" style="color:var(--muted);text-decoration:none">
+    <i class="fas fa-arrow-left"></i>
+  </a>
+  <div>
+    <h2 style="font-size:22px;font-weight:700;margin:0">{{ cliente.nome_cliente or '—' }}</h2>
+    <span class="badge bg-{{ cor }} mt-1">{{ seg }}</span>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Dados do cliente -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header"><i class="fas fa-user me-2" style="color:var(--accent)"></i>Dados do Cliente</div>
+      <div class="card-body">
+        <div class="mb-2">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Telefone</div>
+          <div style="font-weight:600">{{ cliente.telefone or '—' }}</div>
+        </div>
+        <div class="mb-2">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Total de Pedidos</div>
+          <div style="font-size:24px;font-weight:700;color:var(--accent)">{{ cliente.total_pedidos }}</div>
+        </div>
+        <div class="mb-2">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Valor Total</div>
+          <div style="font-weight:700;font-size:18px">R$ {{ '%.2f'|format(cliente.valor_total or 0) }}</div>
+        </div>
+        <div class="mb-2">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Ticket Médio</div>
+          <div style="font-weight:600;color:#22c55e">R$ {{ '%.2f'|format(cliente.ticket_medio or 0) }}</div>
+        </div>
+        <div class="mb-2">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Último Pedido</div>
+          <div style="font-size:13px">{{ cliente.ultimo_pedido.strftime('%d/%m/%Y às %H:%M') if cliente.ultimo_pedido else '—' }}</div>
+        </div>
+        {% if cliente.frequencia_dias %}
+        <div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Frequência</div>
+          <div style="font-size:13px">a cada {{ cliente.frequencia_dias|int }} dias</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Preferências -->
+    {% if cliente.preferencias %}
+    <div class="card">
+      <div class="card-header"><i class="fas fa-heart me-2" style="color:#ef4444"></i>Preferências</div>
+      <div class="card-body">
+        {% for pref in cliente.preferencias %}
+        <span class="badge bg-secondary me-1 mb-1" style="font-size:12px">{{ pref }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Notas -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-sticky-note me-2" style="color:var(--accent)"></i>Notas</span>
+      </div>
+      <div class="card-body">
+        <!-- Adicionar nota -->
+        <form method="post" action="{{ url_for('restaurante_crm_nota', cid=cliente.id) }}" class="mb-4">
+          <div class="mb-2">
+            <textarea name="nota" class="form-control" rows="3"
+                      placeholder="Adicionar observação sobre este cliente..."
+                      style="background:var(--card);border-color:var(--border);color:var(--text)"></textarea>
+          </div>
+          <button type="submit" class="btn-accent" style="font-size:13px">
+            <i class="fas fa-plus"></i> Adicionar Nota
+          </button>
+        </form>
+
+        <!-- Histórico de notas -->
+        {% if cliente.notas %}
+        <div style="white-space:pre-wrap;font-size:13px;color:var(--text);
+                    background:rgba(255,255,255,.03);border:1px solid var(--border);
+                    border-radius:10px;padding:16px;max-height:400px;overflow-y:auto">{{ cliente.notas }}</div>
+        {% else %}
+        <div style="text-align:center;color:var(--muted);padding:32px">
+          <i class="fas fa-sticky-note" style="font-size:32px;opacity:.2;display:block;margin-bottom:12px"></i>
+          Nenhuma nota adicionada ainda.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

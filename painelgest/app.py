@@ -109,6 +109,7 @@ class Administrador(db.Model):
 
 class Cliente(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
+    codigo          = db.Column(db.String(4),   unique=True, nullable=True)
     nome            = db.Column(db.String(80),  nullable=False)
     login           = db.Column(db.String(80),  unique=True, nullable=False)
     senha           = db.Column(db.String(120), nullable=False)
@@ -125,6 +126,12 @@ class Cliente(db.Model):
         self.status = status; self.plano = plano
         self.telefone = telefone; self.email = email
         self.data_vencimento = data_vencimento
+        if not self.codigo:
+            import random, string as _s
+            while True:
+                c = random.choice(_s.ascii_uppercase) + str(random.randint(100, 999))
+                if not Cliente.query.filter_by(codigo=c).first():
+                    self.codigo = c; break
 
     @property
     def info_plano(self):
@@ -207,6 +214,7 @@ class Cobranca(db.Model):
 
 class Restaurante(db.Model):
     id                   = db.Column(db.Integer, primary_key=True)
+    codigo               = db.Column(db.String(4),   unique=True, nullable=True)
     nome                 = db.Column(db.String(80),  nullable=False)
     username             = db.Column(db.String(80),  unique=True, nullable=False)
     password             = db.Column(db.String(120), nullable=False)
@@ -223,13 +231,19 @@ class Restaurante(db.Model):
     instagram            = db.Column(db.String(100), nullable=True)
     facebook             = db.Column(db.String(100), nullable=True)
     whatsapp             = db.Column(db.String(30),  nullable=True)
-    token_frota          = db.Column(db.String(64),  nullable=True, unique=True)  # QR conexão com PainelFrota
-    frota_url            = db.Column(db.String(200), nullable=True)               # URL do PainelFrota conectado
+    token_frota          = db.Column(db.String(64),  nullable=True, unique=True)
+    frota_url            = db.Column(db.String(200), nullable=True)
 
     def __init__(self, nome, username, password, cliente_id=None):
         self.nome = nome; self.username = username
         self.password = generate_password_hash(password)
         self.cliente_id = cliente_id
+        if not self.codigo:
+            import random, string as _s
+            while True:
+                c = random.choice(_s.ascii_uppercase) + str(random.randint(100, 999))
+                if not Restaurante.query.filter_by(codigo=c).first():
+                    self.codigo = c; break
 
     @property
     def formas_pagamento(self):
@@ -407,11 +421,123 @@ class MotoboyParceiro(db.Model):
     id             = db.Column(db.Integer, primary_key=True)
     restaurante_id = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=False)
     nome           = db.Column(db.String(100), nullable=False)
-    telefone       = db.Column(db.String(20))   # formato 5511999999999 para wa.me
+    telefone       = db.Column(db.String(20))
     lat            = db.Column(db.Float)
     lng            = db.Column(db.Float)
     ativo          = db.Column(db.Boolean, default=True)
     criado_em      = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ── Grupos de Motoboys (visão Super Admin) ───────────────────────────────────
+
+class GrupoFrota(db.Model):
+    """Grupo de motoboys gerenciado por um Administrador — visível no Super Admin."""
+    id             = db.Column(db.Integer, primary_key=True)
+    admin_id       = db.Column(db.Integer, db.ForeignKey('administrador.id'), nullable=False)
+    nome           = db.Column(db.String(100), nullable=False)
+    url_frota      = db.Column(db.String(200), default='http://localhost:5004')
+    total_motoboys = db.Column(db.Integer, default=0)
+    corridas_hoje  = db.Column(db.Integer, default=0)
+    receita_total  = db.Column(db.Float,   default=0.0)
+    ativo          = db.Column(db.Boolean, default=True)
+    criado_em      = db.Column(db.DateTime, default=datetime.utcnow)
+    admin          = db.relationship('Administrador', backref='grupos_frota')
+
+
+class ConfigCobrancaGrupo(db.Model):
+    """Configuração de cobrança por grupo de motoboys."""
+    id                   = db.Column(db.Integer, primary_key=True)
+    grupo_id             = db.Column(db.Integer, db.ForeignKey('grupo_frota.id'), unique=True, nullable=False)
+    tipo                 = db.Column(db.String(20), default='corrida')  # corrida | fixo_mensal
+    valor_por_corrida    = db.Column(db.Float, default=0.60)
+    valor_mensal         = db.Column(db.Float, default=99.90)
+    dia_vencimento       = db.Column(db.Integer, default=10)
+    percentual_plataforma= db.Column(db.Float, default=40.0)
+    percentual_adm       = db.Column(db.Float, default=60.0)
+    ativo                = db.Column(db.Boolean, default=True)
+    grupo                = db.relationship('GrupoFrota', backref=db.backref('config_cobranca', uselist=False))
+
+
+class LancamentoCobranca(db.Model):
+    """Lançamento mensal de cobrança por grupo."""
+    id                 = db.Column(db.Integer, primary_key=True)
+    grupo_id           = db.Column(db.Integer, db.ForeignKey('grupo_frota.id'), nullable=False)
+    periodo            = db.Column(db.String(7))   # 'YYYY-MM'
+    corridas           = db.Column(db.Integer, default=0)
+    valor_total        = db.Column(db.Float, default=0.0)
+    valor_plataforma   = db.Column(db.Float, default=0.0)
+    valor_adm          = db.Column(db.Float, default=0.0)
+    status             = db.Column(db.String(20), default='pendente')  # pendente | pago
+    criado_em          = db.Column(db.DateTime, default=datetime.utcnow)
+    grupo              = db.relationship('GrupoFrota', backref='lancamentos')
+
+
+# ── Painel do Dono ────────────────────────────────────────────────────────────
+
+class DonoDaEmpresa(db.Model):
+    """Dono da empresa — acesso de alto nível com visão unificada."""
+    id        = db.Column(db.Integer, primary_key=True)
+    username  = db.Column(db.String(50), unique=True, nullable=False)
+    senha_hash= db.Column(db.String(200), nullable=False)
+    nome      = db.Column(db.String(100), nullable=False)
+    email     = db.Column(db.String(120))
+    ativo     = db.Column(db.Boolean, default=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, username, senha, nome='Dono', email=None):
+        self.username  = username
+        self.senha_hash= generate_password_hash(senha)
+        self.nome      = nome
+        self.email     = email
+
+    def check_senha(self, senha):
+        return check_password_hash(self.senha_hash, senha)
+
+
+class LogAcesso(db.Model):
+    """Registro de acessos ao sistema — visível no Painel do Dono."""
+    id          = db.Column(db.Integer, primary_key=True)
+    usuario     = db.Column(db.String(80))
+    tipo_usuario= db.Column(db.String(20))   # admin|restaurante|dono|superadmin
+    rota        = db.Column(db.String(200))
+    ip          = db.Column(db.String(50))
+    timestamp   = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ── CRM Básico ────────────────────────────────────────────────────────────────
+
+class CRMCliente(db.Model):
+    """Perfil CRM de um cliente final (cliente do restaurante)."""
+    id              = db.Column(db.Integer, primary_key=True)
+    restaurante_id  = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=False)
+    nome_cliente    = db.Column(db.String(100))
+    telefone        = db.Column(db.String(20))
+    total_pedidos   = db.Column(db.Integer, default=0)
+    valor_total     = db.Column(db.Float, default=0.0)
+    ticket_medio    = db.Column(db.Float, default=0.0)
+    ultimo_pedido   = db.Column(db.DateTime)
+    frequencia_dias = db.Column(db.Float)
+    preferencias_json= db.Column(db.Text)
+    notas           = db.Column(db.Text)
+    criado_em       = db.Column(db.DateTime, default=datetime.utcnow)
+    restaurante     = db.relationship('Restaurante', backref='clientes_crm')
+
+    @property
+    def segmento(self):
+        if self.total_pedidos >= 10 or (self.ticket_medio or 0) >= 80:
+            return ('VIP', 'warning')
+        if self.total_pedidos >= 5:
+            return ('Frequente', 'success')
+        if self.ultimo_pedido and (datetime.utcnow() - self.ultimo_pedido).days > 30:
+            return ('Inativo', 'secondary')
+        return ('Regular', 'info')
+
+    @property
+    def preferencias(self):
+        try:
+            return json.loads(self.preferencias_json or '[]')
+        except Exception:
+            return []
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -622,6 +748,25 @@ def requer_restaurante(f):
             return redirect(url_for('restaurante_login'))
         return f(*args, **kwargs)
     return decorated
+
+
+def requer_dono(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'dono' not in session:
+            return redirect(url_for('dono_login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def _registrar_acesso(usuario, tipo):
+    try:
+        log = LogAcesso(usuario=usuario, tipo_usuario=tipo,
+                        rota=request.path, ip=request.remote_addr)
+        db.session.add(log)
+        db.session.commit()
+    except Exception:
+        pass
 
 
 @app.context_processor
@@ -1493,6 +1638,537 @@ def super_bloquear_inadimplentes():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — SUPER ADMIN: GRUPOS DE MOTOBOYS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/super/grupos')
+@requer_super
+def super_grupos():
+    grupos = GrupoFrota.query.filter_by(ativo=True).order_by(GrupoFrota.criado_em.desc()).all()
+    # Tenta buscar dados ao vivo para cada grupo
+    import requests as _req
+    for g in grupos:
+        try:
+            r = _req.get(f"{g.url_frota.rstrip('/')}/api/stats", timeout=2)
+            if r.ok:
+                d = r.json()
+                g.total_motoboys = d.get('total_motoboys', g.total_motoboys)
+                g.corridas_hoje  = d.get('corridas_hoje',  g.corridas_hoje)
+                g.receita_total  = d.get('receita_total',  g.receita_total)
+                db.session.commit()
+        except Exception:
+            pass
+    gestores = Administrador.query.filter_by(status='ativo').order_by(Administrador.username).all()
+    return render_template('super_grupos.html', grupos=grupos, gestores=gestores)
+
+
+@app.route('/super/grupos/novo', methods=['POST'])
+@requer_super
+def super_novo_grupo():
+    admin_id  = int(request.form['admin_id'])
+    nome      = request.form.get('nome', '').strip()
+    url_frota = request.form.get('url_frota', 'http://localhost:5004').strip()
+    if not nome:
+        flash('Nome do grupo obrigatório.', 'danger')
+        return redirect(url_for('super_grupos'))
+    g = GrupoFrota(admin_id=admin_id, nome=nome, url_frota=url_frota)
+    db.session.add(g)
+    db.session.commit()
+    flash(f'Grupo "{nome}" criado!', 'success')
+    return redirect(url_for('super_grupos'))
+
+
+@app.route('/super/grupos/<int:gid>/excluir', methods=['POST'])
+@requer_super
+def super_excluir_grupo(gid):
+    g = GrupoFrota.query.get_or_404(gid)
+    g.ativo = False
+    db.session.commit()
+    flash('Grupo desativado.', 'warning')
+    return redirect(url_for('super_grupos'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — SUPER ADMIN: COBRANÇA POR GRUPO
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/super/cobranca')
+@requer_super
+def super_cobranca():
+    grupos = GrupoFrota.query.filter_by(ativo=True).all()
+    lancamentos = LancamentoCobranca.query.order_by(LancamentoCobranca.criado_em.desc()).limit(50).all()
+    return render_template('super_cobranca.html', grupos=grupos, lancamentos=lancamentos)
+
+
+@app.route('/super/cobranca/<int:gid>/configurar', methods=['POST'])
+@requer_super
+def super_configurar_cobranca(gid):
+    g = GrupoFrota.query.get_or_404(gid)
+    cfg = g.config_cobranca or ConfigCobrancaGrupo(grupo_id=gid)
+    cfg.tipo                  = request.form.get('tipo', 'corrida')
+    cfg.valor_por_corrida     = float(request.form.get('valor_por_corrida', 0.60) or 0.60)
+    cfg.valor_mensal          = float(request.form.get('valor_mensal', 99.90) or 99.90)
+    cfg.dia_vencimento        = int(request.form.get('dia_vencimento', 10) or 10)
+    cfg.percentual_plataforma = float(request.form.get('percentual_plataforma', 40) or 40)
+    cfg.percentual_adm        = 100.0 - cfg.percentual_plataforma
+    if not cfg.id:
+        db.session.add(cfg)
+    db.session.commit()
+    flash('Configuração de cobrança salva!', 'success')
+    return redirect(url_for('super_cobranca'))
+
+
+@app.route('/super/cobranca/<int:gid>/lancar', methods=['POST'])
+@requer_super
+def super_lancar_cobranca(gid):
+    g = GrupoFrota.query.get_or_404(gid)
+    cfg = g.config_cobranca
+    if not cfg:
+        flash('Configure a cobrança antes de lançar.', 'danger')
+        return redirect(url_for('super_cobranca'))
+    periodo = datetime.utcnow().strftime('%Y-%m')
+    existente = LancamentoCobranca.query.filter_by(grupo_id=gid, periodo=periodo).first()
+    if existente:
+        flash('Já existe lançamento para este grupo no período atual.', 'warning')
+        return redirect(url_for('super_cobranca'))
+    corridas = g.corridas_hoje  # simplificado; em produção usaria acumulado do mês
+    if cfg.tipo == 'corrida':
+        valor_total = corridas * cfg.valor_por_corrida
+    else:
+        valor_total = cfg.valor_mensal
+    valor_plataforma = valor_total * (cfg.percentual_plataforma / 100)
+    valor_adm        = valor_total * (cfg.percentual_adm / 100)
+    lanc = LancamentoCobranca(
+        grupo_id=gid, periodo=periodo, corridas=corridas,
+        valor_total=valor_total, valor_plataforma=valor_plataforma, valor_adm=valor_adm
+    )
+    db.session.add(lanc)
+    db.session.commit()
+    flash(f'Lançamento de R$ {valor_total:.2f} criado para {g.nome}!', 'success')
+    return redirect(url_for('super_cobranca'))
+
+
+@app.route('/super/cobranca/<int:lid>/pagar', methods=['POST'])
+@requer_super
+def super_pagar_lancamento(lid):
+    lanc = LancamentoCobranca.query.get_or_404(lid)
+    lanc.status = 'pago'
+    db.session.commit()
+    flash('Lançamento marcado como pago!', 'success')
+    return redirect(url_for('super_cobranca'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — SUPER ADMIN: RELATÓRIO FINANCEIRO
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _gerar_relatorio_pdf_super(mes, ano, dados):
+    """Gera PDF do relatório financeiro do Super Admin."""
+    try:
+        from fpdf import FPDF
+    except ImportError:
+        return None
+    pdf = FPDF(format='A4')
+    pdf.add_page()
+    pdf.set_margins(20, 20, 20)
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.set_fill_color(30, 30, 50)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(0, 14, 'RELATÓRIO FINANCEIRO — SUPER ADMIN', fill=True, align='C', new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(4)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Helvetica', '', 11)
+    pdf.cell(0, 7, f'Período: {mes:02d}/{ano}', new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 7, f'Emitido em: {datetime.now().strftime("%d/%m/%Y às %H:%M")}', new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(6)
+    # Totais
+    pdf.set_font('Helvetica', 'B', 13)
+    pdf.cell(0, 9, 'RESUMO GERAL', new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 11)
+    for label, val in dados.get('resumo', []):
+        pdf.cell(0, 7, f'{label}: R$ {val:.2f}', new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(6)
+    # Grupos
+    if dados.get('lancamentos'):
+        pdf.set_font('Helvetica', 'B', 13)
+        pdf.cell(0, 9, 'LANÇAMENTOS POR GRUPO', new_x='LMARGIN', new_y='NEXT')
+        pdf.set_font('Helvetica', 'B', 9)
+        pdf.set_fill_color(40, 40, 60); pdf.set_text_color(255, 255, 255)
+        for col, w in [('Grupo', 60), ('Período', 25), ('Corridas', 25), ('Total', 35), ('Plataforma', 35), ('Status', 0)]:
+            pdf.cell(w, 7, col, border=1, fill=True)
+        pdf.ln()
+        pdf.set_font('Helvetica', '', 9); pdf.set_text_color(0, 0, 0)
+        for i, lanc in enumerate(dados['lancamentos']):
+            fill = i % 2 == 0
+            pdf.set_fill_color(245, 245, 255) if fill else pdf.set_fill_color(255, 255, 255)
+            pdf.cell(60, 6, str(lanc.get('grupo',''))[:28], border=1, fill=fill)
+            pdf.cell(25, 6, str(lanc.get('periodo','')), border=1, fill=fill)
+            pdf.cell(25, 6, str(lanc.get('corridas',0)), border=1, fill=fill)
+            pdf.cell(35, 6, f"R$ {lanc.get('total',0):.2f}", border=1, fill=fill)
+            pdf.cell(35, 6, f"R$ {lanc.get('plataforma',0):.2f}", border=1, fill=fill)
+            pdf.cell(0,  6, str(lanc.get('status','')), border=1, fill=fill, new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(10)
+    pdf.set_font('Helvetica', 'I', 8); pdf.set_text_color(120, 120, 120)
+    pdf.cell(0, 5, 'Documento gerado automaticamente pelo sistema Verônica IA.', align='C', new_x='LMARGIN', new_y='NEXT')
+    return bytes(pdf.output())
+
+
+@app.route('/super/relatorio')
+@requer_super
+def super_relatorio():
+    mes = int(request.args.get('mes', datetime.utcnow().month))
+    ano = int(request.args.get('ano', datetime.utcnow().year))
+    gestores_ativos = Administrador.query.filter_by(status='ativo').all()
+    mrr_total = sum(g.mrr for g in gestores_ativos)
+    lancamentos_db = LancamentoCobranca.query.order_by(LancamentoCobranca.criado_em.desc()).all()
+    total_cobrancas_pago    = sum(l.valor_plataforma for l in lancamentos_db if l.status == 'pago')
+    total_cobrancas_pendente= sum(l.valor_plataforma for l in lancamentos_db if l.status == 'pendente')
+    cobrancas_mp = Cobranca.query.filter_by(status='pago').all()
+    total_mp = sum(c.valor for c in cobrancas_mp)
+    resumo = [
+        ('MRR (Gestores Ativos)', mrr_total),
+        ('Cobrança Grupos — Pago', total_cobrancas_pago),
+        ('Cobrança Grupos — Pendente', total_cobrancas_pendente),
+        ('Mercado Pago — Recebido', total_mp),
+        ('Total Geral', mrr_total + total_cobrancas_pago + total_mp),
+    ]
+    lancamentos_lista = [{
+        'grupo': l.grupo.nome if l.grupo else '—',
+        'periodo': l.periodo,
+        'corridas': l.corridas,
+        'total': l.valor_total,
+        'plataforma': l.valor_plataforma,
+        'status': l.status,
+    } for l in lancamentos_db]
+    return render_template('super_relatorio.html',
+        mes=mes, ano=ano, resumo=resumo,
+        lancamentos=lancamentos_db,
+        total_lancamentos_pago=total_cobrancas_pago,
+        total_lancamentos_pendente=total_cobrancas_pendente,
+        mrr_total=mrr_total, total_mp=total_mp,
+    )
+
+
+@app.route('/super/relatorio/pdf')
+@requer_super
+def super_relatorio_pdf():
+    mes = int(request.args.get('mes', datetime.utcnow().month))
+    ano = int(request.args.get('ano', datetime.utcnow().year))
+    lancamentos_db = LancamentoCobranca.query.order_by(LancamentoCobranca.criado_em.desc()).all()
+    gestores_ativos = Administrador.query.filter_by(status='ativo').all()
+    mrr_total = sum(g.mrr for g in gestores_ativos)
+    total_pago   = sum(l.valor_plataforma for l in lancamentos_db if l.status == 'pago')
+    total_mp     = sum(c.valor for c in Cobranca.query.filter_by(status='pago').all())
+    dados = {
+        'resumo': [
+            ('MRR', mrr_total),
+            ('Grupos Pago', total_pago),
+            ('Mercado Pago', total_mp),
+            ('Total Geral', mrr_total + total_pago + total_mp),
+        ],
+        'lancamentos': [{
+            'grupo': l.grupo.nome if l.grupo else '—',
+            'periodo': l.periodo, 'corridas': l.corridas,
+            'total': l.valor_total, 'plataforma': l.valor_plataforma, 'status': l.status,
+        } for l in lancamentos_db],
+    }
+    pdf_bytes = _gerar_relatorio_pdf_super(mes, ano, dados)
+    if not pdf_bytes:
+        flash('fpdf2 não instalado. Execute: pip install fpdf2', 'danger')
+        return redirect(url_for('super_relatorio'))
+    from flask import send_file
+    return send_file(io.BytesIO(pdf_bytes),
+                     download_name=f'relatorio_{ano}_{mes:02d}.pdf',
+                     as_attachment=True, mimetype='application/pdf')
+
+
+@app.route('/super/relatorio/email', methods=['POST'])
+@requer_super
+def super_relatorio_email():
+    email_dest = request.form.get('email_contador', '').strip()
+    if not email_dest:
+        flash('Informe o email do contador.', 'danger')
+        return redirect(url_for('super_relatorio'))
+    mes = int(request.form.get('mes', datetime.utcnow().month))
+    ano = int(request.form.get('ano', datetime.utcnow().year))
+    lancamentos_db = LancamentoCobranca.query.order_by(LancamentoCobranca.criado_em.desc()).all()
+    gestores_ativos = Administrador.query.filter_by(status='ativo').all()
+    mrr_total = sum(g.mrr for g in gestores_ativos)
+    total_pago = sum(l.valor_plataforma for l in lancamentos_db if l.status == 'pago')
+    total_mp   = sum(c.valor for c in Cobranca.query.filter_by(status='pago').all())
+    dados = {
+        'resumo': [('MRR', mrr_total), ('Grupos', total_pago), ('MP', total_mp)],
+        'lancamentos': [{'grupo': l.grupo.nome if l.grupo else '—', 'periodo': l.periodo,
+                         'corridas': l.corridas, 'total': l.valor_total,
+                         'plataforma': l.valor_plataforma, 'status': l.status}
+                        for l in lancamentos_db],
+    }
+    pdf_bytes = _gerar_relatorio_pdf_super(mes, ano, dados)
+    corpo = (f'Relatório financeiro referente a {mes:02d}/{ano}.\n'
+             f'MRR: R$ {mrr_total:.2f} | Grupos: R$ {total_pago:.2f} | Total: R$ {mrr_total+total_pago+total_mp:.2f}\n\n'
+             f'Gerado por Verônica IA — Sistema de Gestão.')
+    ok, erro = enviar_email_comprovante(email_dest, f'Relatório Financeiro {mes:02d}/{ano}', corpo,
+                                        pdf_bytes, f'relatorio_{ano}_{mes:02d}.pdf')
+    if ok:
+        flash(f'Relatório enviado para {email_dest}!', 'success')
+    else:
+        flash(f'Erro ao enviar: {erro}', 'danger')
+    return redirect(url_for('super_relatorio'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — PAINEL DO DONO
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/dono/login', methods=['GET', 'POST'])
+def dono_login():
+    if 'dono' in session:
+        return redirect(url_for('dono_dashboard'))
+    if request.method == 'POST':
+        username = request.form['username']
+        senha    = request.form['senha']
+        dono = DonoDaEmpresa.query.filter_by(username=username, ativo=True).first()
+        if dono and dono.check_senha(senha):
+            session['dono'] = username
+            _registrar_acesso(username, 'dono')
+            return redirect(url_for('dono_dashboard'))
+        flash('Usuário ou senha inválidos.', 'danger')
+    return render_template('dono_login.html')
+
+
+@app.route('/dono/logout')
+def dono_logout():
+    session.pop('dono', None)
+    return redirect(url_for('dono_login'))
+
+
+@app.route('/dono/dashboard')
+@requer_dono
+def dono_dashboard():
+    hoje = date.today()
+    _registrar_acesso(session['dono'], 'dono')
+    # Pedidos do dia
+    pedidos_hoje = PedidoKanban.query.filter(
+        db.func.date(PedidoKanban.criado_em) == hoje
+    ).all()
+    vendas_hoje = sum(p.total for p in pedidos_hoje)
+    pedidos_em_andamento = [p for p in pedidos_hoje if p.coluna not in ('entregue', 'cancelado')]
+    # Funcionários
+    total_admins = Administrador.query.filter_by(status='ativo').count()
+    total_subs   = SubAdministrador.query.filter_by(status='ativo').count()
+    total_restaurantes = Restaurante.query.count()
+    # Motoboys via API
+    motoboys_online = 0
+    import requests as _req
+    try:
+        r = _req.get('http://localhost:5003/api/motoboys_disponiveis', timeout=2)
+        if r.ok:
+            motoboys_online = len(r.json())
+    except Exception:
+        pass
+    # Últimos acessos
+    acessos_recentes = LogAcesso.query.order_by(LogAcesso.timestamp.desc()).limit(10).all()
+    return render_template('dono_dashboard.html',
+        pedidos_hoje=len(pedidos_hoje), vendas_hoje=vendas_hoje,
+        pedidos_em_andamento=pedidos_em_andamento,
+        total_admins=total_admins, total_subs=total_subs,
+        total_restaurantes=total_restaurantes, motoboys_online=motoboys_online,
+        acessos_recentes=acessos_recentes, hoje=hoje,
+    )
+
+
+@app.route('/dono/vendas')
+@requer_dono
+def dono_vendas():
+    page  = int(request.args.get('page', 1))
+    per   = 30
+    query = PedidoKanban.query.order_by(PedidoKanban.criado_em.desc())
+    total = query.count()
+    pedidos = query.offset((page - 1) * per).limit(per).all()
+    restaurantes = Restaurante.query.all()
+    rest_map = {r.id: r.nome for r in restaurantes}
+    return render_template('dono_vendas.html', pedidos=pedidos, rest_map=rest_map,
+                           page=page, total=total, per=per)
+
+
+@app.route('/dono/funcionarios')
+@requer_dono
+def dono_funcionarios():
+    admins = Administrador.query.order_by(Administrador.status, Administrador.username).all()
+    subs   = SubAdministrador.query.order_by(SubAdministrador.status, SubAdministrador.username).all()
+    return render_template('dono_funcionarios.html', admins=admins, subs=subs)
+
+
+@app.route('/dono/motoboys')
+@requer_dono
+def dono_motoboys():
+    motoboys_disp = []
+    import requests as _req
+    try:
+        r = _req.get('http://localhost:5003/api/motoboys', timeout=3)
+        if r.ok:
+            motoboys_disp = r.json()
+    except Exception:
+        pass
+    return render_template('dono_motoboys.html', motoboys=motoboys_disp)
+
+
+@app.route('/dono/pedidos')
+@requer_dono
+def dono_pedidos():
+    em_andamento = PedidoKanban.query.filter(
+        PedidoKanban.coluna.notin_(['entregue', 'cancelado'])
+    ).order_by(PedidoKanban.criado_em.desc()).all()
+    restaurantes = Restaurante.query.all()
+    rest_map = {r.id: r.nome for r in restaurantes}
+    return render_template('dono_pedidos.html', pedidos=em_andamento, rest_map=rest_map)
+
+
+@app.route('/dono/acessos')
+@requer_dono
+def dono_acessos():
+    tipo_filtro = request.args.get('tipo', '')
+    query = LogAcesso.query.order_by(LogAcesso.timestamp.desc())
+    if tipo_filtro:
+        query = query.filter_by(tipo_usuario=tipo_filtro)
+    acessos = query.limit(200).all()
+    return render_template('dono_acessos.html', acessos=acessos, tipo_filtro=tipo_filtro)
+
+
+@app.route('/dono/relatorio')
+@requer_dono
+def dono_relatorio():
+    hoje = date.today()
+    # Últimos 7 dias de vendas
+    dados_dias = []
+    for i in range(6, -1, -1):
+        dia = hoje - timedelta(days=i)
+        pedidos_dia = PedidoKanban.query.filter(
+            db.func.date(PedidoKanban.criado_em) == dia
+        ).all()
+        total_dia = sum(p.total for p in pedidos_dia)
+        dados_dias.append({'dia': dia.strftime('%d/%m'), 'total': round(total_dia, 2), 'pedidos': len(pedidos_dia)})
+    # Totais do mês
+    inicio_mes = hoje.replace(day=1)
+    pedidos_mes = PedidoKanban.query.filter(
+        PedidoKanban.criado_em >= datetime.combine(inicio_mes, datetime.min.time())
+    ).all()
+    vendas_mes = sum(p.total for p in pedidos_mes)
+    return render_template('dono_relatorio.html', dados_dias=dados_dias,
+                           vendas_mes=vendas_mes, pedidos_mes=len(pedidos_mes))
+
+
+@app.route('/dono/resumo_dia')
+@requer_dono
+def dono_resumo_dia():
+    hoje = date.today()
+    pedidos_hoje = PedidoKanban.query.filter(
+        db.func.date(PedidoKanban.criado_em) == hoje
+    ).all()
+    import requests as _req
+    motoboys_online = 0
+    try:
+        r = _req.get('http://localhost:5003/api/motoboys_disponiveis', timeout=2)
+        if r.ok: motoboys_online = len(r.json())
+    except Exception: pass
+    return jsonify({
+        'pedidos_hoje': len(pedidos_hoje),
+        'vendas_hoje': round(sum(p.total for p in pedidos_hoje), 2),
+        'em_andamento': sum(1 for p in pedidos_hoje if p.coluna not in ('entregue','cancelado')),
+        'motoboys_online': motoboys_online,
+    })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — CRM BÁSICO (módulo restaurante)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/restaurante/crm')
+@requer_restaurante
+def restaurante_crm():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    clientes_crm = CRMCliente.query.filter_by(restaurante_id=rest.id).order_by(
+        CRMCliente.total_pedidos.desc()
+    ).all()
+    return render_template('crm_lista.html', clientes_crm=clientes_crm, restaurante=rest)
+
+
+@app.route('/restaurante/crm/novo', methods=['GET', 'POST'])
+@requer_restaurante
+def restaurante_crm_novo():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if request.method == 'POST':
+        c = CRMCliente(
+            restaurante_id=rest.id,
+            nome_cliente=request.form.get('nome_cliente', '').strip(),
+            telefone=request.form.get('telefone', '').strip(),
+            notas=request.form.get('notas', '').strip(),
+        )
+        db.session.add(c)
+        db.session.commit()
+        flash('Cliente CRM cadastrado!', 'success')
+        return redirect(url_for('restaurante_crm'))
+    return render_template('crm_novo.html', restaurante=rest)
+
+
+@app.route('/restaurante/crm/<int:cid>')
+@requer_restaurante
+def restaurante_crm_detalhe(cid):
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    c = CRMCliente.query.filter_by(id=cid, restaurante_id=rest.id).first_or_404()
+    return render_template('crm_detalhe.html', cliente=c, restaurante=rest)
+
+
+@app.route('/restaurante/crm/<int:cid>/nota', methods=['POST'])
+@requer_restaurante
+def restaurante_crm_nota(cid):
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    c = CRMCliente.query.filter_by(id=cid, restaurante_id=rest.id).first_or_404()
+    nova_nota = request.form.get('nota', '').strip()
+    if nova_nota:
+        ts = datetime.now().strftime('%d/%m/%Y %H:%M')
+        c.notas = f"[{ts}] {nova_nota}\n{c.notas or ''}"
+        db.session.commit()
+        flash('Nota adicionada!', 'success')
+    return redirect(url_for('restaurante_crm_detalhe', cid=cid))
+
+
+@app.route('/restaurante/crm/importar', methods=['POST'])
+@requer_restaurante
+def restaurante_crm_importar():
+    """Importa clientes únicos a partir dos PedidoKanban do restaurante."""
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    pedidos = PedidoKanban.query.filter_by(restaurante_id=rest.id).all()
+    from collections import defaultdict
+    grupos = defaultdict(list)
+    for p in pedidos:
+        nome = (p.cliente_nome or '').strip()
+        if nome:
+            grupos[nome].append(p)
+    criados = 0
+    for nome_cliente, lista_pedidos in grupos.items():
+        existente = CRMCliente.query.filter_by(restaurante_id=rest.id, nome_cliente=nome_cliente).first()
+        if existente:
+            existente.total_pedidos = len(lista_pedidos)
+            existente.valor_total   = sum(p.total for p in lista_pedidos)
+            existente.ticket_medio  = existente.valor_total / len(lista_pedidos)
+            existente.ultimo_pedido = max(p.criado_em for p in lista_pedidos)
+        else:
+            valor_total = sum(p.total for p in lista_pedidos)
+            c = CRMCliente(
+                restaurante_id=rest.id, nome_cliente=nome_cliente,
+                total_pedidos=len(lista_pedidos), valor_total=valor_total,
+                ticket_medio=valor_total / len(lista_pedidos),
+                ultimo_pedido=max(p.criado_em for p in lista_pedidos),
+            )
+            db.session.add(c)
+            criados += 1
+    db.session.commit()
+    flash(f'{criados} cliente(s) importado(s) dos pedidos!', 'success')
+    return redirect(url_for('restaurante_crm'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ROTAS — SUB-ADMINISTRADORES
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -2076,12 +2752,41 @@ def migrate_db():
     add_col('post_agendado', 'erro',       'TEXT')
     add_col('post_agendado', 'imagem_path','VARCHAR(500)')
 
+    # Código único (4 chars) para Cliente e Restaurante
+    add_col('cliente',     'codigo', 'VARCHAR(4)')
+    add_col('restaurante', 'codigo', 'VARCHAR(4)')
+
     conn.commit()
     conn.close()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # INICIALIZAÇÃO
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# V2.0 — MÓDULOS FUTUROS (estrutura preparada, não implementado)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# --- ESTOQUE ---
+# Modelo: ItemEstoque(id, restaurante_id, nome, quantidade, minimo, unidade)
+# Rota: /restaurante/estoque → CRUD; deduzir ao fechar PedidoKanban
+#
+# --- WHATSAPP AUTOMÁTICO ---
+# Integração: Evolution API ou Baileys (Node.js sidecar)
+# Webhook: /api/whatsapp/webhook → processar mensagens recebidas
+# Envio: notificar cliente ao mudar status do pedido
+#
+# --- PAINEL CONTADOR COMPLETO ---
+# Modelo: Contador(id, admin_id, username, senha_hash, cnpj_escritorio)
+# Rotas: /contador/* → read-only a relatórios e notas fiscais
+# Export: DRE simplificado em PDF por período
+#
+# --- PAINEL DONO MULTI-EMPRESA ---
+# Modelo: Empresa(id, nome, cnpj, dono_id) + EmpresaAdmin(empresa_id, admin_id)
+# Rota: /dono/empresas → alternar entre empresas
+# Isolamento: session['empresa_ativa'] filtra todas as queries
+#
 # ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
@@ -2098,6 +2803,11 @@ if __name__ == '__main__':
             db.session.add(SuperAdmin('superadmin', 'super@2026'))
             db.session.commit()
             print("Super Admin criado → superadmin / super@2026")
+
+        if not DonoDaEmpresa.query.filter_by(username='dono').first():
+            db.session.add(DonoDaEmpresa('dono', 'dono123', nome='Dono da Empresa'))
+            db.session.commit()
+            print("Dono criado → dono / dono123")
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(processar_posts_agendados, 'interval', minutes=5, id='posts_scheduler')

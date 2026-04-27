@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}CRM — {{ restaurante.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:700;margin:0">CRM Clientes</h2>
+    <p style="color:var(--muted);font-size:13px;margin:4px 0 0">{{ restaurante.nome }} — {{ clientes_crm|length }} clientes</p>
+  </div>
+  <div style="display:flex;gap:8px">
+    <form method="post" action="{{ url_for('restaurante_crm_importar') }}">
+      <button class="btn-accent" style="background:rgba(99,102,241,.7)">
+        <i class="fas fa-file-import"></i> Importar dos Pedidos
+      </button>
+    </form>
+    <a href="{{ url_for('restaurante_crm_novo') }}" class="btn-accent">
+      <i class="fas fa-plus"></i> Novo Cliente
+    </a>
+  </div>
+</div>
+
+<!-- Segmentos rápidos -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+  {% set vip = clientes_crm|selectattr('segmento.0','eq','VIP')|list %}
+  {% set freq = clientes_crm|selectattr('segmento.0','eq','Frequente')|list %}
+  {% set inativo = clientes_crm|selectattr('segmento.0','eq','Inativo')|list %}
+  <div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.2);padding:8px 16px;border-radius:10px;font-size:13px">
+    <i class="fas fa-crown" style="color:#f59e0b;margin-right:6px"></i> VIP: <strong>{{ vip|length }}</strong>
+  </div>
+  <div style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.2);padding:8px 16px;border-radius:10px;font-size:13px">
+    <i class="fas fa-star" style="color:#22c55e;margin-right:6px"></i> Frequentes: <strong>{{ freq|length }}</strong>
+  </div>
+  <div style="background:rgba(100,116,139,.12);border:1px solid rgba(100,116,139,.2);padding:8px 16px;border-radius:10px;font-size:13px">
+    <i class="fas fa-moon" style="color:#64748b;margin-right:6px"></i> Inativos: <strong>{{ inativo|length }}</strong>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if clientes_crm %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="color:var(--text)">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>Pedidos</th>
+            <th>Ticket Médio</th>
+            <th>Último Pedido</th>
+            <th>Segmento</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in clientes_crm %}
+          <tr>
+            <td style="font-weight:600">{{ c.nome_cliente or '—' }}</td>
+            <td style="color:var(--muted);font-size:12px">{{ c.telefone or '—' }}</td>
+            <td>
+              <span style="font-weight:700;font-size:16px;color:var(--accent)">{{ c.total_pedidos }}</span>
+            </td>
+            <td style="font-weight:600">R$ {{ '%.2f'|format(c.ticket_medio or 0) }}</td>
+            <td style="font-size:12px;color:var(--muted)">
+              {{ c.ultimo_pedido.strftime('%d/%m/%Y') if c.ultimo_pedido else '—' }}
+            </td>
+            <td>
+              {% set seg, cor = c.segmento %}
+              <span class="badge bg-{{ cor }}">{{ seg }}</span>
+            </td>
+            <td>
+              <a href="{{ url_for('restaurante_crm_detalhe', cid=c.id) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-eye"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5" style="color:var(--muted)">
+      <i class="fas fa-users" style="font-size:40px;margin-bottom:16px;display:block;opacity:.3"></i>
+      <p>Nenhum cliente no CRM ainda.</p>
+      <p><small>Clique em "Importar dos Pedidos" para popular automaticamente.</small></p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

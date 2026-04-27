@@ -1,0 +1,142 @@
+{% extends 'super_base.html' %}
+{% block title %}Relatório Financeiro — Super Admin{% endblock %}
+{% block topbar_title %}Relatório Financeiro{% endblock %}
+{% block topbar_sub %}Visão consolidada de receitas e repasses{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('super_relatorio_pdf', mes=mes, ano=ano) }}" class="btn-ghost">
+    <i class="fas fa-file-pdf"></i> Exportar PDF
+  </a>
+{% endblock %}
+
+{% block content %}
+<!-- Filtro de período -->
+<div class="pg-card" style="margin-bottom:20px">
+  <div class="pg-card-body" style="padding:16px 20px">
+    <form method="get" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <label style="color:var(--muted);font-size:13px;margin:0">Período:</label>
+      <select name="mes" class="form-select" style="width:auto;background:var(--surface2);border-color:var(--border);color:var(--text)">
+        {% for m in range(1,13) %}
+        <option value="{{ m }}" {% if m == mes %}selected{% endif %}>{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m-1] }}</option>
+        {% endfor %}
+      </select>
+      <select name="ano" class="form-select" style="width:auto;background:var(--surface2);border-color:var(--border);color:var(--text)">
+        {% for a in [2025, 2026, 2027] %}
+        <option value="{{ a }}" {% if a == ano %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn-accent" style="padding:8px 16px">Filtrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Cards principais -->
+<div class="stat-grid" style="margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon si-amber"><i class="fas fa-chart-line"></i></div>
+    <div>
+      <div class="stat-value">R$ {{ '%.2f'|format(mrr_total) }}</div>
+      <div class="stat-label">MRR (Gestores Ativos)</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-green"><i class="fas fa-check-circle"></i></div>
+    <div>
+      <div class="stat-value">R$ {{ '%.2f'|format(total_lancamentos_pago) }}</div>
+      <div class="stat-label">Grupos — Pago</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-red"><i class="fas fa-clock"></i></div>
+    <div>
+      <div class="stat-value">R$ {{ '%.2f'|format(total_lancamentos_pendente) }}</div>
+      <div class="stat-label">Grupos — Pendente</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-blue"><i class="fas fa-credit-card"></i></div>
+    <div>
+      <div class="stat-value">R$ {{ '%.2f'|format(total_mp) }}</div>
+      <div class="stat-label">Mercado Pago</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Resumo financeiro -->
+  <div class="col-lg-4">
+    <div class="pg-card h-100">
+      <div class="pg-card-header">
+        <div class="pg-card-title"><i class="fas fa-calculator" style="color:var(--accent);margin-right:8px"></i>Resumo</div>
+      </div>
+      <div class="pg-card-body">
+        {% for label, val in resumo %}
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--muted);font-size:13px">{{ label }}</span>
+          <span style="font-weight:600{% if loop.last %};color:var(--accent);font-size:16px{% endif %}">R$ {{ '%.2f'|format(val) }}</span>
+        </div>
+        {% endfor %}
+
+        <!-- Enviar ao contador -->
+        <div style="margin-top:20px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Enviar relatório ao contador:</div>
+          <form method="post" action="{{ url_for('super_relatorio_email') }}" style="display:flex;gap:8px">
+            <input type="hidden" name="mes" value="{{ mes }}">
+            <input type="hidden" name="ano" value="{{ ano }}">
+            <input type="email" name="email_contador" placeholder="email@contador.com.br"
+                   class="form-control" style="flex:1;background:var(--surface2);border-color:var(--border);color:var(--text);font-size:12px">
+            <button type="submit" class="btn-accent" style="white-space:nowrap;padding:8px 12px;font-size:12px">
+              <i class="fas fa-envelope"></i> Enviar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lançamentos -->
+  <div class="col-lg-8">
+    <div class="pg-card">
+      <div class="pg-card-header">
+        <div class="pg-card-title"><i class="fas fa-list" style="color:var(--accent);margin-right:8px"></i>Lançamentos por Grupo</div>
+      </div>
+      <div class="pg-card-body p-0">
+        {% if lancamentos %}
+        <table class="pg-table">
+          <thead>
+            <tr>
+              <th>Grupo</th>
+              <th>Período</th>
+              <th>Corridas</th>
+              <th>Total</th>
+              <th>Plataforma</th>
+              <th>ADM</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in lancamentos %}
+            <tr>
+              <td style="font-weight:500">{{ l.grupo.nome if l.grupo else '—' }}</td>
+              <td style="font-family:monospace;font-size:12px">{{ l.periodo }}</td>
+              <td>{{ l.corridas }}</td>
+              <td>R$ {{ '%.2f'|format(l.valor_total) }}</td>
+              <td style="color:#f59e0b;font-weight:600">R$ {{ '%.2f'|format(l.valor_plataforma) }}</td>
+              <td style="color:#22c55e">R$ {{ '%.2f'|format(l.valor_adm) }}</td>
+              <td>
+                <span class="badge-status {{ 'bs-success' if l.status == 'pago' else 'bs-warning' }}">{{ l.status|capitalize }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div style="text-align:center;padding:40px;color:var(--muted)">
+          <i class="fas fa-receipt" style="font-size:32px;margin-bottom:12px;display:block;opacity:.3"></i>
+          Nenhum lançamento no período.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

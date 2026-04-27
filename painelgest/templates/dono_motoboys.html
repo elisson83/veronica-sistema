@@ -1,0 +1,63 @@
+{% extends 'dono_base.html' %}
+{% block title %}Motoboys Online — Painel do Dono{% endblock %}
+{% block topbar_title %}Motoboys Online{% endblock %}
+{% block topbar_sub %}Dados em tempo real via AppMotoboy{% endblock %}
+
+{% block content %}
+{% if motoboys %}
+<div class="kpi-grid" style="margin-bottom:24px">
+  <div class="kpi-card">
+    <div class="kpi-icon ki-green"><i class="fas fa-motorcycle"></i></div>
+    <div>
+      <div class="kpi-value">{{ motoboys|length }}</div>
+      <div class="kpi-label">Motoboys Ativos</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-amber"><i class="fas fa-circle-dot"></i></div>
+    <div>
+      <div class="kpi-value">{{ motoboys|selectattr('disponivel')|list|length }}</div>
+      <div class="kpi-label">Disponíveis</div>
+    </div>
+  </div>
+</div>
+
+<div class="dono-card">
+  <div class="dono-card-header">
+    <div class="dono-card-title"><i class="fas fa-motorcycle" style="color:var(--accent);margin-right:8px"></i>Lista de Motoboys</div>
+  </div>
+  <div class="dono-card-body p-0">
+    <table class="dono-table">
+      <thead>
+        <tr><th>Nome</th><th>Usuário</th><th>Disponível</th><th>Saldo Hoje</th><th>GPS</th></tr>
+      </thead>
+      <tbody>
+        {% for m in motoboys %}
+        <tr>
+          <td style="font-weight:600">{{ m.nome }}</td>
+          <td style="color:var(--muted);font-size:12px">{{ m.username }}</td>
+          <td>
+            <span class="badge-d {{ 'bd-green' if m.disponivel else 'bd-muted' }}">
+              {{ 'Disponível' if m.disponivel else 'Ocupado' }}
+            </span>
+          </td>
+          <td style="font-weight:600;color:#10b981">R$ {{ '%.2f'|format(m.saldo_dia or 0) }}</td>
+          <td style="font-size:11px;color:var(--muted)">
+            {% if m.lat_atual and m.lng_atual %}
+            <i class="fas fa-location-dot" style="color:#10b981"></i> {{ '%.4f'|format(m.lat_atual) }}, {{ '%.4f'|format(m.lng_atual) }}
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div style="text-align:center;padding:80px;color:var(--muted)">
+  <i class="fas fa-motorcycle" style="font-size:48px;margin-bottom:20px;display:block;opacity:.2"></i>
+  <div style="font-size:18px;font-weight:600;margin-bottom:8px">AppMotoboy Offline</div>
+  <div style="font-size:13px">O AppMotoboy (porta 5003) não está respondendo.<br>Inicie-o para ver motoboys online.</div>
+</div>
+{% endif %}
+{% endblock %}

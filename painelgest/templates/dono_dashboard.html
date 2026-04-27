@@ -1,0 +1,157 @@
+{% extends 'dono_base.html' %}
+{% block title %}Dashboard — Painel do Dono{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+{% block topbar_sub %}Resumo em tempo real — {{ hoje.strftime('%d/%m/%Y') }}{% endblock %}
+{% block topbar_actions %}
+  <button class="btn-dono" onclick="atualizarKPIs()">
+    <i class="fas fa-rotate"></i> Atualizar
+  </button>
+{% endblock %}
+
+{% block content %}
+<!-- KPIs principais -->
+<div class="kpi-grid" style="margin-bottom:24px">
+  <div class="kpi-card">
+    <div class="kpi-icon ki-green"><i class="fas fa-shopping-bag"></i></div>
+    <div>
+      <div class="kpi-value" id="kpi-pedidos">{{ pedidos_hoje }}</div>
+      <div class="kpi-label">Pedidos Hoje</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-amber"><i class="fas fa-dollar-sign"></i></div>
+    <div>
+      <div class="kpi-value" id="kpi-vendas">R$ {{ '%.2f'|format(vendas_hoje) }}</div>
+      <div class="kpi-label">Vendas Hoje</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-red"><i class="fas fa-fire"></i></div>
+    <div>
+      <div class="kpi-value" id="kpi-andamento">{{ pedidos_em_andamento|length }}</div>
+      <div class="kpi-label">Em Andamento</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-blue"><i class="fas fa-motorcycle"></i></div>
+    <div>
+      <div class="kpi-value" id="kpi-motoboys">{{ motoboys_online }}</div>
+      <div class="kpi-label">Motoboys Online</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-purple"><i class="fas fa-users"></i></div>
+    <div>
+      <div class="kpi-value">{{ total_admins + total_subs }}</div>
+      <div class="kpi-label">Funcionários</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon ki-green"><i class="fas fa-store"></i></div>
+    <div>
+      <div class="kpi-value">{{ total_restaurantes }}</div>
+      <div class="kpi-label">Restaurantes</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Pedidos em andamento -->
+  <div class="col-lg-7">
+    <div class="dono-card">
+      <div class="dono-card-header">
+        <div class="dono-card-title">
+          <i class="fas fa-fire" style="color:#ef4444;margin-right:8px"></i>Pedidos em Andamento
+        </div>
+        <a href="{{ url_for('dono_pedidos') }}" class="btn-outline" style="padding:5px 12px;font-size:12px">Ver todos</a>
+      </div>
+      <div class="dono-card-body p-0">
+        {% if pedidos_em_andamento %}
+        <table class="dono-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>Valor</th>
+              <th>Status</th>
+              <th>Hora</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in pedidos_em_andamento[:10] %}
+            <tr>
+              <td style="font-weight:600;color:var(--accent)">#{{ p.numero }}</td>
+              <td>{{ p.cliente_nome or 'Cliente' }}</td>
+              <td>R$ {{ '%.2f'|format(p.total) }}</td>
+              <td>
+                <span class="badge-d {% if p.coluna=='novo' %}bd-red{% elif p.coluna=='preparo' %}bd-amber{% else %}bd-green{% endif %}">
+                  {{ p.coluna|capitalize }}
+                </span>
+              </td>
+              <td style="font-size:12px;color:var(--muted)">{{ p.criado_em.strftime('%H:%M') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div style="text-align:center;padding:32px;color:var(--muted)">
+          <i class="fas fa-check-circle" style="font-size:32px;margin-bottom:12px;display:block;color:#10b981;opacity:.5"></i>
+          Nenhum pedido em andamento agora.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Últimos acessos -->
+  <div class="col-lg-5">
+    <div class="dono-card">
+      <div class="dono-card-header">
+        <div class="dono-card-title">
+          <i class="fas fa-shield-halved" style="color:#10b981;margin-right:8px"></i>Últimos Acessos
+        </div>
+        <a href="{{ url_for('dono_acessos') }}" class="btn-outline" style="padding:5px 12px;font-size:12px">Ver tudo</a>
+      </div>
+      <div class="dono-card-body p-0">
+        <table class="dono-table">
+          <thead>
+            <tr><th>Usuário</th><th>Tipo</th><th>Hora</th></tr>
+          </thead>
+          <tbody>
+            {% for a in acessos_recentes %}
+            <tr>
+              <td style="font-weight:500">{{ a.usuario or '—' }}</td>
+              <td>
+                <span class="badge-d {% if a.tipo_usuario=='dono' %}bd-green{% elif a.tipo_usuario=='superadmin' %}bd-amber{% else %}bd-muted{% endif %}">
+                  {{ a.tipo_usuario or '—' }}
+                </span>
+              </td>
+              <td style="font-size:11px;color:var(--muted)">{{ a.timestamp.strftime('%H:%M:%S') }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">Nenhum acesso registrado.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function atualizarKPIs() {
+  try {
+    const r = await fetch('{{ url_for("dono_resumo_dia") }}');
+    const d = await r.json();
+    document.getElementById('kpi-pedidos').textContent = d.pedidos_hoje;
+    document.getElementById('kpi-vendas').textContent = 'R$ ' + d.vendas_hoje.toFixed(2);
+    document.getElementById('kpi-andamento').textContent = d.em_andamento;
+    document.getElementById('kpi-motoboys').textContent = d.motoboys_online;
+  } catch(e) {}
+}
+// Atualiza a cada 30 segundos
+setInterval(atualizarKPIs, 30000);
+</script>
+{% endblock %}

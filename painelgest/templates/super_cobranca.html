@@ -1,0 +1,149 @@
+{% extends 'super_base.html' %}
+{% block title %}Cobrança por Grupo — Super Admin{% endblock %}
+{% block topbar_title %}Cobrança por Grupo{% endblock %}
+{% block topbar_sub %}Gestão de receitas por grupo de motoboys{% endblock %}
+
+{% block content %}
+<!-- Resumo financeiro dos lançamentos -->
+<div class="stat-grid" style="margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon si-green"><i class="fas fa-check-circle"></i></div>
+    <div>
+      <div class="stat-value">R$ {{ '%.2f'|format(lancamentos|selectattr('status','eq','pago')|sum(attribute='valor_plataforma')) }}</div>
+      <div class="stat-label">Plataforma — Recebido</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-amber"><i class="fas fa-clock"></i></div>
+    <div>
+      <div class="stat-value">R$ {{ '%.2f'|format(lancamentos|selectattr('status','eq','pendente')|sum(attribute='valor_plataforma')) }}</div>
+      <div class="stat-label">Plataforma — Pendente</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-blue"><i class="fas fa-users"></i></div>
+    <div>
+      <div class="stat-value">R$ {{ '%.2f'|format(lancamentos|sum(attribute='valor_adm')) }}</div>
+      <div class="stat-label">Total ADMs (repasse)</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-purple"><i class="fas fa-receipt"></i></div>
+    <div>
+      <div class="stat-value">{{ lancamentos|length }}</div>
+      <div class="stat-label">Lançamentos no período</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Configurações por grupo -->
+  <div class="col-lg-5">
+    <div class="pg-card h-100">
+      <div class="pg-card-header">
+        <div class="pg-card-title"><i class="fas fa-gear" style="color:var(--accent);margin-right:8px"></i>Configurações</div>
+      </div>
+      <div class="pg-card-body p-0">
+        {% for g in grupos %}
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div>
+              <div style="font-weight:600">{{ g.nome }}</div>
+              <div style="font-size:11px;color:var(--muted)">ADM: {{ g.admin.username if g.admin else '—' }}</div>
+            </div>
+            {% if g.config_cobranca %}
+              <span class="badge-status bs-success">Configurado</span>
+            {% else %}
+              <span class="badge-status bs-muted">Sem config</span>
+            {% endif %}
+          </div>
+          {% if g.config_cobranca %}
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+            Tipo: <strong style="color:var(--text)">{{ 'Por Corrida' if g.config_cobranca.tipo == 'corrida' else 'Fixo Mensal' }}</strong> &nbsp;|&nbsp;
+            Plataforma: <strong style="color:#f59e0b">{{ g.config_cobranca.percentual_plataforma|int }}%</strong> &nbsp;|&nbsp;
+            ADM: <strong style="color:#22c55e">{{ g.config_cobranca.percentual_adm|int }}%</strong>
+          </div>
+          {% endif %}
+          <div style="display:flex;gap:8px">
+            <form method="post" action="{{ url_for('super_lancar_cobranca', gid=g.id) }}">
+              <button class="btn-accent" style="font-size:12px;padding:6px 12px">
+                <i class="fas fa-play"></i> Lançar Mês Atual
+              </button>
+            </form>
+            <a href="{{ url_for('super_grupos') }}" class="btn-ghost" style="font-size:12px;padding:6px 12px">
+              <i class="fas fa-gear"></i> Configurar
+            </a>
+          </div>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:40px;color:var(--muted)">
+          <i class="fas fa-motorcycle" style="font-size:32px;margin-bottom:12px;display:block;opacity:.3"></i>
+          Nenhum grupo cadastrado.<br>
+          <a href="{{ url_for('super_grupos') }}" style="color:var(--accent)">Criar grupo</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Histórico de lançamentos -->
+  <div class="col-lg-7">
+    <div class="pg-card">
+      <div class="pg-card-header">
+        <div class="pg-card-title"><i class="fas fa-history" style="color:var(--accent);margin-right:8px"></i>Histórico de Lançamentos</div>
+      </div>
+      <div class="pg-card-body p-0">
+        {% if lancamentos %}
+        <table class="pg-table">
+          <thead>
+            <tr>
+              <th>Grupo</th>
+              <th>Período</th>
+              <th>Corridas</th>
+              <th>Total</th>
+              <th>Plataforma</th>
+              <th>ADM</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in lancamentos %}
+            <tr>
+              <td style="font-weight:500">{{ l.grupo.nome if l.grupo else '—' }}</td>
+              <td style="font-family:monospace">{{ l.periodo }}</td>
+              <td>{{ l.corridas }}</td>
+              <td>R$ {{ '%.2f'|format(l.valor_total) }}</td>
+              <td style="color:#f59e0b;font-weight:600">R$ {{ '%.2f'|format(l.valor_plataforma) }}</td>
+              <td style="color:#22c55e">R$ {{ '%.2f'|format(l.valor_adm) }}</td>
+              <td>
+                {% if l.status == 'pago' %}
+                  <span class="badge-status bs-success">Pago</span>
+                {% else %}
+                  <span class="badge-status bs-warning">Pendente</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if l.status == 'pendente' %}
+                <form method="post" action="{{ url_for('super_pagar_lancamento', lid=l.id) }}">
+                  <button class="btn-ghost" style="padding:4px 8px;font-size:11px">
+                    <i class="fas fa-check"></i> Pago
+                  </button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div style="text-align:center;padding:40px;color:var(--muted)">
+          <i class="fas fa-receipt" style="font-size:32px;margin-bottom:12px;display:block;opacity:.3"></i>
+          Nenhum lançamento ainda.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

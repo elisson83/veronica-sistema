@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Novo Cliente CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{{ url_for('restaurante_crm') }}" style="color:var(--muted);text-decoration:none">
+    <i class="fas fa-arrow-left"></i>
+  </a>
+  <h2 style="font-size:22px;font-weight:700;margin:0">Novo Cliente CRM</h2>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label" style="color:var(--muted);font-size:12px">Nome do Cliente</label>
+            <input type="text" name="nome_cliente" class="form-control"
+                   style="background:var(--card);border-color:var(--border);color:var(--text)"
+                   placeholder="Nome completo" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="color:var(--muted);font-size:12px">Telefone</label>
+            <input type="text" name="telefone" class="form-control"
+                   style="background:var(--card);border-color:var(--border);color:var(--text)"
+                   placeholder="(11) 99999-9999">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="color:var(--muted);font-size:12px">Notas iniciais</label>
+            <textarea name="notas" class="form-control" rows="3"
+                      style="background:var(--card);border-color:var(--border);color:var(--text)"
+                      placeholder="Observações sobre o cliente..."></textarea>
+          </div>
+          <div style="display:flex;gap:10px">
+            <a href="{{ url_for('restaurante_crm') }}" class="btn-ghost">Cancelar</a>
+            <button type="submit" class="btn-accent"><i class="fas fa-save"></i> Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

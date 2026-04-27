@@ -233,6 +233,9 @@ class Restaurante(db.Model):
     whatsapp             = db.Column(db.String(30),  nullable=True)
     token_frota          = db.Column(db.String(64),  nullable=True, unique=True)
     frota_url            = db.Column(db.String(200), nullable=True)
+    lat                  = db.Column(db.Float,        nullable=True)
+    lng                  = db.Column(db.Float,        nullable=True)
+    raio_entrega_km      = db.Column(db.Float,        default=5.0)
 
     def __init__(self, nome, username, password, cliente_id=None):
         self.nome = nome; self.username = username
@@ -2385,6 +2388,17 @@ def editar_perfil_restaurante():
         restaurante.instagram    = request.form.get('instagram') or None
         restaurante.facebook     = request.form.get('facebook') or None
         restaurante.whatsapp     = request.form.get('whatsapp') or None
+        try:
+            restaurante.raio_entrega_km = float(request.form.get('raio_entrega_km') or 5)
+        except (ValueError, TypeError):
+            restaurante.raio_entrega_km = 5.0
+        try:
+            lat_v = request.form.get('lat_restaurante')
+            lng_v = request.form.get('lng_restaurante')
+            if lat_v: restaurante.lat = float(lat_v)
+            if lng_v: restaurante.lng = float(lng_v)
+        except (ValueError, TypeError):
+            pass
         formas = request.form.getlist('forma_pagamento')
         restaurante.formas_pagamento_json = json.dumps(formas)
         # Upload logo
@@ -2402,6 +2416,37 @@ def editar_perfil_restaurante():
         return redirect(url_for('editar_perfil_restaurante'))
     return render_template('perfil_restaurante.html', restaurante=restaurante,
                            formas_disponiveis=FORMAS_PAGAMENTO_DISPONIVEIS)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — MAPA DE ENTREGA DO RESTAURANTE
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/restaurante/mapa')
+@requer_restaurante
+def mapa_restaurante():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    try:
+        import requests as _req
+        r = _req.get('http://localhost:5003/api/motoboys_disponiveis', timeout=2)
+        motoboys = r.json()
+    except Exception:
+        motoboys = []
+    return render_template('mapa_restaurante.html', restaurante=restaurante, motoboys=motoboys)
+
+
+@app.route('/restaurante/mapa/salvar_pos', methods=['POST'])
+@requer_restaurante
+def mapa_restaurante_salvar_pos():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    data = request.get_json() or {}
+    try:
+        restaurante.lat = float(data.get('lat'))
+        restaurante.lng = float(data.get('lng'))
+        db.session.commit()
+    except (TypeError, ValueError):
+        pass
+    return jsonify({'ok': True})
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2769,6 +2814,9 @@ def migrate_db():
     add_col('restaurante', 'whatsapp',             'VARCHAR(30)')
     add_col('restaurante', 'token_frota',          'VARCHAR(64)')
     add_col('restaurante', 'frota_url',            'VARCHAR(200)')
+    add_col('restaurante', 'lat',                  'FLOAT')
+    add_col('restaurante', 'lng',                  'FLOAT')
+    add_col('restaurante', 'raio_entrega_km',      'FLOAT DEFAULT 5.0')
 
     # PostAgendado
     add_col('post_agendado', 'erro',       'TEXT')

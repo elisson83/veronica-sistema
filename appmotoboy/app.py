@@ -509,6 +509,12 @@ def perfil():
 
 # ─── APIs INTERNAS ────────────────────────────────────────────────────────────
 
+@app.route('/mapa')
+@login_required
+def mapa_motoboy():
+    return render_template('mapa.html', motoboy=current_user)
+
+
 @app.route('/api/motoboys_disponiveis')
 def api_motoboys_disponiveis():
     mbs = Motoboy.query.filter_by(disponivel=True, ativo=True).all()

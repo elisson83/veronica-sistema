@@ -125,6 +125,9 @@
   <a href="{{ url_for('vagas') }}" class="{% if request.endpoint=='vagas' %}active{% endif %}">
     <i class="fas fa-calendar-check"></i>Vagas
   </a>
+  <a href="{{ url_for('mapa_motoboy') }}" class="{% if request.endpoint=='mapa_motoboy' %}active{% endif %}">
+    <i class="fas fa-map-location-dot"></i>Mapa
+  </a>
   <a href="{{ url_for('ganhos') }}" class="{% if request.endpoint in ['ganhos','historico'] %}active{% endif %}">
     <i class="fas fa-wallet"></i>Ganhos
   </a>

@@ -177,6 +177,24 @@
             <input type="text" name="endereco" class="input" value="{{ restaurante.endereco or '' }}" placeholder="Rua, número, bairro">
           </div>
         </div>
+        <div class="grid2">
+          <div class="form-group">
+            <label class="label"><i class="fas fa-circle-dot" style="color:#6366f1;margin-right:4px"></i>Raio de Entrega (km)</label>
+            <input type="number" name="raio_entrega_km" class="input" value="{{ restaurante.raio_entrega_km or 5 }}" min="0.5" max="50" step="0.5">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Distância máxima que o restaurante atende via delivery.</div>
+          </div>
+          <div class="form-group">
+            <label class="label"><i class="fas fa-location-dot" style="color:#22d3ee;margin-right:4px"></i>Posição GPS do Restaurante</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="number" name="lat_restaurante" id="lat_rest" class="input" value="{{ restaurante.lat or '' }}" placeholder="Latitude" step="any" style="flex:1">
+              <input type="number" name="lng_restaurante" id="lng_rest" class="input" value="{{ restaurante.lng or '' }}" placeholder="Longitude" step="any" style="flex:1">
+              <button type="button" onclick="capturarGPS()" class="btn btn-ghost" style="flex-shrink:0;padding:8px 10px" title="Usar minha localização atual">
+                <i class="fas fa-location-crosshairs"></i>
+              </button>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Clique no ícone para capturar automaticamente. Usado no mapa de entrega.</div>
+          </div>
+        </div>
         <div class="grid3">
           <div class="form-group">
             <label class="label"><i class="fab fa-instagram me-1" style="color:#E1306C"></i>Instagram</label>
@@ -306,6 +324,14 @@
 </div>
 
 <script>
+function capturarGPS() {
+  if (!navigator.geolocation) { alert('GPS não disponível no navegador'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    document.getElementById('lat_rest').value = pos.coords.latitude.toFixed(6);
+    document.getElementById('lng_rest').value = pos.coords.longitude.toFixed(6);
+  }, () => alert('Não foi possível obter a localização. Verifique as permissões do navegador.'), { enableHighAccuracy: true, timeout: 10000 });
+}
+
 function previewLogo(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();

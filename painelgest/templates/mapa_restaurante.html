@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa de Entrega — {{ restaurante.nome }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    :root {
+      --bg:#0b0d17; --surface:#131720; --surface2:#1c2133;
+      --border:rgba(255,255,255,0.07); --text:#e2e8f0; --muted:#64748b;
+      --accent: {{ restaurante.cor_primaria or '#6366f1' }};
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+
+    .header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 12px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    .header-title { font-size: 15px; font-weight: 600; }
+    .header-sub { font-size: 11px; color: var(--muted); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 8px; font-size: 12px;
+      font-weight: 500; text-decoration: none; border: none; cursor: pointer;
+      transition: all .15s; font-family: 'Inter', sans-serif;
+    }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: #232a3e; }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { opacity: .85; }
+    .ml-auto { margin-left: auto; }
+
+    .map-container { display: flex; flex: 1; overflow: hidden; }
+    #mapa { flex: 1; }
+
+    .panel {
+      width: 280px; background: var(--surface); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0;
+    }
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; }
+
+    .label { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: block; }
+    .input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 13px;
+      font-family: 'Inter', sans-serif; outline: none; transition: border .15s;
+    }
+    .input:focus { border-color: var(--accent); }
+
+    .raio-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .raio-btn {
+      padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+      cursor: pointer; transition: all .15s;
+    }
+    .raio-btn:hover, .raio-btn.ativo { background: rgba(99,102,241,.15); border-color: var(--accent); color: var(--accent); }
+
+    .status-gps {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; padding: 8px 10px; border-radius: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    .status-dot.on { background: #10b981; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .motoboy-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .motoboy-item.dentro { border-color: rgba(16,185,129,.4); background: rgba(16,185,129,.06); }
+    .motoboy-dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
+    .motoboy-dot.dentro { background: #10b981; }
+    .motoboy-dist { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title"><i class="fas fa-map-location-dot" style="color:var(--accent);margin-right:6px"></i>Mapa de Entrega</div>
+    <div class="header-sub">{{ restaurante.nome }} — Raio de cobertura do delivery</div>
+  </div>
+  <div class="ml-auto" style="display:flex;gap:8px">
+    <a href="{{ url_for('restaurante_dashboard') }}" class="btn btn-ghost">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+    <a href="{{ url_for('editar_perfil_restaurante') }}" class="btn btn-ghost">
+      <i class="fas fa-sliders"></i> Perfil
+    </a>
+  </div>
+</div>
+
+<div class="map-container">
+  <div id="mapa"></div>
+
+  <div class="panel">
+
+    <!-- GPS do Restaurante -->
+    <div class="panel-section">
+      <div class="panel-title"><i class="fas fa-store me-1"></i>Posição do Restaurante</div>
+      <div class="status-gps" id="status-gps">
+        <div class="status-dot" id="dot-gps"></div>
+        <span id="txt-gps">Obtendo localização...</span>
+      </div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:8px;justify-content:center" onclick="pedirGeolocalizacao()">
+        <i class="fas fa-location-crosshairs"></i> Atualizar Posição
+      </button>
+    </div>
+
+    <!-- Raio de Entrega -->
+    <div class="panel-section">
+      <div class="panel-title"><i class="fas fa-circle-dot me-1"></i>Raio de Entrega</div>
+      <label class="label">Distância máxima (km)</label>
+      <input type="number" id="inp-raio" class="input" value="{{ restaurante.raio_entrega_km or 5 }}"
+             min="0.5" max="50" step="0.5" oninput="atualizarRaio(parseFloat(this.value))">
+      <div class="raio-btns">
+        <button class="raio-btn" onclick="setRaio(2)">2 km</button>
+        <button class="raio-btn" onclick="setRaio(5)">5 km</button>
+        <button class="raio-btn" onclick="setRaio(10)">10 km</button>
+        <button class="raio-btn" onclick="setRaio(15)">15 km</button>
+        <button class="raio-btn" onclick="setRaio(20)">20 km</button>
+      </div>
+      <button class="btn btn-accent" style="width:100%;margin-top:12px;justify-content:center" onclick="salvarRaio()">
+        <i class="fas fa-floppy-disk"></i> Salvar Configuração
+      </button>
+      <div id="msg-save" style="font-size:11px;text-align:center;margin-top:6px;color:var(--muted)"></div>
+    </div>
+
+    <!-- Motoboys no Mapa -->
+    <div class="panel-section" style="flex:1">
+      <div class="panel-title"><i class="fas fa-motorcycle me-1"></i>Motoboys Online (<span id="cnt-motoboys">0</span>)</div>
+      <div id="lista-motoboys"></div>
+      {% if not motoboys %}
+      <div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0">
+        <i class="fas fa-circle-info"></i> Nenhum motoboy online
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Legenda -->
+    <div class="panel-section">
+      <div class="panel-title">Legenda</div>
+      <div class="legend-item"><div class="legend-color" style="background:#6366f1;border-radius:50%"></div>Restaurante</div>
+      <div class="legend-item"><div class="legend-color" style="background:rgba(99,102,241,.2);border:2px solid #6366f1;border-radius:50%"></div>Área de entrega</div>
+      <div class="legend-item"><div class="legend-color" style="background:#f59e0b;border-radius:50%"></div>Motoboy (fora da área)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#10b981;border-radius:50%"></div>Motoboy (dentro da área)</div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Dados do servidor
+const dadosServidor = {
+  lat: {{ restaurante.lat or 'null' }},
+  lng: {{ restaurante.lng or 'null' }},
+  raio: {{ restaurante.raio_entrega_km or 5 }}
+};
+const motoboysDados = {{ motoboys | tojson }};
+
+// Inicializar mapa
+const posInicio = (dadosServidor.lat && dadosServidor.lng)
+  ? [dadosServidor.lat, dadosServidor.lng]
+  : [-23.55, -46.63];
+
+const mapa = L.map('mapa').setView(posInicio, 14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap'
+}).addTo(mapa);
+
+// Ícones
+const iconeRestaurante = L.divIcon({
+  html: '<div style="background:var(--accent,#6366f1);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.6);border:3px solid #fff"><i class="fas fa-store" style="color:#fff;font-size:18px"></i></div>',
+  iconSize:[44,44], iconAnchor:[22,22], className:''
+});
+
+const iconeMotoboy = cor => L.divIcon({
+  html: `<div style="background:${cor};border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.5);border:2px solid #fff"><i class="fas fa-motorcycle" style="color:#fff;font-size:13px"></i></div>`,
+  iconSize:[34,34], iconAnchor:[17,17], className:''
+});
+
+// Estado do mapa
+let markerRestaurante = null;
+let circulo = null;
+let markersMotoboys = [];
+let raioAtual = dadosServidor.raio;
+let posRestaurante = null;
+
+// Se já tem posição salva, mostrar
+if (dadosServidor.lat && dadosServidor.lng) {
+  posRestaurante = [dadosServidor.lat, dadosServidor.lng];
+  colocarRestaurante(dadosServidor.lat, dadosServidor.lng);
+  document.getElementById('dot-gps').classList.add('on');
+  document.getElementById('txt-gps').textContent = 'Posição salva do restaurante';
+}
+
+// Mostrar motoboys
+colocarMotoboys();
+
+// Geolocalização automática ao abrir
+pedirGeolocalizacao();
+
+function pedirGeolocalizacao() {
+  const txt = document.getElementById('txt-gps');
+  const dot = document.getElementById('dot-gps');
+  txt.textContent = 'Obtendo localização GPS...';
+  dot.classList.remove('on');
+
+  if (!navigator.geolocation) {
+    txt.textContent = 'GPS não disponível no navegador';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      colocarRestaurante(lat, lng);
+      dot.classList.add('on');
+      txt.textContent = `GPS ativo (±${Math.round(pos.coords.accuracy)}m)`;
+      posRestaurante = [lat, lng];
+      mapa.setView([lat, lng], 15);
+      // Salvar posição automaticamente
+      fetch('/restaurante/mapa/salvar_pos', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({lat, lng})
+      });
+      colocarMotoboys();
+    },
+    err => {
+      if (dadosServidor.lat && dadosServidor.lng) {
+        dot.classList.add('on');
+        txt.textContent = 'Usando posição salva anteriormente';
+      } else {
+        txt.textContent = 'Permita o acesso à localização';
+      }
+    },
+    { enableHighAccuracy: true, timeout: 12000 }
+  );
+}
+
+function colocarRestaurante(lat, lng) {
+  if (markerRestaurante) markerRestaurante.setLatLng([lat, lng]);
+  else {
+    markerRestaurante = L.marker([lat, lng], {icon: iconeRestaurante})
+      .addTo(mapa)
+      .bindPopup(`<b>{{ restaurante.nome }}</b><br>Seu restaurante`);
+  }
+  desenharCirculo(lat, lng, raioAtual);
+}
+
+function desenharCirculo(lat, lng, raioKm) {
+  if (circulo) mapa.removeLayer(circulo);
+  circulo = L.circle([lat, lng], {
+    radius: raioKm * 1000,
+    color: '#6366f1',
+    fillColor: '#6366f1',
+    fillOpacity: 0.08,
+    weight: 2,
+    dashArray: '6,4'
+  }).addTo(mapa);
+}
+
+function colocarMotoboys() {
+  markersMotoboys.forEach(m => mapa.removeLayer(m));
+  markersMotoboys = [];
+  const lista = document.getElementById('lista-motoboys');
+  lista.innerHTML = '';
+  let cnt = 0;
+
+  motoboysDados.forEach(mb => {
+    if (!mb.lat || !mb.lng) return;
+    const dentro = posRestaurante ? calcDistKm(posRestaurante[0], posRestaurante[1], mb.lat, mb.lng) <= raioAtual : false;
+    const cor = dentro ? '#10b981' : '#f59e0b';
+    const dist = posRestaurante ? calcDistKm(posRestaurante[0], posRestaurante[1], mb.lat, mb.lng).toFixed(1) : '?';
+    const mk = L.marker([mb.lat, mb.lng], {icon: iconeMotoboy(cor)})
+      .addTo(mapa)
+      .bindPopup(`<b>${mb.nome}</b><br>${dist} km do restaurante<br>${dentro ? '✅ Dentro da área' : '🔴 Fora da área'}`);
+    markersMotoboys.push(mk);
+    cnt++;
+    lista.innerHTML += `
+      <div class="motoboy-item ${dentro ? 'dentro' : ''}">
+        <div class="motoboy-dot ${dentro ? 'dentro' : ''}"></div>
+        <div>
+          <div style="font-weight:600">${mb.nome}</div>
+          <div style="font-size:10px;color:var(--muted)">${dentro ? 'Dentro da área' : 'Fora da área'}</div>
+        </div>
+        <div class="motoboy-dist">${dist} km</div>
+      </div>`;
+  });
+
+  document.getElementById('cnt-motoboys').textContent = cnt;
+}
+
+function calcDistKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+function atualizarRaio(val) {
+  if (isNaN(val) || val <= 0) return;
+  raioAtual = val;
+  if (posRestaurante) {
+    desenharCirculo(posRestaurante[0], posRestaurante[1], val);
+    colocarMotoboys();
+  }
+  document.querySelectorAll('.raio-btn').forEach(b => {
+    b.classList.toggle('ativo', parseFloat(b.textContent) === val);
+  });
+}
+
+function setRaio(val) {
+  document.getElementById('inp-raio').value = val;
+  atualizarRaio(val);
+}
+
+async function salvarRaio() {
+  const raio = parseFloat(document.getElementById('inp-raio').value);
+  if (isNaN(raio) || raio <= 0) return;
+  const msg = document.getElementById('msg-save');
+  const r = await fetch('{{ url_for("editar_perfil_restaurante") }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({
+      nome: '{{ restaurante.nome }}',
+      raio_entrega_km: raio,
+      lat_restaurante: posRestaurante ? posRestaurante[0] : '',
+      lng_restaurante: posRestaurante ? posRestaurante[1] : '',
+      cor_primaria: '{{ restaurante.cor_primaria or "#6366f1" }}'
+    })
+  });
+  msg.style.color = '#4ade80';
+  msg.textContent = '✓ Raio de ' + raio + ' km salvo!';
+  setTimeout(() => msg.textContent = '', 3000);
+}
+
+// Atualizar marcadores a cada 60s
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/motoboys_disponiveis_rest', {timeout: 2000});
+    // Os dados já foram renderizados pelo servidor — apenas recarregar se necessário
+  } catch(e) {}
+}, 60000);
+</script>
+</body>
+</html>

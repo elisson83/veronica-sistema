@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}Mapa — AppMotoboy{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  #mapa {
+    width: 100%;
+    height: calc(100vh - 170px);
+    min-height: 320px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  #info-gps {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .82rem; padding: 8px 12px; border-radius: 8px;
+    margin-bottom: 10px;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  #info-gps.on  { border-color: rgba(16,185,129,.4); color: #10b981; }
+  #info-gps.err { border-color: rgba(239,68,68,.4);  color: #ef4444; }
+  .gps-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0;
+  }
+  .gps-dot.on  { background: #10b981; animation: pulse 1.5s infinite; }
+  .gps-dot.err { background: #ef4444; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+</style>
+{% endblock %}
+
+{% block content %}
+<h5 class="section-title">
+  <i class="fas fa-map-location-dot me-1" style="color:var(--accent)"></i>Minha Posição em Tempo Real
+</h5>
+
+<div id="info-gps">
+  <div class="gps-dot" id="dot-gps"></div>
+  <span id="txt-gps">Obtendo localização GPS do dispositivo...</span>
+</div>
+
+<div id="mapa"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const latServidor = {{ (motoboy.lat_atual if motoboy.lat_atual else 'null') }};
+const lngServidor = {{ (motoboy.lng_atual if motoboy.lng_atual else 'null') }};
+const nomeMotoboy = {{ motoboy.nome | tojson }};
+
+// Inicializar mapa com posição do servidor ou cidade padrão
+const posInicio = (latServidor && lngServidor) ? [latServidor, lngServidor] : [-23.55, -46.63];
+const mapa = L.map('mapa').setView(posInicio, 15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap'
+}).addTo(mapa);
+
+const icone = L.divIcon({
+  html: `<div style="background:#f59e0b;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.6);border:3px solid #fff">
+           <i class="fas fa-motorcycle" style="color:#000;font-size:16px"></i>
+         </div>`,
+  iconSize:[42,42], iconAnchor:[21,21], className:''
+});
+
+let marker = null;
+const dot  = document.getElementById('dot-gps');
+const txt  = document.getElementById('txt-gps');
+const info = document.getElementById('info-gps');
+
+// Se tiver posição do servidor, mostra imediatamente
+if (latServidor && lngServidor) {
+  mostrarPosicao(latServidor, lngServidor, false);
+}
+
+// Pedir geolocalização automática ao abrir
+pedirGPS();
+
+function mostrarPosicao(lat, lng, preciso) {
+  mapa.setView([lat, lng], 16);
+  if (marker) {
+    marker.setLatLng([lat, lng]);
+  } else {
+    marker = L.marker([lat, lng], {icon: icone}).addTo(mapa)
+      .bindPopup(`<b>${nomeMotoboy}</b><br>Você está aqui`).openPopup();
+  }
+
+  if (preciso) {
+    dot.className  = 'gps-dot on';
+    info.className = 'info-gps on';
+    txt.textContent = 'GPS ativo — posição em tempo real';
+    // Enviar ao servidor
+    fetch('/atualizar_gps', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({lat, lng})
+    });
+  } else {
+    dot.className  = 'gps-dot';
+    info.className = 'info-gps';
+    txt.textContent = 'Última posição registrada (GPS do dispositivo não ativo)';
+  }
+}
+
+function pedirGPS() {
+  txt.textContent = 'Obtendo localização GPS do dispositivo...';
+  dot.className = 'gps-dot';
+  info.className = 'info-gps';
+
+  if (!navigator.geolocation) {
+    dot.className  = 'gps-dot err';
+    info.className = 'info-gps err';
+    txt.textContent = 'GPS não suportado neste dispositivo';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => mostrarPosicao(pos.coords.latitude, pos.coords.longitude, true),
+    err => {
+      if (latServidor && lngServidor) {
+        mostrarPosicao(latServidor, lngServidor, false);
+      } else {
+        dot.className  = 'gps-dot err';
+        info.className = 'info-gps err';
+        txt.textContent = 'Permita o acesso à localização nas configurações do navegador';
+      }
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
+  );
+}
+
+// Atualizar a cada 30 segundos
+setInterval(pedirGPS, 30000);
+</script>
+{% endblock %}

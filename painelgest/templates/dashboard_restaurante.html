@@ -104,6 +104,9 @@
   </a>
 
   <div class="nav-group">Motoboys</div>
+  <a href="{{ url_for('mapa_restaurante') }}" class="nav-item {% if request.endpoint=='mapa_restaurante' %}active{% endif %}">
+    <i class="fas fa-map-location-dot"></i> Mapa de Entrega
+  </a>
   <a href="{{ url_for('vagas_restaurante') }}" class="nav-item">
     <i class="fas fa-calendar-check"></i> Vagas da Casa
   </a>

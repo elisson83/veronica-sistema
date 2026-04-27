@@ -54,7 +54,8 @@
       "Bash(python3 -m py_compile /c/Users/Usuário/Desktop/veronica/painelgest/app.py)",
       "PowerShell(Get-Volume *)",
       "PowerShell(Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Name -in @\\('G','E'\\) } | Select-Object Name, Description)",
-      "PowerShell(Get-WmiObject *)"
+      "PowerShell(Get-WmiObject *)",
+      "PowerShell(Get-ChildItem *)"
     ]
   }
 }

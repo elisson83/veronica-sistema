@@ -1,13 +1,52 @@
 {% extends 'dono_base.html' %}
 {% block title %}Vendas — Painel do Dono{% endblock %}
 {% block topbar_title %}Vendas{% endblock %}
-{% block topbar_sub %}Todos os pedidos — em tempo real{% endblock %}
+{% block topbar_sub %}{{ total }} pedido(s) encontrado(s){% endblock %}
 
 {% block content %}
+<!-- Filtros -->
+<form method="get" style="margin-bottom:20px">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Data</label>
+      <input type="date" name="data" value="{{ filtro_data }}"
+             style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;font-family:inherit">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Status</label>
+      <select name="status" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;font-family:inherit">
+        <option value="">Todos</option>
+        <option value="novo"      {% if filtro_status=='novo' %}selected{% endif %}>Novo</option>
+        <option value="preparo"   {% if filtro_status=='preparo' %}selected{% endif %}>Em Preparo</option>
+        <option value="pronto"    {% if filtro_status=='pronto' %}selected{% endif %}>Pronto</option>
+        <option value="entregue"  {% if filtro_status=='entregue' %}selected{% endif %}>Entregue</option>
+        <option value="cancelado" {% if filtro_status=='cancelado' %}selected{% endif %}>Cancelado</option>
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Restaurante</label>
+      <select name="restaurante_id" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;font-family:inherit">
+        <option value="">Todos</option>
+        {% for r in restaurantes %}
+        <option value="{{ r.id }}" {% if filtro_rest == r.id|string %}selected{% endif %}>{{ r.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-dono" style="padding:8px 18px">
+      <i class="fas fa-filter"></i> Filtrar
+    </button>
+    {% if filtro_status or filtro_rest or filtro_data %}
+    <a href="{{ url_for('dono_vendas') }}" class="btn-outline" style="padding:8px 14px">
+      <i class="fas fa-times"></i> Limpar
+    </a>
+    {% endif %}
+  </div>
+</form>
+
 <div class="dono-card">
   <div class="dono-card-header">
-    <div class="dono-card-title"><i class="fas fa-shopping-bag" style="color:var(--accent);margin-right:8px"></i>Todos os Pedidos</div>
-    <span style="font-size:12px;color:var(--muted)">{{ total }} pedidos no total</span>
+    <div class="dono-card-title"><i class="fas fa-shopping-bag" style="color:var(--accent);margin-right:8px"></i>Pedidos</div>
+    <span style="font-size:12px;color:var(--muted)">{{ total }} no total</span>
   </div>
   <div class="dono-card-body p-0">
     <table class="dono-table">
@@ -44,13 +83,17 @@
     </table>
   </div>
   {% if total > per %}
-  <div style="padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:center">
+  <div style="padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:center;align-items:center">
     {% if page > 1 %}
-    <a href="?page={{ page-1 }}" class="btn-outline" style="padding:6px 12px;font-size:12px">← Anterior</a>
+    <a href="?page={{ page-1 }}&status={{ filtro_status }}&restaurante_id={{ filtro_rest }}&data={{ filtro_data }}"
+       class="btn-outline" style="padding:6px 12px;font-size:12px">← Anterior</a>
     {% endif %}
-    <span style="padding:6px 12px;font-size:12px;color:var(--muted)">Página {{ page }}</span>
+    <span style="padding:6px 12px;font-size:12px;color:var(--muted)">
+      Página {{ page }} de {{ ((total-1)//per + 1) }}
+    </span>
     {% if (page * per) < total %}
-    <a href="?page={{ page+1 }}" class="btn-outline" style="padding:6px 12px;font-size:12px">Próxima →</a>
+    <a href="?page={{ page+1 }}&status={{ filtro_status }}&restaurante_id={{ filtro_rest }}&data={{ filtro_data }}"
+       class="btn-outline" style="padding:6px 12px;font-size:12px">Próxima →</a>
     {% endif %}
   </div>
   {% endif %}

@@ -1980,15 +1980,37 @@ def dono_dashboard():
 @app.route('/dono/vendas')
 @requer_dono
 def dono_vendas():
-    page  = int(request.args.get('page', 1))
-    per   = 30
-    query = PedidoKanban.query.order_by(PedidoKanban.criado_em.desc())
-    total = query.count()
+    page          = int(request.args.get('page', 1))
+    per           = 30
+    filtro_status = request.args.get('status', '')
+    filtro_rest   = request.args.get('restaurante_id', '')
+    filtro_data   = request.args.get('data', '')
+    query = PedidoKanban.query
+    if filtro_status:
+        query = query.filter_by(coluna=filtro_status)
+    if filtro_rest:
+        try:
+            query = query.filter_by(restaurante_id=int(filtro_rest))
+        except (ValueError, TypeError):
+            pass
+    if filtro_data:
+        try:
+            from datetime import datetime as _dt2
+            dia_f = _dt2.strptime(filtro_data, '%Y-%m-%d').date()
+            query = query.filter(db.func.date(PedidoKanban.criado_em) == dia_f)
+        except ValueError:
+            pass
+    query   = query.order_by(PedidoKanban.criado_em.desc())
+    total   = query.count()
     pedidos = query.offset((page - 1) * per).limit(per).all()
-    restaurantes = Restaurante.query.all()
-    rest_map = {r.id: r.nome for r in restaurantes}
+    restaurantes = Restaurante.query.order_by(Restaurante.nome).all()
+    rest_map     = {r.id: r.nome for r in restaurantes}
     return render_template('dono_vendas.html', pedidos=pedidos, rest_map=rest_map,
-                           page=page, total=total, per=per)
+                           page=page, total=total, per=per,
+                           restaurantes=restaurantes,
+                           filtro_status=filtro_status,
+                           filtro_rest=filtro_rest,
+                           filtro_data=filtro_data)
 
 
 @app.route('/dono/funcionarios')
@@ -2021,7 +2043,7 @@ def dono_pedidos():
     ).order_by(PedidoKanban.criado_em.desc()).all()
     restaurantes = Restaurante.query.all()
     rest_map = {r.id: r.nome for r in restaurantes}
-    return render_template('dono_pedidos.html', pedidos=em_andamento, rest_map=rest_map)
+    return render_template('dono_pedidos.html', pedidos=em_andamento, rest_map=rest_map, now=datetime.utcnow())
 
 
 @app.route('/dono/acessos')

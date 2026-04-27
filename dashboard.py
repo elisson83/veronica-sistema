@@ -45,7 +45,15 @@ def salvar_projetos(projetos: list):
 
 @app.route("/")
 def index():
+    return render_template("status.html")
+
+@app.route("/dashboard")
+def dashboard_old():
     return render_template("dashboard.html")
+
+@app.route("/status")
+def status_page():
+    return render_template("status.html")
 
 @app.route("/api/status")
 def api_status():

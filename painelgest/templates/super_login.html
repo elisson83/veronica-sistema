@@ -138,7 +138,11 @@
       <label>Senha</label>
       <div class="input-wrap">
         <i class="fas fa-lock"></i>
-        <input type="password" name="password" placeholder="••••••••" required>
+        <input type="password" id="pwd-super" name="password" placeholder="••••••••" required style="padding-right:40px">
+        <button type="button" onclick="toggleSenha('pwd-super', this)"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#475569;cursor:pointer;padding:4px">
+          <i class="fas fa-eye"></i>
+        </button>
       </div>
     </div>
     <button type="submit" class="btn-super">
@@ -148,5 +152,18 @@
 
   <a href="{{ url_for('login') }}" class="back-link">← Voltar para o login do Gestor</a>
 </div>
+<script>
+function toggleSenha(id, btn) {
+  const input = document.getElementById(id);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+}
+</script>
 </body>
 </html>

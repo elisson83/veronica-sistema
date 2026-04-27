@@ -97,7 +97,11 @@
         <label class="form-label">Senha</label>
         <div class="input-group">
           <i class="fas fa-lock input-icon"></i>
-          <input type="password" name="senha" class="form-control" placeholder="••••••••" required>
+          <input type="password" id="pwd-dono" name="senha" class="form-control" placeholder="••••••••" required style="padding-right:40px">
+          <button type="button" onclick="toggleSenha('pwd-dono', this)"
+            style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#64748b;cursor:pointer;padding:4px">
+            <i class="fas fa-eye"></i>
+          </button>
         </div>
       </div>
       <button type="submit" class="btn-login"><i class="fas fa-sign-in-alt"></i> Acessar Painel</button>
@@ -108,5 +112,18 @@
       <a href="{{ url_for('super_login') }}">Super Admin</a>
     </div>
   </div>
+<script>
+function toggleSenha(id, btn) {
+  const input = document.getElementById(id);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+}
+</script>
 </body>
 </html>

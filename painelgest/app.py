@@ -3015,6 +3015,70 @@ def api_restaurante_token(token):
 # HELPERS — EMAIL RESET + PIX
 # ══════════════════════════════════════════════════════════════════════════════
 
+def enviar_whatsapp(telefone, mensagem):
+    """
+    Envia mensagem de texto via WhatsApp Business Cloud API (Meta).
+    Retorna (True, message_id) em caso de sucesso ou (False, erro) em caso de falha.
+    Telefone deve estar no formato internacional sem '+': ex: 5511999999999
+    """
+    import requests as _req
+    phone_id    = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
+    access_token = os.environ.get('WHATSAPP_ACCESS_TOKEN', '')
+
+    if not phone_id or not access_token:
+        return False, 'WHATSAPP_PHONE_NUMBER_ID ou WHATSAPP_ACCESS_TOKEN não configurado no .env'
+
+    # Normaliza telefone: remove tudo que não é dígito, adiciona 55 se necessário
+    tel = ''.join(filter(str.isdigit, str(telefone)))
+    if not tel.startswith('55'):
+        tel = '55' + tel
+
+    url = f"https://graph.facebook.com/v19.0/{phone_id}/messages"
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type':  'application/json',
+    }
+    payload = {
+        'messaging_product': 'whatsapp',
+        'recipient_type':    'individual',
+        'to':                tel,
+        'type':              'text',
+        'text':              {'preview_url': False, 'body': mensagem},
+    }
+    try:
+        resp = _req.post(url, json=payload, headers=headers, timeout=10)
+        data = resp.json()
+        if resp.status_code == 200 and data.get('messages'):
+            return True, data['messages'][0].get('id', 'ok')
+        erro = data.get('error', {}).get('message', resp.text[:200])
+        return False, erro
+    except Exception as e:
+        return False, str(e)
+
+
+def testar_whatsapp_api():
+    """Testa a conexão com a API do WhatsApp (sem enviar mensagem)."""
+    import requests as _req
+    phone_id     = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
+    business_id  = os.environ.get('WHATSAPP_BUSINESS_ACCOUNT_ID', '')
+    access_token = os.environ.get('WHATSAPP_ACCESS_TOKEN', '')
+
+    if not phone_id or not access_token:
+        return False, 'Credenciais não configuradas'
+
+    url = f"https://graph.facebook.com/v19.0/{phone_id}"
+    headers = {'Authorization': f'Bearer {access_token}'}
+    try:
+        resp = _req.get(url, headers=headers, timeout=10)
+        data = resp.json()
+        if resp.status_code == 200:
+            nome = data.get('display_phone_number', phone_id)
+            return True, f"Conectado — número: {nome} | Business ID: {business_id}"
+        return False, data.get('error', {}).get('message', resp.text[:200])
+    except Exception as e:
+        return False, str(e)
+
+
 def enviar_email_reset(destinatario, link_reset, nome_painel='PainelGest'):
     """Envia e-mail de redefinição de senha."""
     corpo = f"""Olá!
@@ -3462,24 +3526,41 @@ def restaurante_atendimento_registrar():
 
     db.session.commit()
 
-    # Monta link WhatsApp
-    tel_wa  = f"55{telefone}"
+    # Monta mensagem de boas-vindas
     cardapio_link = url_for('cardapio_publico', username=rest.username, _external=True) \
-                   if 'cardapio_publico' in app.view_functions else f"http://localhost:5002/cardapio/{rest.username}"
+                   if 'cardapio_publico' in app.view_functions \
+                   else f"http://localhost:5002/cardapio/{rest.username}"
     mensagem = (
         f"Olá! 👋 Bem-vindo(a) ao *{rest.nome}*!\n\n"
         f"📱 Acesse nosso cardápio digital:\n{cardapio_link}\n\n"
         f"💬 Responda com:\n"
-        f"*1* - Fazer pedido (informe o número do produto)\n"
-        f"*2* - Fechar conta\n"
-        f"*3* - Chamar garçom"
+        f"*1* — Fazer pedido (informe o número do produto)\n"
+        f"*2* — Fechar conta\n"
+        f"*3* — Chamar garçom\n\n"
+        f"_Bom apetite! 🍽️_"
     )
-    import urllib.parse
-    wa_link = f"https://wa.me/{tel_wa}?text={urllib.parse.quote(mensagem)}"
-    cliente.whatsapp_enviado = True
+
+    # Tenta envio via API oficial; fallback para link wa.me
+    ok, resultado = enviar_whatsapp(telefone, mensagem)
+    cliente.whatsapp_enviado = ok
     db.session.commit()
 
-    flash(f'Cliente registrado! <a href="{wa_link}" target="_blank" class="alert-link">Clique aqui para enviar WhatsApp</a>', 'success')
+    import urllib.parse
+    tel_wa  = f"55{telefone}"
+    wa_link = f"https://wa.me/{tel_wa}?text={urllib.parse.quote(mensagem)}"
+
+    if ok:
+        flash(
+            f'✅ WhatsApp enviado automaticamente via API para {telefone}! '
+            f'<small style="opacity:.7">(ID: {resultado})</small>',
+            'success'
+        )
+    else:
+        flash(
+            f'Cliente registrado. WhatsApp API indisponível ({resultado}). '
+            f'<a href="{wa_link}" target="_blank" class="alert-link">Clique para enviar manualmente</a>',
+            'warning'
+        )
     return redirect(url_for('restaurante_atendimento'))
 
 
@@ -3699,6 +3780,188 @@ def restaurante_saida_confirmar():
         conta.cliente.saiu_em = datetime.utcnow()
     db.session.commit()
     return jsonify({'ok': True, 'mensagem': 'Pagamento confirmado! Boa sorte! 👋'})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — WHATSAPP BUSINESS API (Meta Cloud API)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/super/whatsapp/testar')
+@requer_super
+def super_whatsapp_testar():
+    """Super Admin: testa conexão com a API do WhatsApp Business."""
+    ok, msg = testar_whatsapp_api()
+    return jsonify({
+        'ok': ok,
+        'mensagem': msg,
+        'phone_number_id':      os.environ.get('WHATSAPP_PHONE_NUMBER_ID', ''),
+        'business_account_id':  os.environ.get('WHATSAPP_BUSINESS_ACCOUNT_ID', ''),
+        'token_configurado':    bool(os.environ.get('WHATSAPP_ACCESS_TOKEN')),
+    })
+
+
+@app.route('/restaurante/whatsapp/testar')
+@requer_restaurante
+def restaurante_whatsapp_testar():
+    """Restaurante: testa conexão com WhatsApp e exibe status."""
+    ok, msg = testar_whatsapp_api()
+    return jsonify({'ok': ok, 'mensagem': msg})
+
+
+@app.route('/restaurante/whatsapp/enviar-manual', methods=['POST'])
+@requer_restaurante
+def restaurante_whatsapp_enviar_manual():
+    """Envia mensagem WhatsApp manualmente para um telefone."""
+    rest     = Restaurante.query.filter_by(username=session['restaurante']).first()
+    telefone = ''.join(filter(str.isdigit, request.json.get('telefone', '')))
+    mensagem = request.json.get('mensagem', '').strip()
+    if not telefone or not mensagem:
+        return jsonify({'ok': False, 'erro': 'Telefone e mensagem são obrigatórios'}), 400
+
+    ok, resultado = enviar_whatsapp(telefone, mensagem)
+    return jsonify({'ok': ok, 'resultado': resultado})
+
+
+@app.route('/whatsapp/webhook', methods=['GET'])
+def whatsapp_webhook_verify():
+    """Verificação do webhook Meta (GET) — necessário para configurar o webhook no painel Meta."""
+    verify_token = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'painelgest_webhook_2026')
+    mode      = request.args.get('hub.mode')
+    token     = request.args.get('hub.verify_token')
+    challenge = request.args.get('hub.challenge')
+    if mode == 'subscribe' and token == verify_token:
+        return challenge, 200
+    return 'Forbidden', 403
+
+
+@app.route('/whatsapp/webhook', methods=['POST'])
+def whatsapp_webhook_receive():
+    """
+    Recebe mensagens do WhatsApp (POST) e processa o bot de atendimento.
+    Bot: 1 = fazer pedido, 2 = fechar conta, 3 = chamar garçom
+    """
+    data = request.get_json(silent=True) or {}
+    try:
+        entry   = data.get('entry', [{}])[0]
+        changes = entry.get('changes', [{}])[0]
+        value   = changes.get('value', {})
+        msgs    = value.get('messages', [])
+
+        for msg in msgs:
+            if msg.get('type') != 'text':
+                continue
+            telefone = msg.get('from', '')     # ex: "5511999998888"
+            texto    = msg.get('text', {}).get('body', '').strip()
+
+            # Busca cliente presente pelo telefone (remove 55 do início)
+            tel_local = telefone.lstrip('55') if telefone.startswith('55') else telefone
+            cliente = ClientePresente.query.filter(
+                ClientePresente.telefone.in_([telefone, tel_local]),
+                ClientePresente.saiu == False
+            ).order_by(ClientePresente.entrada_em.desc()).first()
+
+            if not cliente:
+                continue
+
+            rest  = Restaurante.query.get(cliente.restaurante_id)
+            conta = ContaMesa.query.filter_by(
+                restaurante_id=cliente.restaurante_id,
+                cliente_id=cliente.id,
+                status='aberta'
+            ).first()
+
+            resposta = None
+
+            if texto == '1':
+                # Faz pedido — lista os produtos disponíveis
+                cats = Categoria.query.filter_by(restaurante_id=rest.id, ativo=True).all()
+                linhas = ["🍽️ *Cardápio — escolha o número do produto:*\n"]
+                idx = 1
+                for cat in cats:
+                    itens = ItemCardapio.query.filter_by(categoria_id=cat.id, disponivel=True).all()
+                    if itens:
+                        linhas.append(f"*{cat.nome}*")
+                        for item in itens:
+                            linhas.append(f"  {idx}. {item.nome} — R$ {item.preco:.2f}".replace('.', ','))
+                            idx += 1
+                linhas.append("\nDigite o *número* do produto para pedir.")
+                resposta = '\n'.join(linhas)
+
+            elif texto == '2':
+                # Fechar conta
+                if conta and conta.total > 0:
+                    resposta = (
+                        f"💳 *Sua conta:*\n"
+                        + '\n'.join([f"  {i['qtd']}x {i['nome']} — R$ {i['subtotal']:.2f}".replace('.', ',')
+                                     for i in conta.itens])
+                        + f"\n\n*Total: R$ {conta.total:.2f}*".replace('.', ',')
+                        + "\n\nUm garçom irá até você para finalizar o pagamento. ✅"
+                    )
+                else:
+                    resposta = "Não encontrei uma conta aberta. Fale com o garçom. 😊"
+
+            elif texto == '3':
+                # Chamar garçom
+                mesa_txt = f" (Mesa {cliente.mesa.label})" if cliente.mesa else ""
+                resposta = f"🔔 Garçom chamado{mesa_txt}! Estaremos com você em instantes."
+
+            elif texto.isdigit() and int(texto) > 3:
+                # Tenta adicionar item à conta pelo número do cardápio
+                cats = Categoria.query.filter_by(restaurante_id=rest.id, ativo=True).all()
+                idx = 1
+                item_alvo = None
+                for cat in cats:
+                    itens = ItemCardapio.query.filter_by(categoria_id=cat.id, disponivel=True).all()
+                    for item in itens:
+                        if idx == int(texto):
+                            item_alvo = item
+                            break
+                        idx += 1
+                    if item_alvo:
+                        break
+
+                if item_alvo:
+                    if not conta:
+                        conta = ContaMesa(
+                            restaurante_id=rest.id,
+                            mesa_id=cliente.mesa_id,
+                            cliente_id=cliente.id
+                        )
+                        db.session.add(conta)
+                        db.session.flush()
+                    itens_lista = conta.itens
+                    encontrado = False
+                    for i in itens_lista:
+                        if i['id'] == item_alvo.id:
+                            i['qtd'] += 1
+                            i['subtotal'] = round(i['qtd'] * i['preco'], 2)
+                            encontrado = True
+                            break
+                    if not encontrado:
+                        itens_lista.append({
+                            'id': item_alvo.id, 'nome': item_alvo.nome,
+                            'preco': item_alvo.preco, 'qtd': 1,
+                            'subtotal': item_alvo.preco
+                        })
+                    import json as _json
+                    conta.itens_json = _json.dumps(itens_lista)
+                    conta.total = round(sum(i['subtotal'] for i in itens_lista), 2)
+                    db.session.commit()
+                    resposta = (
+                        f"✅ *{item_alvo.nome}* adicionado!\n"
+                        f"Subtotal atual: R$ {conta.total:.2f}".replace('.', ',')
+                        + "\n\nDigite *2* para fechar a conta ou *3* para chamar o garçom."
+                    )
+                else:
+                    resposta = "Número de produto não encontrado. Digite *1* para ver o cardápio."
+
+            if resposta:
+                enviar_whatsapp(telefone, resposta)
+
+    except Exception as e:
+        app.logger.error(f"WhatsApp webhook erro: {e}")
+
+    return jsonify({'status': 'ok'}), 200
 
 
 # ══════════════════════════════════════════════════════════════════════════════

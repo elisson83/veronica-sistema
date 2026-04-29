@@ -58,7 +58,9 @@
       "PowerShell(Get-ChildItem *)",
       "Bash([ -f \"$BASE/$f\" ])",
       "PowerShell($env:USERPROFILE)",
-      "Bash(grep -v \"^\\\\\\\\[\")"
+      "Bash(grep -v \"^\\\\\\\\[\")",
+      "Bash(grep -oP \"'[A-Z_]{4,}'\")",
+      "Bash(grep -oP \"'[A-Z][A-Z_]{3,}'\")"
     ]
   }
 }

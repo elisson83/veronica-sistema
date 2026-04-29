@@ -1,0 +1,9 @@
+flask
+flask-sqlalchemy
+flask-login
+werkzeug
+apscheduler
+python-dotenv
+requests
+qrcode[pil]
+pillow

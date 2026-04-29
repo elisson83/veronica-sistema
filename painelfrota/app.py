@@ -7,7 +7,10 @@ import smtplib
 import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, make_response, send_file
+
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -1054,20 +1057,10 @@ class TokenResetFrota(db.Model):
 
 
 def _email_frota(para, assunto, corpo):
-    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
-    smtp_port = int(os.environ.get('SMTP_PORT', 587))
-    smtp_user = os.environ.get('SMTP_USER', '')
-    smtp_pass = os.environ.get('SMTP_PASS', '')
-    if not smtp_user:
-        return False
-    try:
-        msg = MIMEMultipart(); msg['From'] = smtp_user; msg['To'] = para; msg['Subject'] = assunto
-        msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
-        with smtplib.SMTP(smtp_host, smtp_port) as s:
-            s.starttls(); s.login(smtp_user, smtp_pass); s.sendmail(smtp_user, para, msg.as_string())
-        return True
-    except Exception:
-        return False
+    import sys; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from modules.email_utils import enviar_email
+    ok, _ = enviar_email(para, assunto, corpo)
+    return ok
 
 
 @app.route('/esqueci-senha', methods=['GET', 'POST'])
@@ -1105,7 +1098,7 @@ def resetar_senha_frota(token):
         else:
             admin = AdminFrota.query.filter(db.func.lower(AdminFrota.email) == tok.email).first()
             if admin:
-                admin.password = generate_password_hash(nova); tok.usado = True; db.session.commit()
+                admin.set_senha(nova); tok.usado = True; db.session.commit()
                 flash('Senha redefinida! Faça login.', 'success')
                 return redirect(url_for('login'))
     return render_template('resetar_senha.html', token=token)

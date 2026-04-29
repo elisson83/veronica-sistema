@@ -4,7 +4,10 @@ import secrets
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
+
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -666,20 +669,10 @@ class TokenResetMotoboy(db.Model):
 
 
 def _enviar_email_motoboy(para, assunto, corpo):
-    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
-    smtp_port = int(os.environ.get('SMTP_PORT', 587))
-    smtp_user = os.environ.get('SMTP_USER', '')
-    smtp_pass = os.environ.get('SMTP_PASS', '')
-    if not smtp_user:
-        return False
-    try:
-        msg = MIMEMultipart(); msg['From'] = smtp_user; msg['To'] = para; msg['Subject'] = assunto
-        msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
-        with smtplib.SMTP(smtp_host, smtp_port) as s:
-            s.starttls(); s.login(smtp_user, smtp_pass); s.sendmail(smtp_user, para, msg.as_string())
-        return True
-    except Exception:
-        return False
+    import sys; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from modules.email_utils import enviar_email
+    ok, _ = enviar_email(para, assunto, corpo)
+    return ok
 
 
 @app.route('/esqueci-senha', methods=['GET', 'POST'])

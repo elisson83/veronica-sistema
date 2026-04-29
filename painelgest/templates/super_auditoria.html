@@ -1,0 +1,64 @@
+{% extends 'super_base.html' %}
+{% block title %}Auditoria de Acesso — PainelGest{% endblock %}
+{% block topbar_title %}Auditoria{% endblock %}
+{% block topbar_sub %}Registro de todas as ações de acesso temporário{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('super_gestores') }}" class="btn-accent" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8">
+    <i class="fas fa-arrow-left"></i> Gestores
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="pg-card">
+  <div class="pg-card-header">
+    <span class="pg-card-title"><i class="fas fa-shield-halved" style="color:#f59e0b;margin-right:8px"></i>Log de Auditoria ({{ logs|length }} registros)</span>
+  </div>
+  <div style="overflow-x:auto">
+  <table class="pg-table">
+    <thead>
+      <tr>
+        <th>Data/Hora</th>
+        <th>Super Admin</th>
+        <th>Gestor</th>
+        <th>Ação</th>
+        <th>Detalhes</th>
+        <th>IP</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for log in logs %}
+    <tr>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">
+        {{ log.criado_em.strftime('%d/%m/%Y %H:%M:%S') }}
+      </td>
+      <td style="font-weight:600;color:#f59e0b">{{ log.super_admin }}</td>
+      <td style="color:var(--text)">{{ log.gestor_nome or '—' }}</td>
+      <td>
+        {% if 'AUTORIZADO' in log.acao %}
+          <span style="color:#10b981"><i class="fas fa-check-circle"></i> {{ log.acao }}</span>
+        {% elif 'NEGADO' in log.acao or 'ENCERRADA' in log.acao %}
+          <span style="color:#f87171"><i class="fas fa-times-circle"></i> {{ log.acao }}</span>
+        {% elif 'INICIADA' in log.acao %}
+          <span style="color:#6366f1"><i class="fas fa-play-circle"></i> {{ log.acao }}</span>
+        {% else %}
+          <span style="color:#94a3b8"><i class="fas fa-info-circle"></i> {{ log.acao }}</span>
+        {% endif %}
+      </td>
+      <td style="font-size:12px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis">
+        {{ log.detalhes or '—' }}
+      </td>
+      <td style="font-size:11px;color:var(--muted)">{{ log.ip or '—' }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="6" style="text-align:center;padding:48px;color:var(--muted)">
+        <i class="fas fa-shield-halved" style="font-size:36px;opacity:.2;display:block;margin-bottom:12px"></i>
+        Nenhum registro de auditoria ainda.
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

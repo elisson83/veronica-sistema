@@ -99,8 +99,19 @@
   <a href="{{ url_for('restaurante_kanban') }}" class="nav-item">
     <i class="fas fa-table-columns"></i> Kanban de Pedidos
   </a>
-  <a href="{{ url_for('restaurante_cardapio') }}" class="nav-item">
+  <a href="{{ url_for('restaurante_cardapio') }}" class="nav-item {% if request.endpoint=='restaurante_cardapio' %}active{% endif %}">
     <i class="fas fa-book-open"></i> Cardápio
+  </a>
+
+  <div class="nav-group">Atendimento</div>
+  <a href="{{ url_for('restaurante_mesas') }}" class="nav-item {% if request.endpoint=='restaurante_mesas' %}active{% endif %}">
+    <i class="fas fa-chair"></i> Mesas
+  </a>
+  <a href="{{ url_for('restaurante_atendimento') }}" class="nav-item {% if request.endpoint=='restaurante_atendimento' %}active{% endif %}">
+    <i class="fas fa-bell-concierge"></i> Atendimento WhatsApp
+  </a>
+  <a href="{{ url_for('restaurante_conta_lista') }}" class="nav-item {% if 'conta' in request.endpoint %}active{% endif %}">
+    <i class="fas fa-receipt"></i> Contas / Pagamentos
   </a>
 
   <div class="nav-group">Motoboys</div>

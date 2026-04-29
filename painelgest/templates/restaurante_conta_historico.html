@@ -1,0 +1,48 @@
+{% extends 'dashboard_restaurante.html' %}
+{% block title %}Histórico de Contas — {{ restaurante.nome }}{% endblock %}
+
+{% block content %}
+<div style="padding:24px;max-width:1100px;margin:0 auto">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+    <a href="{{ url_for('restaurante_conta_lista') }}" style="color:#64748b;text-decoration:none"><i class="fas fa-arrow-left"></i> Contas</a>
+    <h2 style="font-size:20px;font-weight:700;color:#e2e8f0">
+      <i class="fas fa-history" style="color:#6366f1;margin-right:8px"></i>Histórico (últimas 100)
+    </h2>
+  </div>
+  <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+          <th style="padding:14px 20px;text-align:left;color:#64748b;font-weight:600">Conta</th>
+          <th style="padding:14px 20px;text-align:left;color:#64748b;font-weight:600">Mesa</th>
+          <th style="padding:14px 20px;text-align:left;color:#64748b;font-weight:600">Total</th>
+          <th style="padding:14px 20px;text-align:left;color:#64748b;font-weight:600">Pagamento</th>
+          <th style="padding:14px 20px;text-align:left;color:#64748b;font-weight:600">Status</th>
+          <th style="padding:14px 20px;text-align:left;color:#64748b;font-weight:600">Fechado em</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for c in contas %}
+      <tr style="border-bottom:1px solid rgba(255,255,255,.04)">
+        <td style="padding:12px 20px;color:#e2e8f0">#{{ c.id }}</td>
+        <td style="padding:12px 20px;color:#94a3b8">{% if c.mesa_rel %}{{ c.mesa_rel.label }}{% else %}—{% endif %}</td>
+        <td style="padding:12px 20px;font-weight:600;color:#10b981">{{ c.total_fmt }}</td>
+        <td style="padding:12px 20px;color:#94a3b8">{{ c.forma_pagamento or '—' }}</td>
+        <td style="padding:12px 20px">
+          <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;
+            {{ 'background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)' if c.status=='paga' else 'background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)' }}">
+            {{ c.status|title }}
+          </span>
+        </td>
+        <td style="padding:12px 20px;color:#64748b;font-size:12px">
+          {{ c.pago_em.strftime('%d/%m %H:%M') if c.pago_em else '—' }}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="text-align:center;padding:48px;color:#475569">Nenhuma conta no histórico</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

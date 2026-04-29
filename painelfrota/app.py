@@ -3,7 +3,10 @@ import io
 import math
 import json
 import secrets
+import smtplib
 import requests
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, make_response, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -1028,6 +1031,84 @@ def api_stats():
         'corridas_hoje':  corridas,
         'receita_total':  round(float(receita), 2),
     })
+
+
+# ── Reset de Senha PainelFrota ────────────────────────────────────────────────
+
+class TokenResetFrota(db.Model):
+    id        = db.Column(db.Integer, primary_key=True)
+    email     = db.Column(db.String(120), nullable=False)
+    token     = db.Column(db.String(64), unique=True, nullable=False)
+    usado     = db.Column(db.Boolean, default=False)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    expira_em = db.Column(db.DateTime, nullable=False)
+
+    def __init__(self, email):
+        self.email     = email.lower()
+        self.token     = secrets.token_urlsafe(32)
+        self.expira_em = datetime.utcnow() + timedelta(hours=2)
+
+    @property
+    def valido(self):
+        return not self.usado and datetime.utcnow() < self.expira_em
+
+
+def _email_frota(para, assunto, corpo):
+    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', 587))
+    smtp_user = os.environ.get('SMTP_USER', '')
+    smtp_pass = os.environ.get('SMTP_PASS', '')
+    if not smtp_user:
+        return False
+    try:
+        msg = MIMEMultipart(); msg['From'] = smtp_user; msg['To'] = para; msg['Subject'] = assunto
+        msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
+        with smtplib.SMTP(smtp_host, smtp_port) as s:
+            s.starttls(); s.login(smtp_user, smtp_pass); s.sendmail(smtp_user, para, msg.as_string())
+        return True
+    except Exception:
+        return False
+
+
+@app.route('/esqueci-senha', methods=['GET', 'POST'])
+def esqueci_senha_frota():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        admin = AdminFrota.query.filter(db.func.lower(AdminFrota.email) == email).first()
+        if admin and admin.email:
+            TokenResetFrota.query.filter_by(email=email, usado=False).update({'usado': True})
+            db.session.commit()
+            tok = TokenResetFrota(email)
+            db.session.add(tok)
+            db.session.commit()
+            link = url_for('resetar_senha_frota', token=tok.token, _external=True)
+            corpo = f"Olá!\n\nRedefina sua senha no PainelFrota:\n{link}\n\nVálido por 2 horas.\n\nPainelFrota"
+            _email_frota(email, 'Redefinir senha — PainelFrota', corpo)
+        flash('Se esse e-mail estiver cadastrado, você receberá o link.', 'info')
+        return redirect(url_for('login'))
+    return render_template('esqueci_senha.html')
+
+
+@app.route('/resetar-senha/<token>', methods=['GET', 'POST'])
+def resetar_senha_frota(token):
+    tok = TokenResetFrota.query.filter_by(token=token).first_or_404()
+    if not tok.valido:
+        flash('Link expirado ou já utilizado.', 'danger')
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        nova = request.form.get('senha', '')
+        conf = request.form.get('confirm', '')
+        if len(nova) < 6:
+            flash('Mínimo 6 caracteres.', 'danger')
+        elif nova != conf:
+            flash('Senhas não coincidem.', 'danger')
+        else:
+            admin = AdminFrota.query.filter(db.func.lower(AdminFrota.email) == tok.email).first()
+            if admin:
+                admin.password = generate_password_hash(nova); tok.usado = True; db.session.commit()
+                flash('Senha redefinida! Faça login.', 'success')
+                return redirect(url_for('login'))
+    return render_template('resetar_senha.html', token=token)
 
 
 # ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────

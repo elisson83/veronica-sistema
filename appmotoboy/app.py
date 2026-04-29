@@ -1,5 +1,9 @@
 import os
 import math
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -640,6 +644,84 @@ def api_nova_entrega():
     db.session.add(e)
     db.session.commit()
     return jsonify({'ok': True, 'id': e.id, 'expira_em': e.expira_em.isoformat()})
+
+# ── Reset de Senha ────────────────────────────────────────────────────────────
+
+class TokenResetMotoboy(db.Model):
+    id        = db.Column(db.Integer, primary_key=True)
+    email     = db.Column(db.String(120), nullable=False)
+    token     = db.Column(db.String(64), unique=True, nullable=False)
+    usado     = db.Column(db.Boolean, default=False)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    expira_em = db.Column(db.DateTime, nullable=False)
+
+    def __init__(self, email):
+        self.email    = email.lower()
+        self.token    = secrets.token_urlsafe(32)
+        self.expira_em = datetime.utcnow() + timedelta(hours=2)
+
+    @property
+    def valido(self):
+        return not self.usado and datetime.utcnow() < self.expira_em
+
+
+def _enviar_email_motoboy(para, assunto, corpo):
+    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', 587))
+    smtp_user = os.environ.get('SMTP_USER', '')
+    smtp_pass = os.environ.get('SMTP_PASS', '')
+    if not smtp_user:
+        return False
+    try:
+        msg = MIMEMultipart(); msg['From'] = smtp_user; msg['To'] = para; msg['Subject'] = assunto
+        msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
+        with smtplib.SMTP(smtp_host, smtp_port) as s:
+            s.starttls(); s.login(smtp_user, smtp_pass); s.sendmail(smtp_user, para, msg.as_string())
+        return True
+    except Exception:
+        return False
+
+
+@app.route('/esqueci-senha', methods=['GET', 'POST'])
+def esqueci_senha_motoboy():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        mb = Motoboy.query.filter(db.func.lower(Motoboy.email) == email).first()
+        if mb and mb.email:
+            TokenResetMotoboy.query.filter_by(email=email, usado=False).update({'usado': True})
+            db.session.commit()
+            tok = TokenResetMotoboy(email)
+            db.session.add(tok)
+            db.session.commit()
+            link = url_for('resetar_senha_motoboy', token=tok.token, _external=True)
+            corpo = f"Olá {mb.nome}!\n\nRedefina sua senha:\n{link}\n\nVálido por 2 horas.\n\nAppMotoboy"
+            _enviar_email_motoboy(email, 'Redefinir senha — AppMotoboy', corpo)
+        flash('Se esse e-mail estiver cadastrado, você receberá o link.', 'info')
+        return redirect(url_for('login'))
+    return render_template('esqueci_senha.html')
+
+
+@app.route('/resetar-senha/<token>', methods=['GET', 'POST'])
+def resetar_senha_motoboy(token):
+    tok = TokenResetMotoboy.query.filter_by(token=token).first_or_404()
+    if not tok.valido:
+        flash('Link expirado ou já utilizado.', 'danger')
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        nova = request.form.get('senha', '')
+        conf = request.form.get('confirm', '')
+        if len(nova) < 6:
+            flash('Mínimo 6 caracteres.', 'danger')
+        elif nova != conf:
+            flash('Senhas não coincidem.', 'danger')
+        else:
+            mb = Motoboy.query.filter(db.func.lower(Motoboy.email) == tok.email).first()
+            if mb:
+                mb.set_senha(nova); tok.usado = True; db.session.commit()
+                flash('Senha redefinida! Faça login.', 'success')
+                return redirect(url_for('login'))
+    return render_template('resetar_senha.html', token=token)
+
 
 # ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────
 

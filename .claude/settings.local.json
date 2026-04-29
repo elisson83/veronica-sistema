@@ -55,7 +55,10 @@
       "PowerShell(Get-Volume *)",
       "PowerShell(Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Name -in @\\('G','E'\\) } | Select-Object Name, Description)",
       "PowerShell(Get-WmiObject *)",
-      "PowerShell(Get-ChildItem *)"
+      "PowerShell(Get-ChildItem *)",
+      "Bash([ -f \"$BASE/$f\" ])",
+      "PowerShell($env:USERPROFILE)",
+      "Bash(grep -v \"^\\\\\\\\[\")"
     ]
   }
 }

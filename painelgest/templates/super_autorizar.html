@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autorização de Acesso — PainelGest</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #0b0d17; color: #e2e8f0;
+         min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .card { background: #131720; border: 1px solid rgba(255,255,255,.07);
+          border-radius: 20px; padding: 48px 40px; max-width: 480px; width: 100%;
+          text-align: center; box-shadow: 0 24px 64px rgba(0,0,0,.5); }
+  .icon { font-size: 56px; margin-bottom: 20px; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 10px; }
+  p  { color: #94a3b8; font-size: 15px; line-height: 1.6; margin-bottom: 8px; }
+  .badge { display: inline-block; padding: 6px 16px; border-radius: 20px;
+           font-size: 12px; font-weight: 700; letter-spacing: .5px; margin: 16px 0; }
+  .badge-ok  { background: rgba(16,185,129,.15); color: #10b981; border: 1px solid rgba(16,185,129,.3); }
+  .badge-err { background: rgba(239,68,68,.15);  color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+  .badge-war { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+</style>
+</head>
+<body>
+<div class="card">
+{% if resultado == 'autorizado' %}
+  <div class="icon" style="color:#10b981"><i class="fas fa-shield-check"></i></div>
+  <h1>Acesso Autorizado!</h1>
+  <div class="badge badge-ok">AUTORIZADO</div>
+  <p>Você autorizou o acesso temporário de <strong>{{ super_nome }}</strong> ao seu painel.</p>
+  <p>O acesso expirará automaticamente em <strong>30 minutos</strong> e tudo será registrado no log de auditoria.</p>
+
+{% elif resultado == 'negado' %}
+  <div class="icon" style="color:#f87171"><i class="fas fa-shield-xmark"></i></div>
+  <h1>Acesso Negado</h1>
+  <div class="badge badge-err">NEGADO</div>
+  <p>Você negou o acesso ao seu painel. Nenhuma sessão foi criada.</p>
+
+{% elif resultado == 'expirado' %}
+  <div class="icon" style="color:#f59e0b"><i class="fas fa-clock"></i></div>
+  <h1>Link Expirado</h1>
+  <div class="badge badge-war">EXPIRADO</div>
+  <p>Este link de autorização já expirou. Peça ao administrador que solicite um novo acesso.</p>
+
+{% elif resultado == 'ja_usado' %}
+  <div class="icon" style="color:#64748b"><i class="fas fa-circle-check"></i></div>
+  <h1>Link Já Utilizado</h1>
+  <div class="badge badge-war">UTILIZADO</div>
+  <p>Este link já foi processado anteriormente.</p>
+{% endif %}
+
+  <p style="margin-top:24px;font-size:12px;color:#475569">PainelGest — Sistema de Segurança de Acesso</p>
+</div>
+</body>
+</html>

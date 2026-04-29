@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Esqueci minha senha — PainelGest</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #0b0d17; color: #e2e8f0;
+         min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .card { background: #131720; border: 1px solid rgba(255,255,255,.07); border-radius: 20px;
+          padding: 44px 36px; max-width: 420px; width: 100%; box-shadow: 0 24px 64px rgba(0,0,0,.5); }
+  .logo { text-align: center; margin-bottom: 28px; }
+  .logo-icon { width: 56px; height: 56px; background: linear-gradient(135deg,#6366f1,#818cf8);
+               border-radius: 16px; display: inline-grid; place-items: center;
+               font-size: 22px; color: #fff; margin-bottom: 12px; }
+  h1 { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+  p.sub { text-align: center; color: #64748b; font-size: 13px; margin-bottom: 24px; }
+  .form-label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 600;
+                color: #94a3b8; letter-spacing: .5px; text-transform: uppercase; }
+  .input-wrap { position: relative; margin-bottom: 18px; }
+  .input-wrap i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+                  color: #475569; font-size: 13px; }
+  .form-input { width: 100%; background: #1c2133; border: 1px solid rgba(255,255,255,.07);
+                border-radius: 10px; padding: 11px 14px 11px 38px; color: #e2e8f0;
+                font-size: 14px; font-family: 'Inter', sans-serif; outline: none; }
+  .form-input:focus { border-color: #6366f1; }
+  .btn { width: 100%; background: #6366f1; color: #fff; border: none; border-radius: 10px;
+         padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer;
+         font-family: 'Inter', sans-serif; }
+  .btn:hover { background: #4f46e5; }
+  .flash { padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 16px;
+           display: flex; align-items: center; gap: 8px; }
+  .flash-info { background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.3); color: #818cf8; }
+  .flash-danger { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: #f87171; }
+  .back { text-align: center; margin-top: 18px; font-size: 12px; color: #64748b; }
+  .back a { color: #6366f1; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon"><i class="fas fa-key"></i></div>
+    <h1>Esqueci minha senha</h1>
+    <p class="sub">Informe seu e-mail e enviaremos um link de redefinição</p>
+  </div>
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+    <div class="flash flash-{{ 'info' if cat == 'info' else 'danger' }}">
+      <i class="fas fa-{{ 'info-circle' if cat == 'info' else 'exclamation-circle' }}"></i>
+      {{ msg|safe }}
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST">
+    <label class="form-label">E-mail cadastrado</label>
+    <div class="input-wrap">
+      <i class="fas fa-envelope"></i>
+      <input type="email" name="email" class="form-input" placeholder="seu@email.com" required autofocus>
+    </div>
+    <button type="submit" class="btn"><i class="fas fa-paper-plane"></i> Enviar link de redefinição</button>
+  </form>
+
+  <div class="back">
+    <a href="{{ volta }}"><i class="fas fa-arrow-left"></i> Voltar ao login</a>
+  </div>
+</div>
+</body>
+</html>

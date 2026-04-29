@@ -1,0 +1,129 @@
+{% extends 'dashboard_restaurante.html' %}
+{% block title %}Contas — {{ restaurante.nome }}{% endblock %}
+
+{% block content %}
+<div style="padding:24px;max-width:1100px;margin:0 auto">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="font-size:20px;font-weight:700;color:#e2e8f0">
+        <i class="fas fa-receipt" style="color:#6366f1;margin-right:8px"></i>Contas Abertas
+      </h2>
+      <p style="color:#64748b;font-size:13px;margin-top:4px">{{ contas|length }} conta(s) aberta(s)</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <a href="{{ url_for('restaurante_conta_historico') }}" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none">
+        <i class="fas fa-history"></i> Histórico
+      </a>
+      <button onclick="abrirConta()" style="background:#6366f1;border:none;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">
+        <i class="fas fa-plus"></i> Abrir Conta
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal abrir conta -->
+  <div id="modal-abrir" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:none;place-items:center">
+    <div style="background:#131720;border-radius:16px;padding:32px;width:360px;border:1px solid rgba(255,255,255,.08)">
+      <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;color:#e2e8f0">Abrir Nova Conta</h3>
+      <form method="POST" action="{{ url_for('restaurante_conta_abrir') }}">
+        <label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px">Mesa (opcional)</label>
+        <select name="mesa_id" style="width:100%;background:#0b0d17;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:11px 14px;color:#e2e8f0;font-size:13px;margin-bottom:20px;outline:none">
+          <option value="">-- Sem mesa --</option>
+          {% for mesa in mesas %}
+          <option value="{{ mesa.id }}">{{ mesa.label }}</option>
+          {% endfor %}
+        </select>
+        <div style="display:flex;gap:10px">
+          <button type="button" onclick="fecharModal()" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;padding:11px;border-radius:10px;font-size:13px;cursor:pointer">Cancelar</button>
+          <button type="submit" style="flex:2;background:#6366f1;border:none;color:#fff;padding:11px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Abrir Conta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Grid de contas -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+    {% for conta in contas %}
+    <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden">
+      <div style="padding:16px 20px;background:rgba(99,102,241,.08);border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#e2e8f0">
+            {% if conta.mesa_rel %}{{ conta.mesa_rel.label }}{% else %}Balcão{% endif %}
+          </div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">
+            Conta #{{ conta.id }} — {{ conta.criado_em.strftime('%H:%M') }}
+          </div>
+        </div>
+        <div style="font-size:20px;font-weight:700;color:#10b981">{{ conta.total_fmt }}</div>
+      </div>
+      <div style="padding:16px 20px">
+        {% set itens = conta.itens %}
+        {% if itens %}
+        <div style="margin-bottom:14px;max-height:140px;overflow-y:auto">
+          {% for item in itens %}
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+            <span>{{ item.qtd }}x {{ item.nome }}</span>
+            <span style="color:#e2e8f0">R$ {{ "%.2f"|format(item.subtotal) }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:16px;color:#475569;font-size:13px">Nenhum item ainda</div>
+        {% endif %}
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="{{ url_for('restaurante_conta_detalhe', cid=conta.id) }}"
+             style="flex:1;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8;padding:9px;border-radius:8px;font-size:12px;text-align:center;text-decoration:none;font-weight:600;min-width:80px">
+            <i class="fas fa-plus"></i> Itens
+          </a>
+          <button onclick="pagarConta({{ conta.id }}, 'pix')" title="PIX"
+                  style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#10b981;padding:9px 12px;border-radius:8px;font-size:14px;cursor:pointer">
+            <i class="fas fa-qrcode"></i>
+          </button>
+          <button onclick="pagarConta({{ conta.id }}, 'cartao')" title="Cartão"
+                  style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8;padding:9px 12px;border-radius:8px;font-size:14px;cursor:pointer">
+            <i class="fas fa-credit-card"></i>
+          </button>
+          <button onclick="pagarConta({{ conta.id }}, 'dinheiro')" title="Dinheiro"
+                  style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:9px 12px;border-radius:8px;font-size:14px;cursor:pointer">
+            <i class="fas fa-money-bill-wave"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div style="grid-column:1/-1;text-align:center;padding:64px;color:#475569">
+      <i class="fas fa-receipt" style="font-size:48px;opacity:.2;display:block;margin-bottom:16px"></i>
+      Nenhuma conta aberta no momento.<br>
+      <button onclick="abrirConta()" style="margin-top:16px;background:#6366f1;border:none;color:#fff;padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer">
+        <i class="fas fa-plus"></i> Abrir primeira conta
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+function abrirConta() { document.getElementById('modal-abrir').style.display = 'grid'; }
+function fecharModal() { document.getElementById('modal-abrir').style.display = 'none'; }
+
+const FORMA_LABEL = {pix: 'PIX', cartao: 'Cartão (garçom com maquininha)', dinheiro: 'Dinheiro (garçom)'};
+
+async function pagarConta(id, forma) {
+  const msg = forma === 'pix'
+    ? 'Confirmar pagamento via PIX? O QR Code será exibido.'
+    : forma === 'cartao'
+      ? 'Direcionar garçom com maquininha para cartão?'
+      : 'Direcionar garçom para receber dinheiro?';
+  if (!confirm(msg)) return;
+  const r = await fetch(`/restaurante/conta/${id}/pagar`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({forma})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    alert(`✅ ${d.mensagem}`);
+    location.reload();
+  }
+}
+</script>
+{% endblock %}

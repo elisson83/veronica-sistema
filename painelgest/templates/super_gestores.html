@@ -68,7 +68,14 @@
           {{ g.criado_em.strftime('%d/%m/%Y') if g.criado_em else '—' }}
         </td>
         <td>
-          <div style="display:flex;gap:5px;align-items:center">
+          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+            <form method="POST" action="{{ url_for('super_solicitar_acesso', gid=g.id) }}" style="margin:0">
+              <button type="submit" class="icon-btn" title="Solicitar acesso temporário (requer autorização do gestor)"
+                      style="background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)"
+                      onclick="return confirm('Enviar e-mail de autorização para {{ g.email or \"(sem e-mail)\" }}?')">
+                <i class="fas fa-eye"></i>
+              </button>
+            </form>
             <a href="{{ url_for('super_editar_gestor', id=g.id) }}" class="icon-btn ib-edit" title="Editar">
               <i class="fas fa-pen"></i>
             </a>

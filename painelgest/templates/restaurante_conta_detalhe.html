@@ -1,0 +1,215 @@
+{% extends 'dashboard_restaurante.html' %}
+{% block title %}Conta #{{ conta.id }} — {{ restaurante.nome }}{% endblock %}
+
+{% block content %}
+<div style="padding:24px;max-width:900px;margin:0 auto">
+
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+    <a href="{{ url_for('restaurante_conta_lista') }}" style="color:#64748b;text-decoration:none;font-size:14px">
+      <i class="fas fa-arrow-left"></i> Contas
+    </a>
+    <h2 style="font-size:20px;font-weight:700;color:#e2e8f0">
+      Conta #{{ conta.id }} — {% if conta.mesa_rel %}{{ conta.mesa_rel.label }}{% else %}Balcão{% endif %}
+    </h2>
+    <span style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:3px 12px;font-size:12px">
+      {{ conta.status|title }}
+    </span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:20px">
+
+    <!-- Itens -->
+    <div>
+      <!-- Buscar item do cardápio -->
+      <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:20px;margin-bottom:16px">
+        <h3 style="font-size:15px;font-weight:600;color:#e2e8f0;margin-bottom:14px">
+          <i class="fas fa-plus-circle" style="color:#10b981;margin-right:8px"></i>Adicionar Item
+        </h3>
+        <input type="text" id="busca-item" placeholder="Buscar produto..." oninput="filtrarItens()"
+               style="width:100%;background:#0b0d17;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;color:#e2e8f0;font-size:13px;outline:none;margin-bottom:12px">
+        <div id="lista-itens" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+          {% for item in itens_cardapio %}
+          <div class="item-row" data-nome="{{ item.nome|lower }}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1c2133;border-radius:10px;cursor:pointer" onclick="adicionarItem({{ item.id }}, '{{ item.nome|replace("'","\'") }}', {{ item.preco }})">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#e2e8f0">{{ item.nome }}</div>
+              <div style="font-size:12px;color:#64748b">R$ {{ "%.2f"|format(item.preco) }}</div>
+            </div>
+            <button type="button" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;pointer-events:none">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Itens da conta -->
+      <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:20px">
+        <h3 style="font-size:15px;font-weight:600;color:#e2e8f0;margin-bottom:14px">
+          <i class="fas fa-list" style="color:#6366f1;margin-right:8px"></i>Itens da Conta
+        </h3>
+        <div id="itens-conta" style="display:flex;flex-direction:column;gap:8px">
+          {% for i, item in enumerate(conta.itens) %}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1c2133;border-radius:10px">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#e2e8f0">{{ item.qtd }}x {{ item.nome }}</div>
+              <div style="font-size:12px;color:#64748b">R$ {{ "%.2f"|format(item.preco) }} un.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="font-weight:700;color:#10b981">R$ {{ "%.2f"|format(item.subtotal) }}</span>
+              <button onclick="removerItem({{ i }}, this)" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+          {% if not conta.itens %}
+          <div id="vazio" style="text-align:center;padding:32px;color:#475569;font-size:13px">
+            Nenhum item adicionado ainda
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Painel de pagamento -->
+    <div style="position:sticky;top:80px;height:fit-content">
+      <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px">
+        <h3 style="font-size:15px;font-weight:600;color:#e2e8f0;margin-bottom:16px">
+          <i class="fas fa-cash-register" style="color:#f59e0b;margin-right:8px"></i>Fechamento
+        </h3>
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+          <span style="color:#94a3b8;font-size:14px">Total</span>
+          <span id="total-display" style="font-size:24px;font-weight:700;color:#10b981">{{ conta.total_fmt }}</span>
+        </div>
+
+        {% if pix_payload %}
+        <!-- PIX QR Code -->
+        <div style="margin:20px 0;text-align:center">
+          <div style="font-size:12px;font-weight:600;color:#10b981;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="fas fa-qrcode"></i> QR Code PIX
+          </div>
+          <canvas id="qr-pix" style="border-radius:8px;max-width:200px"></canvas>
+          <div style="font-size:10px;color:#475569;margin-top:8px;word-break:break-all;padding:8px;background:#0b0d17;border-radius:6px">
+            {{ pix_payload[:30] }}...
+          </div>
+        </div>
+        {% elif restaurante.chave_pix %}
+        <div style="margin:16px 0;padding:12px;background:rgba(16,185,129,.08);border-radius:10px;border:1px solid rgba(16,185,129,.2);text-align:center;font-size:12px;color:#64748b">
+          Adicione itens para gerar o QR PIX
+        </div>
+        {% else %}
+        <div style="margin:16px 0;padding:12px;background:rgba(245,158,11,.08);border-radius:10px;border:1px solid rgba(245,158,11,.2);text-align:center;font-size:12px;color:#f59e0b">
+          <i class="fas fa-info-circle"></i> Configure sua Chave PIX no perfil para ativar pagamento PIX
+        </div>
+        {% endif %}
+
+        <!-- Botões de pagamento -->
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+          {% if restaurante.chave_pix %}
+          <button onclick="pagar('pix')" class="btn-pag" style="background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff">
+            <i class="fas fa-qrcode"></i> Confirmar PIX
+          </button>
+          {% endif %}
+          <button onclick="pagar('cartao')" class="btn-pag" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8">
+            <i class="fas fa-credit-card"></i> Cartão — Chamar com Maquininha
+          </button>
+          <button onclick="pagar('dinheiro')" class="btn-pag" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#f59e0b">
+            <i class="fas fa-money-bill-wave"></i> Dinheiro — Chamar Garçom
+          </button>
+          <button onclick="cancelarConta()" class="btn-pag" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171">
+            <i class="fas fa-times"></i> Cancelar Conta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.btn-pag { width:100%;padding:12px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer; }
+</style>
+
+<script>
+const CONTA_ID = {{ conta.id }};
+let totalAtual = {{ conta.total }};
+
+function filtrarItens() {
+  const q = document.getElementById('busca-item').value.toLowerCase();
+  document.querySelectorAll('.item-row').forEach(r => {
+    r.style.display = r.dataset.nome.includes(q) ? 'flex' : 'none';
+  });
+}
+
+async function adicionarItem(id, nome, preco) {
+  const r = await fetch(`/restaurante/conta/${CONTA_ID}/item`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({item_id: id, qtd: 1})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    totalAtual = d.total;
+    document.getElementById('total-display').textContent = 'R$ ' + d.total.toFixed(2).replace('.',',');
+    document.getElementById('vazio') && (document.getElementById('vazio').remove());
+    const cont = document.getElementById('itens-conta');
+    const exist = [...cont.querySelectorAll('[data-item]')].find(e => e.dataset.item == id);
+    if (exist) {
+      const it = d.itens.find(i => i.id == id);
+      exist.querySelector('.qtd').textContent = it.qtd + 'x ' + nome;
+      exist.querySelector('.sub').textContent = 'R$ ' + it.subtotal.toFixed(2);
+    } else {
+      const idx = d.itens.length - 1;
+      const div = document.createElement('div');
+      div.dataset.item = id;
+      div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1c2133;border-radius:10px';
+      div.innerHTML = `<div><div class="qtd" style="font-size:13px;font-weight:600;color:#e2e8f0">1x ${nome}</div>
+        <div style="font-size:12px;color:#64748b">R$ ${preco.toFixed(2)} un.</div></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="sub" style="font-weight:700;color:#10b981">R$ ${preco.toFixed(2)}</span>
+          <button onclick="removerItem(${idx},this)" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer"><i class="fas fa-trash"></i></button>
+        </div>`;
+      cont.appendChild(div);
+    }
+  }
+}
+
+async function removerItem(idx, btn) {
+  const r = await fetch(`/restaurante/conta/${CONTA_ID}/item/${idx}/remover`, {method:'POST'});
+  const d = await r.json();
+  if (d.ok) {
+    totalAtual = d.total;
+    document.getElementById('total-display').textContent = 'R$ ' + d.total.toFixed(2).replace('.',',');
+    btn.closest('[style*="1c2133"]').remove();
+    location.reload(); // Recarrega para ajustar índices
+  }
+}
+
+async function pagar(forma) {
+  const msgs = {pix: 'Confirmar recebimento via PIX?', cartao: 'Chamar garçom com maquininha para cartão?', dinheiro: 'Chamar garçom para receber dinheiro?'};
+  if (!confirm(msgs[forma])) return;
+  const r = await fetch(`/restaurante/conta/${CONTA_ID}/pagar`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({forma})
+  });
+  const d = await r.json();
+  if (d.ok) { alert('✅ ' + d.mensagem); window.location = '/restaurante/conta'; }
+}
+
+async function cancelarConta() {
+  if (!confirm('Cancelar esta conta?')) return;
+  const r = await fetch(`/restaurante/conta/${CONTA_ID}/cancelar`, {method:'POST'});
+  const d = await r.json();
+  if (d.ok) window.location = '/restaurante/conta';
+}
+
+// Gera QR Code PIX com qrcodejs se payload disponível
+{% if pix_payload %}
+const script = document.createElement('script');
+script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+script.onload = () => {
+  QRCode.toCanvas(document.getElementById('qr-pix'), '{{ pix_payload }}',
+    {width: 200, color: {dark:'#000000', light:'#ffffff'}});
+};
+document.head.appendChild(script);
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Saída — {% if restaurante %}{{ restaurante.nome }}{% else %}Restaurante{% endif %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #0a0a12; color: #e2e8f0;
+         min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+         justify-content: center; padding: 24px; }
+  .card { background: #131720; border: 1px solid rgba(255,255,255,.07); border-radius: 24px;
+          padding: 40px 32px; width: 100%; max-width: 420px; box-shadow: 0 24px 64px rgba(0,0,0,.6); }
+  .logo { text-align: center; margin-bottom: 28px; }
+  .logo-icon { width: 72px; height: 72px; background: linear-gradient(135deg,#6366f1,#818cf8);
+               border-radius: 20px; display: inline-grid; place-items: center;
+               font-size: 28px; color: #fff; margin-bottom: 12px; }
+  h1 { font-size: 24px; font-weight: 800; text-align: center; }
+  p.sub { text-align: center; color: #64748b; font-size: 14px; margin-top: 6px; margin-bottom: 28px; }
+  .field-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase;
+                 letter-spacing: .5px; margin-bottom: 6px; display: block; }
+  .inp { width: 100%; background: #1c2133; border: 1px solid rgba(255,255,255,.08); border-radius: 12px;
+         padding: 14px 16px; color: #e2e8f0; font-size: 20px; font-weight: 600; outline: none;
+         text-align: center; letter-spacing: 4px; margin-bottom: 16px; }
+  .inp:focus { border-color: #6366f1; }
+  .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px;
+         font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .btn-primary { background: linear-gradient(135deg,#6366f1,#818cf8); color: #fff; }
+  .btn-primary:hover { opacity: .9; }
+  .btn-pix  { background: linear-gradient(135deg,#10b981,#059669); color: #fff; margin-bottom: 10px; }
+  .btn-card { background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.3) !important; color: #818cf8; margin-bottom: 10px; }
+  .btn-cash { background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3) !important; color: #f59e0b; }
+  #resultado { display: none; }
+  .total-big { font-size: 48px; font-weight: 800; color: #10b981; text-align: center; margin: 16px 0; }
+  .item-row { display: flex; justify-content: space-between; padding: 8px 0;
+              border-bottom: 1px solid rgba(255,255,255,.05); font-size: 13px; }
+  .badge-premium { display: inline-flex; align-items: center; gap: 5px;
+                   background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3);
+                   color: #f59e0b; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-bottom: 16px; }
+  #loading { display: none; text-align: center; color: #64748b; padding: 24px; }
+  #erro { display: none; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3);
+          color: #f87171; border-radius: 10px; padding: 12px; margin-bottom: 16px; text-align: center; font-size: 14px; }
+  #sucesso { display: none; text-align: center; }
+</style>
+</head>
+<body>
+{% if not restaurante %}
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fas fa-exclamation-triangle"></i></div>
+  </div>
+  <h1>Restaurante não encontrado</h1>
+  <p class="sub">{{ erro }}</p>
+</div>
+{% else %}
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon"><i class="fas fa-door-open"></i></div>
+    <div class="badge-premium"><i class="fas fa-crown"></i> Plano Premium</div>
+    <h1>Confirmação de Saída</h1>
+    <p class="sub">{{ restaurante.nome }}</p>
+  </div>
+
+  <!-- Tela de consulta -->
+  <div id="tela-consulta">
+    <div id="erro"></div>
+    <label class="field-label">Seu telefone cadastrado na entrada</label>
+    <input type="tel" id="inp-telefone" class="inp" placeholder="11999999999"
+           inputmode="numeric" maxlength="11"
+           oninput="this.value=this.value.replace(/\D/g,'')">
+    <button class="btn btn-primary" onclick="consultar()">
+      <i class="fas fa-search"></i> Verificar Conta
+    </button>
+    <div id="loading"><i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:8px;display:block"></i>Consultando...</div>
+  </div>
+
+  <!-- Resultado / pagamento -->
+  <div id="resultado">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:600;color:#e2e8f0" id="res-nome"></div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px">Entrada: <span id="res-entrada"></span></div>
+    </div>
+    <div id="res-itens" style="margin-bottom:16px;max-height:200px;overflow-y:auto"></div>
+    <div class="total-big" id="res-total"></div>
+    <div id="tela-pagar">
+      <button class="btn btn-pix" onclick="confirmar('pix')"><i class="fas fa-qrcode"></i> Pago via PIX</button>
+      <button class="btn btn-card" onclick="confirmar('cartao')"><i class="fas fa-credit-card"></i> Pago via Cartão</button>
+      <button class="btn btn-cash" onclick="confirmar('dinheiro')"><i class="fas fa-money-bill-wave"></i> Pago em Dinheiro</button>
+    </div>
+    <div id="sucesso">
+      <i class="fas fa-check-circle" style="font-size:64px;color:#10b981;margin-bottom:16px;display:block"></i>
+      <h2 style="font-size:22px;font-weight:700;color:#10b981;margin-bottom:8px">Pagamento Confirmado!</h2>
+      <p style="color:#64748b;font-size:14px">Obrigado pela visita! Volte sempre 😊</p>
+      <button class="btn btn-primary" onclick="reiniciar()" style="margin-top:24px">
+        <i class="fas fa-redo"></i> Próximo Cliente
+      </button>
+    </div>
+    <button onclick="voltar()" style="display:block;width:100%;margin-top:12px;background:none;border:none;color:#64748b;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif">
+      <i class="fas fa-arrow-left"></i> Voltar
+    </button>
+  </div>
+</div>
+
+<script>
+const USERNAME = '{{ restaurante.username }}';
+let contaIdAtual = null;
+
+async function consultar() {
+  const tel = document.getElementById('inp-telefone').value.trim();
+  if (tel.length < 10) { mostrarErro('Informe um telefone válido (mínimo 10 dígitos).'); return; }
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('erro').style.display = 'none';
+  const fd = new FormData();
+  fd.append('username', USERNAME);
+  fd.append('telefone', tel);
+  const r = await fetch('/restaurante/saida/consultar', {method: 'POST', body: fd});
+  document.getElementById('loading').style.display = 'none';
+  const d = await r.json();
+  if (!d.ok) { mostrarErro(d.erro); return; }
+
+  contaIdAtual = d.conta_id;
+  document.getElementById('res-nome').textContent = d.nome;
+  document.getElementById('res-entrada').textContent = d.entrada;
+  document.getElementById('res-total').textContent = d.total_fmt;
+
+  let html = '';
+  (d.itens || []).forEach(i => {
+    html += `<div class="item-row"><span>${i.qtd}x ${i.nome}</span><span style="color:#10b981">R$ ${i.subtotal.toFixed(2)}</span></div>`;
+  });
+  document.getElementById('res-itens').innerHTML = html || '<p style="text-align:center;color:#64748b;font-size:13px">Nenhum item registrado</p>';
+
+  document.getElementById('tela-consulta').style.display = 'none';
+  document.getElementById('resultado').style.display = 'block';
+}
+
+async function confirmar(forma) {
+  if (!contaIdAtual) { alert('Nenhuma conta encontrada.'); return; }
+  const r = await fetch('/restaurante/saida/confirmar', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({conta_id: contaIdAtual, forma})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    document.getElementById('tela-pagar').style.display = 'none';
+    document.getElementById('sucesso').style.display = 'block';
+  } else {
+    alert(d.erro || 'Erro ao confirmar pagamento.');
+  }
+}
+
+function mostrarErro(msg) {
+  const el = document.getElementById('erro');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function voltar() {
+  document.getElementById('tela-consulta').style.display = 'block';
+  document.getElementById('resultado').style.display = 'none';
+  document.getElementById('erro').style.display = 'none';
+  document.getElementById('inp-telefone').value = '';
+}
+
+function reiniciar() {
+  document.getElementById('tela-pagar').style.display = 'block';
+  document.getElementById('sucesso').style.display = 'none';
+  voltar();
+}
+</script>
+{% endif %}
+</body>
+</html>

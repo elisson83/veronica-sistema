@@ -1,0 +1,210 @@
+{% extends 'dashboard_restaurante.html' %}
+{% block title %}Mesas — {{ restaurante.nome }}{% endblock %}
+
+{% block content %}
+<div style="padding:24px;max-width:1100px;margin:0 auto">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="font-size:20px;font-weight:700;color:#e2e8f0">
+        <i class="fas fa-chair" style="color:#6366f1;margin-right:8px"></i>Gerenciar Mesas
+      </h2>
+      <p style="color:#64748b;font-size:13px;margin-top:4px">Configure até 50 mesas com numeração personalizada</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="adicionarMesa()" class="btn-add">
+        <i class="fas fa-plus"></i> Adicionar Mesa
+      </button>
+      <button onclick="salvar()" class="btn-save" id="btn-save">
+        <i class="fas fa-save"></i> Salvar Configuração
+      </button>
+    </div>
+  </div>
+
+  <!-- Grid de mesas -->
+  <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px;margin-bottom:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <span style="font-weight:600;color:#e2e8f0">Mesas configuradas: <span id="total-mesas" style="color:#6366f1">{{ mesas|length }}</span></span>
+      <span style="font-size:12px;color:#64748b">Máximo: 50 mesas</span>
+    </div>
+    <div id="grid-mesas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+      {% for mesa in mesas %}
+      <div class="mesa-card" data-id="{{ mesa.id }}" data-numero="{{ mesa.numero }}">
+        <div class="mesa-header">
+          <span class="mesa-num">Mesa {{ mesa.numero }}</span>
+          <button onclick="removerMesa(this)" class="btn-remover"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="mesa-body">
+          <div class="field-group">
+            <label>Número</label>
+            <input type="number" class="inp-numero" value="{{ mesa.numero }}" min="1" max="50">
+          </div>
+          <div class="field-group">
+            <label>Nome (opcional)</label>
+            <input type="text" class="inp-nome" value="{{ mesa.nome or '' }}" placeholder="ex: VIP, Varanda">
+          </div>
+          <div class="field-group">
+            <label>Capacidade</label>
+            <input type="number" class="inp-cap" value="{{ mesa.capacidade }}" min="1" max="20">
+          </div>
+          <div style="margin-top:8px">
+            <span class="status-badge status-{{ mesa.status }}">{{ mesa.status|title }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if not mesas %}
+    <div id="empty" style="text-align:center;padding:48px;color:#475569">
+      <i class="fas fa-chair" style="font-size:48px;opacity:.2;display:block;margin-bottom:16px"></i>
+      Nenhuma mesa configurada. Clique em "Adicionar Mesa" para começar.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Mapa visual de status -->
+  <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px">
+    <h3 style="font-size:16px;font-weight:600;color:#e2e8f0;margin-bottom:16px">
+      <i class="fas fa-map-marked-alt" style="color:#6366f1;margin-right:8px"></i>Mapa de Status ao Vivo
+    </h3>
+    <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8">
+        <span style="width:12px;height:12px;border-radius:50%;background:#10b981;display:inline-block"></span>Livre
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8">
+        <span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block"></span>Ocupada
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8">
+        <span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block"></span>Reservada
+      </span>
+    </div>
+    <div id="mapa-status" style="display:flex;flex-wrap:wrap;gap:10px">
+      {% for mesa in mesas %}
+      <div class="mapa-mesa status-{{ mesa.status }}" data-mesa="{{ mesa.id }}" onclick="toggleStatus(this, {{ mesa.id }})">
+        <div style="font-size:22px;margin-bottom:4px"><i class="fas fa-chair"></i></div>
+        <div style="font-size:11px;font-weight:700">{{ mesa.label }}</div>
+        <div style="font-size:10px;opacity:.7">{{ mesa.status|title }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<style>
+.btn-add { background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.3); color: #818cf8;
+           padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-save { background: #6366f1; border: none; color: #fff;
+            padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-save:hover { background: #4f46e5; }
+.mesa-card { background: #1c2133; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; overflow: hidden; }
+.mesa-header { display: flex; align-items: center; justify-content: space-between;
+               padding: 10px 14px; background: rgba(99,102,241,.1); border-bottom: 1px solid rgba(255,255,255,.06); }
+.mesa-num { font-weight: 700; font-size: 13px; color: #818cf8; }
+.btn-remover { background: none; border: none; color: #f87171; cursor: pointer; font-size: 14px; padding: 2px 6px; }
+.mesa-body { padding: 14px; }
+.field-group { margin-bottom: 10px; }
+.field-group label { display: block; font-size: 10px; font-weight: 600; color: #64748b;
+                     text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.field-group input { width: 100%; background: #0b0d17; border: 1px solid rgba(255,255,255,.08);
+                     border-radius: 8px; padding: 7px 10px; color: #e2e8f0; font-size: 13px; outline: none; }
+.field-group input:focus { border-color: #6366f1; }
+.status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.status-livre { background: rgba(16,185,129,.15); color: #10b981; border: 1px solid rgba(16,185,129,.3); }
+.status-ocupada { background: rgba(239,68,68,.15); color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+.status-reservada { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+.mapa-mesa { width: 80px; height: 80px; border-radius: 12px; display: flex; flex-direction: column;
+             align-items: center; justify-content: center; cursor: pointer; transition: .2s;
+             border: 2px solid transparent; }
+.mapa-mesa.status-livre { background: rgba(16,185,129,.15); border-color: rgba(16,185,129,.4); color: #10b981; }
+.mapa-mesa.status-ocupada { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.4); color: #f87171; }
+.mapa-mesa.status-reservada { background: rgba(245,158,11,.15); border-color: rgba(245,158,11,.4); color: #f59e0b; }
+.mapa-mesa:hover { transform: scale(1.05); }
+</style>
+
+<script>
+const MAX = 50;
+let contadorNovo = 1;
+
+function adicionarMesa() {
+  const grid = document.getElementById('grid-mesas');
+  const total = grid.querySelectorAll('.mesa-card').length;
+  if (total >= MAX) { alert('Limite de 50 mesas atingido!'); return; }
+  document.getElementById('empty') && (document.getElementById('empty').style.display='none');
+
+  // Encontra próximo número disponível
+  const usados = new Set([...grid.querySelectorAll('.inp-numero')].map(i => parseInt(i.value)));
+  let num = 1;
+  while (usados.has(num) && num <= 50) num++;
+
+  const card = document.createElement('div');
+  card.className = 'mesa-card';
+  card.innerHTML = `
+    <div class="mesa-header">
+      <span class="mesa-num">Mesa ${num}</span>
+      <button onclick="removerMesa(this)" class="btn-remover"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="mesa-body">
+      <div class="field-group"><label>Número</label>
+        <input type="number" class="inp-numero" value="${num}" min="1" max="50" oninput="atualizarHeader(this)">
+      </div>
+      <div class="field-group"><label>Nome (opcional)</label>
+        <input type="text" class="inp-nome" placeholder="ex: VIP, Varanda">
+      </div>
+      <div class="field-group"><label>Capacidade</label>
+        <input type="number" class="inp-cap" value="4" min="1" max="20">
+      </div>
+      <div style="margin-top:8px"><span class="status-badge status-livre">Livre</span></div>
+    </div>`;
+  grid.appendChild(card);
+  document.getElementById('total-mesas').textContent = grid.querySelectorAll('.mesa-card').length;
+}
+
+function atualizarHeader(inp) {
+  const card = inp.closest('.mesa-card');
+  card.querySelector('.mesa-num').textContent = `Mesa ${inp.value}`;
+}
+
+function removerMesa(btn) {
+  btn.closest('.mesa-card').remove();
+  const grid = document.getElementById('grid-mesas');
+  document.getElementById('total-mesas').textContent = grid.querySelectorAll('.mesa-card').length;
+}
+
+async function salvar() {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+  const cards = document.querySelectorAll('.mesa-card');
+  const mesas = [];
+  cards.forEach(c => {
+    const num  = parseInt(c.querySelector('.inp-numero').value);
+    const nome = c.querySelector('.inp-nome').value.trim();
+    const cap  = parseInt(c.querySelector('.inp-cap').value);
+    if (num >= 1 && num <= 50) mesas.push({numero: num, nome: nome || null, capacidade: cap || 4});
+  });
+  const r = await fetch('{{ url_for("restaurante_mesas_salvar") }}', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({mesas})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    btn.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+    btn.style.background = '#10b981';
+    setTimeout(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Salvar'; btn.style.background = ''; }, 2000);
+  } else {
+    alert('Erro ao salvar: ' + (d.erro || 'desconhecido'));
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+  }
+}
+
+async function toggleStatus(el, mesaId) {
+  const ciclo = {livre: 'ocupada', ocupada: 'reservada', reservada: 'livre'};
+  const cur = el.classList.contains('status-livre') ? 'livre' : el.classList.contains('status-ocupada') ? 'ocupada' : 'reservada';
+  const prox = ciclo[cur];
+  await fetch(`/restaurante/mesas/status/${mesaId}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status: prox})
+  });
+  el.classList.replace(`status-${cur}`, `status-${prox}`);
+  el.querySelector('div:last-child').textContent = prox.charAt(0).toUpperCase() + prox.slice(1);
+}
+</script>
+{% endblock %}

@@ -236,6 +236,7 @@ class Restaurante(db.Model):
     lat                  = db.Column(db.Float,        nullable=True)
     lng                  = db.Column(db.Float,        nullable=True)
     raio_entrega_km      = db.Column(db.Float,        default=5.0)
+    session_token        = db.Column(db.String(64),   nullable=True)
 
     def __init__(self, nome, username, password, cliente_id=None):
         self.nome = nome; self.username = username
@@ -543,6 +544,148 @@ class CRMCliente(db.Model):
             return []
 
 
+# ── Acesso Temporário Super Admin ────────────────────────────────────────────
+
+class AcessoTemporario(db.Model):
+    """Token de acesso temporário: Super Admin entra no painel de um gestor."""
+    id            = db.Column(db.Integer, primary_key=True)
+    super_admin   = db.Column(db.String(80),  nullable=False)
+    gestor_id     = db.Column(db.Integer, db.ForeignKey('administrador.id'), nullable=False)
+    token         = db.Column(db.String(64),  unique=True, nullable=False)
+    autorizado    = db.Column(db.Boolean,     default=False)
+    usado         = db.Column(db.Boolean,     default=False)
+    criado_em     = db.Column(db.DateTime,    default=datetime.utcnow)
+    expira_em     = db.Column(db.DateTime,    nullable=False)
+    ip_solicitante= db.Column(db.String(50),  nullable=True)
+    gestor        = db.relationship('Administrador', backref='acessos_super')
+
+    def __init__(self, super_admin, gestor_id, ip=None):
+        self.super_admin    = super_admin
+        self.gestor_id      = gestor_id
+        self.token          = secrets.token_urlsafe(32)
+        self.expira_em      = datetime.utcnow() + timedelta(hours=1)
+        self.ip_solicitante = ip
+
+    @property
+    def valido(self):
+        return self.autorizado and not self.usado and datetime.utcnow() < self.expira_em
+
+    @property
+    def expirado(self):
+        return datetime.utcnow() >= self.expira_em
+
+
+class AuditoriaAcesso(db.Model):
+    """Registro de auditoria de ações do Super Admin no painel de gestores."""
+    id            = db.Column(db.Integer, primary_key=True)
+    acesso_id     = db.Column(db.Integer, db.ForeignKey('acesso_temporario.id'), nullable=True)
+    super_admin   = db.Column(db.String(80),  nullable=False)
+    gestor_id     = db.Column(db.Integer,     nullable=True)
+    gestor_nome   = db.Column(db.String(120), nullable=True)
+    acao          = db.Column(db.String(200), nullable=False)
+    detalhes      = db.Column(db.Text,        nullable=True)
+    ip            = db.Column(db.String(50),  nullable=True)
+    criado_em     = db.Column(db.DateTime,    default=datetime.utcnow)
+
+
+# ── Reset de Senha ────────────────────────────────────────────────────────────
+
+class TokenResetSenha(db.Model):
+    """Token para reset de senha por e-mail — todos os painéis."""
+    id         = db.Column(db.Integer, primary_key=True)
+    painel     = db.Column(db.String(20), nullable=False)  # gestor|dono|restaurante
+    email      = db.Column(db.String(120), nullable=False)
+    token      = db.Column(db.String(64), unique=True, nullable=False)
+    usado      = db.Column(db.Boolean, default=False)
+    criado_em  = db.Column(db.DateTime, default=datetime.utcnow)
+    expira_em  = db.Column(db.DateTime, nullable=False)
+
+    def __init__(self, painel, email):
+        self.painel    = painel
+        self.email     = email.lower()
+        self.token     = secrets.token_urlsafe(32)
+        self.expira_em = datetime.utcnow() + timedelta(hours=2)
+
+    @property
+    def valido(self):
+        return not self.usado and datetime.utcnow() < self.expira_em
+
+
+# ── Mesas do Restaurante ──────────────────────────────────────────────────────
+
+class Mesa(db.Model):
+    """Mesa do restaurante — numeração personalizável pelo dono."""
+    id             = db.Column(db.Integer, primary_key=True)
+    restaurante_id = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=False)
+    numero         = db.Column(db.Integer, nullable=False)
+    nome           = db.Column(db.String(30), nullable=True)   # ex: "VIP", "Varanda"
+    capacidade     = db.Column(db.Integer, default=4)
+    status         = db.Column(db.String(20), default='livre')  # livre|ocupada|reservada
+    ativa          = db.Column(db.Boolean, default=True)
+    restaurante    = db.relationship('Restaurante', backref='mesas')
+
+    def __init__(self, restaurante_id, numero, nome=None, capacidade=4):
+        self.restaurante_id = restaurante_id
+        self.numero         = numero
+        self.nome           = nome
+        self.capacidade     = capacidade
+
+    @property
+    def label(self):
+        return self.nome or f"Mesa {self.numero}"
+
+
+# ── Atendimento Inteligente ───────────────────────────────────────────────────
+
+class ClientePresente(db.Model):
+    """Cliente registrado na entrada via telefone."""
+    id             = db.Column(db.Integer, primary_key=True)
+    restaurante_id = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=False)
+    mesa_id        = db.Column(db.Integer, db.ForeignKey('mesa.id'), nullable=True)
+    telefone       = db.Column(db.String(20), nullable=False)
+    nome           = db.Column(db.String(80), nullable=True)
+    whatsapp_enviado = db.Column(db.Boolean, default=False)
+    entrada_em     = db.Column(db.DateTime, default=datetime.utcnow)
+    saiu           = db.Column(db.Boolean, default=False)
+    saiu_em        = db.Column(db.DateTime, nullable=True)
+    restaurante    = db.relationship('Restaurante', backref='clientes_presentes')
+    mesa           = db.relationship('Mesa', backref='clientes_presentes')
+
+
+class ContaMesa(db.Model):
+    """Conta aberta de um cliente presente."""
+    id                = db.Column(db.Integer, primary_key=True)
+    restaurante_id    = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=False)
+    cliente_id        = db.Column(db.Integer, db.ForeignKey('cliente_presente.id'), nullable=True)
+    mesa_id           = db.Column(db.Integer, db.ForeignKey('mesa.id'), nullable=True)
+    itens_json        = db.Column(db.Text, default='[]')
+    total             = db.Column(db.Float, default=0.0)
+    status            = db.Column(db.String(20), default='aberta')  # aberta|paga|cancelada
+    forma_pagamento   = db.Column(db.String(30), nullable=True)  # pix|cartao|dinheiro
+    pix_payload       = db.Column(db.Text, nullable=True)
+    criado_em         = db.Column(db.DateTime, default=datetime.utcnow)
+    pago_em           = db.Column(db.DateTime, nullable=True)
+    restaurante       = db.relationship('Restaurante', backref='contas_mesas')
+    cliente           = db.relationship('ClientePresente', backref='contas')
+    mesa_rel          = db.relationship('Mesa', backref='contas')
+
+    def __init__(self, restaurante_id, mesa_id=None, cliente_id=None):
+        self.restaurante_id = restaurante_id
+        self.mesa_id        = mesa_id
+        self.cliente_id     = cliente_id
+
+    @property
+    def itens(self):
+        try:
+            return json.loads(self.itens_json or '[]')
+        except Exception:
+            return []
+
+    @property
+    def total_fmt(self):
+        return f"R$ {self.total:.2f}".replace('.', ',')
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -754,6 +897,14 @@ def requer_restaurante(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'restaurante' not in session:
+            return redirect(url_for('restaurante_login'))
+        # Valida sessão única — verifica se o token ainda é o atual
+        rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+        if rest and rest.session_token and session.get('restaurante_token') != rest.session_token:
+            session.pop('restaurante', None)
+            session.pop('restaurante_id', None)
+            session.pop('restaurante_token', None)
+            flash('Sessão encerrada — outro dispositivo fez login.', 'warning')
             return redirect(url_for('restaurante_login'))
         return f(*args, **kwargs)
     return decorated
@@ -1359,8 +1510,13 @@ def restaurante_login():
         password = request.form['password']
         restaurante = Restaurante.query.filter_by(username=username).first()
         if restaurante and check_password_hash(restaurante.password, password):
-            session['restaurante'] = username
-            session['restaurante_id'] = restaurante.id
+            # Sessão única: invalida qualquer sessão anterior
+            tok = secrets.token_hex(16)
+            restaurante.session_token = tok
+            db.session.commit()
+            session['restaurante']       = username
+            session['restaurante_id']    = restaurante.id
+            session['restaurante_token'] = tok
             return redirect(url_for('restaurante_dashboard'))
         flash('Login ou senha inválidos.', 'danger')
     return render_template('login_restaurante.html')
@@ -2855,6 +3011,697 @@ def api_restaurante_token(token):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# HELPERS — EMAIL RESET + PIX
+# ══════════════════════════════════════════════════════════════════════════════
+
+def enviar_email_reset(destinatario, link_reset, nome_painel='PainelGest'):
+    """Envia e-mail de redefinição de senha."""
+    corpo = f"""Olá!
+
+Recebemos um pedido de redefinição de senha para sua conta no {nome_painel}.
+
+Clique no link abaixo para criar uma nova senha (válido por 2 horas):
+{link_reset}
+
+Se você não solicitou isso, ignore este e-mail.
+
+Equipe {nome_painel}"""
+    ok, err = enviar_email_comprovante(destinatario, f'Redefinir senha — {nome_painel}', corpo)
+    return ok, err
+
+
+def enviar_email_autorizacao_acesso(destinatario, gestor_nome, super_nome, link_autorizar, link_negar):
+    """Envia e-mail pedindo autorização do gestor para acesso do Super Admin."""
+    corpo = f"""Olá, {gestor_nome}!
+
+O administrador "{super_nome}" solicitou acesso temporário (30 minutos) ao seu painel PainelGest para suporte técnico.
+
+✅ AUTORIZAR acesso:
+{link_autorizar}
+
+❌ NEGAR acesso:
+{link_negar}
+
+Este link expira em 1 hora. Se você não reconhece esta solicitação, ignore este e-mail.
+
+PainelGest — Sistema de Segurança"""
+    ok, err = enviar_email_comprovante(destinatario, 'Autorização de acesso ao seu painel — PainelGest', corpo)
+    return ok, err
+
+
+def gerar_pix_payload(chave, nome_beneficiario, cidade, valor, txid='PAINELGEST'):
+    """Gera payload PIX estático (EMVCo) para QR Code."""
+    def crc16(data):
+        crc = 0xFFFF
+        for b in data.encode('utf-8'):
+            crc ^= b << 8
+            for _ in range(8):
+                crc = (crc << 1) ^ 0x1021 if crc & 0x8000 else crc << 1
+        return format(crc & 0xFFFF, '04X')
+
+    def tlv(tag, val):
+        return f"{tag}{len(val):02d}{val}"
+
+    chave_pix     = tlv('01', chave)
+    merchant_acc  = tlv('00', 'BR.GOV.BCB.PIX') + chave_pix
+    valor_str     = f"{valor:.2f}"
+    nome_b        = nome_beneficiario[:25]
+    cidade_b      = cidade[:15]
+
+    payload  = '000201'                          # Payload Format Indicator
+    payload += tlv('26', merchant_acc)           # Merchant Account
+    payload += '52040000'                        # MCC
+    payload += '5303986'                         # Currency BRL
+    payload += tlv('54', valor_str)              # Transaction Amount
+    payload += '5802BR'                          # Country
+    payload += tlv('59', nome_b)                 # Merchant Name
+    payload += tlv('60', cidade_b)               # Merchant City
+    payload += tlv('62', tlv('05', txid[:25]))   # Additional Data
+    payload += '6304'                            # CRC placeholder
+    payload += crc16(payload)
+    return payload
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — ACESSO TEMPORÁRIO SUPER ADMIN (Feature 1)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/super/gestores/<int:gid>/solicitar-acesso', methods=['POST'])
+@requer_super
+def super_solicitar_acesso(gid):
+    gestor = Administrador.query.get_or_404(gid)
+    if not gestor.email:
+        flash('Este gestor não tem e-mail cadastrado. Impossível solicitar autorização.', 'danger')
+        return redirect(url_for('super_gestores'))
+
+    # Invalida tokens anteriores não usados
+    AcessoTemporario.query.filter_by(gestor_id=gid, usado=False).update({'usado': True})
+    db.session.commit()
+
+    acesso = AcessoTemporario(
+        super_admin=session['super_admin'],
+        gestor_id=gid,
+        ip=request.remote_addr
+    )
+    db.session.add(acesso)
+    db.session.commit()
+
+    link_autorizar = url_for('super_autorizar_acesso', token=acesso.token, acao='autorizar', _external=True)
+    link_negar     = url_for('super_autorizar_acesso', token=acesso.token, acao='negar', _external=True)
+
+    ok, err = enviar_email_autorizacao_acesso(
+        gestor.email, gestor.nome_empresa or gestor.username,
+        session['super_admin'], link_autorizar, link_negar
+    )
+
+    audit = AuditoriaAcesso(
+        super_admin=session['super_admin'], gestor_id=gid,
+        gestor_nome=gestor.nome_empresa or gestor.username,
+        acao='Solicitação de acesso temporário',
+        detalhes=f'E-mail enviado para {gestor.email}. Envio: {"OK" if ok else err}',
+        ip=request.remote_addr
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    if ok:
+        flash(f'E-mail de autorização enviado para {gestor.email}. Aguarde o gestor autorizar.', 'success')
+    else:
+        flash(f'Falha ao enviar e-mail: {err}. Configure SMTP_USER e SMTP_PASS no .env.', 'warning')
+
+    return redirect(url_for('super_gestores'))
+
+
+@app.route('/super/autorizar/<token>/<acao>')
+def super_autorizar_acesso(token, acao):
+    """Página pública — gestor clica no link do e-mail para autorizar ou negar."""
+    acesso = AcessoTemporario.query.filter_by(token=token).first_or_404()
+    if acesso.expirado:
+        return render_template('super_autorizar.html', resultado='expirado')
+    if acesso.usado:
+        return render_template('super_autorizar.html', resultado='ja_usado')
+
+    if acao == 'autorizar':
+        acesso.autorizado = True
+        resultado = 'autorizado'
+        acao_texto = 'Acesso AUTORIZADO pelo gestor'
+    else:
+        acesso.autorizado = False
+        acesso.usado = True
+        resultado = 'negado'
+        acao_texto = 'Acesso NEGADO pelo gestor'
+
+    audit = AuditoriaAcesso(
+        acesso_id=acesso.id,
+        super_admin=acesso.super_admin,
+        gestor_id=acesso.gestor_id,
+        gestor_nome=acesso.gestor.nome_empresa or acesso.gestor.username,
+        acao=acao_texto, ip=request.remote_addr
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    return render_template('super_autorizar.html', resultado=resultado,
+                           gestor_nome=acesso.gestor.nome_empresa or acesso.gestor.username,
+                           super_nome=acesso.super_admin)
+
+
+@app.route('/super/entrar-como/<token>')
+@requer_super
+def super_entrar_como(token):
+    """Super Admin entra no painel do gestor com token autorizado."""
+    acesso = AcessoTemporario.query.filter_by(token=token).first_or_404()
+    if not acesso.valido:
+        flash('Token inválido, expirado ou não autorizado pelo gestor.', 'danger')
+        return redirect(url_for('super_gestores'))
+
+    acesso.expira_em = datetime.utcnow() + timedelta(minutes=30)
+    db.session.commit()
+
+    session['super_acesso_token']   = token
+    session['super_acesso_expira']  = acesso.expira_em.isoformat()
+    session['administrador']        = acesso.gestor.email or acesso.gestor.username
+
+    audit = AuditoriaAcesso(
+        acesso_id=acesso.id,
+        super_admin=acesso.super_admin, gestor_id=acesso.gestor_id,
+        gestor_nome=acesso.gestor.nome_empresa or acesso.gestor.username,
+        acao='Sessão de acesso temporário INICIADA (30 min)',
+        ip=request.remote_addr
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    flash(f'Acesso temporário ao painel de "{acesso.gestor.nome_empresa or acesso.gestor.username}" — expira em 30 minutos.', 'info')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/super/encerrar-acesso')
+@requer_super
+def super_encerrar_acesso():
+    """Encerra o acesso temporário e volta para o super admin."""
+    token = session.pop('super_acesso_token', None)
+    session.pop('super_acesso_expira', None)
+    session.pop('administrador', None)
+
+    if token:
+        acesso = AcessoTemporario.query.filter_by(token=token).first()
+        if acesso:
+            acesso.usado = True
+            audit = AuditoriaAcesso(
+                acesso_id=acesso.id,
+                super_admin=acesso.super_admin, gestor_id=acesso.gestor_id,
+                gestor_nome=acesso.gestor.nome_empresa or acesso.gestor.username,
+                acao='Sessão de acesso temporário ENCERRADA manualmente',
+                ip=request.remote_addr
+            )
+            db.session.add(audit)
+            db.session.commit()
+
+    flash('Acesso temporário encerrado.', 'success')
+    return redirect(url_for('super_gestores'))
+
+
+@app.route('/super/auditoria')
+@requer_super
+def super_auditoria():
+    logs = AuditoriaAcesso.query.order_by(AuditoriaAcesso.criado_em.desc()).limit(200).all()
+    return render_template('super_auditoria.html', logs=logs)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — ESQUECI SENHA (Feature 2)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/esqueci-senha', methods=['GET', 'POST'])
+def esqueci_senha():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        admin = Administrador.query.filter(db.func.lower(Administrador.email) == email).first()
+        if admin and admin.email:
+            TokenResetSenha.query.filter_by(painel='gestor', email=email, usado=False).update({'usado': True})
+            db.session.commit()
+            tok = TokenResetSenha('gestor', email)
+            db.session.add(tok)
+            db.session.commit()
+            link = url_for('resetar_senha', token=tok.token, _external=True)
+            enviar_email_reset(email, link, 'PainelGest Gestor')
+        flash('Se esse e-mail estiver cadastrado, você receberá o link de redefinição.', 'info')
+        return redirect(url_for('login'))
+    return render_template('esqueci_senha.html', painel='gestor', volta=url_for('login'))
+
+
+@app.route('/resetar-senha/<token>', methods=['GET', 'POST'])
+def resetar_senha(token):
+    tok = TokenResetSenha.query.filter_by(token=token, painel='gestor').first_or_404()
+    if not tok.valido:
+        flash('Link expirado ou já utilizado.', 'danger')
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        nova = request.form.get('senha', '')
+        conf = request.form.get('confirm', '')
+        if len(nova) < 6:
+            flash('A senha deve ter pelo menos 6 caracteres.', 'danger')
+        elif nova != conf:
+            flash('As senhas não coincidem.', 'danger')
+        else:
+            admin = Administrador.query.filter(db.func.lower(Administrador.email) == tok.email).first()
+            if admin:
+                admin.password = generate_password_hash(nova)
+                tok.usado = True
+                db.session.commit()
+                flash('Senha redefinida com sucesso! Faça login.', 'success')
+                return redirect(url_for('login'))
+    return render_template('resetar_senha.html', token=token)
+
+
+@app.route('/dono/esqueci-senha', methods=['GET', 'POST'])
+def dono_esqueci_senha():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        dono = DonoDaEmpresa.query.filter(db.func.lower(DonoDaEmpresa.email) == email).first()
+        if dono and dono.email:
+            TokenResetSenha.query.filter_by(painel='dono', email=email, usado=False).update({'usado': True})
+            db.session.commit()
+            tok = TokenResetSenha('dono', email)
+            db.session.add(tok)
+            db.session.commit()
+            link = url_for('dono_resetar_senha', token=tok.token, _external=True)
+            enviar_email_reset(email, link, 'Painel do Dono')
+        flash('Se esse e-mail estiver cadastrado, você receberá o link de redefinição.', 'info')
+        return redirect(url_for('dono_login'))
+    return render_template('esqueci_senha.html', painel='dono', volta=url_for('dono_login'))
+
+
+@app.route('/dono/resetar-senha/<token>', methods=['GET', 'POST'])
+def dono_resetar_senha(token):
+    tok = TokenResetSenha.query.filter_by(token=token, painel='dono').first_or_404()
+    if not tok.valido:
+        flash('Link expirado ou já utilizado.', 'danger')
+        return redirect(url_for('dono_login'))
+    if request.method == 'POST':
+        nova = request.form.get('senha', '')
+        conf = request.form.get('confirm', '')
+        if len(nova) < 6:
+            flash('A senha deve ter pelo menos 6 caracteres.', 'danger')
+        elif nova != conf:
+            flash('As senhas não coincidem.', 'danger')
+        else:
+            dono = DonoDaEmpresa.query.filter(db.func.lower(DonoDaEmpresa.email) == tok.email).first()
+            if dono:
+                dono.senha_hash = generate_password_hash(nova)
+                tok.usado = True
+                db.session.commit()
+                flash('Senha redefinida! Faça login.', 'success')
+                return redirect(url_for('dono_login'))
+    return render_template('resetar_senha.html', token=token, volta=url_for('dono_login'))
+
+
+@app.route('/restaurante/esqueci-senha', methods=['GET', 'POST'])
+def restaurante_esqueci_senha():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        rest = Restaurante.query.filter(db.func.lower(Restaurante.username) == email).first()
+        if not rest:
+            rest = Restaurante.query.filter(db.func.lower(Restaurante.username) == email.split('@')[0]).first()
+        if rest:
+            TokenResetSenha.query.filter_by(painel='restaurante', email=email, usado=False).update({'usado': True})
+            db.session.commit()
+            tok = TokenResetSenha('restaurante', rest.username)
+            db.session.add(tok)
+            db.session.commit()
+            link = url_for('restaurante_resetar_senha', token=tok.token, _external=True)
+            enviar_email_reset(email, link, 'Painel do Restaurante')
+        flash('Se esse login estiver cadastrado, você receberá o link de redefinição.', 'info')
+        return redirect(url_for('restaurante_login'))
+    return render_template('esqueci_senha.html', painel='restaurante', volta=url_for('restaurante_login'))
+
+
+@app.route('/restaurante/resetar-senha/<token>', methods=['GET', 'POST'])
+def restaurante_resetar_senha(token):
+    tok = TokenResetSenha.query.filter_by(token=token, painel='restaurante').first_or_404()
+    if not tok.valido:
+        flash('Link expirado ou já utilizado.', 'danger')
+        return redirect(url_for('restaurante_login'))
+    if request.method == 'POST':
+        nova = request.form.get('senha', '')
+        conf = request.form.get('confirm', '')
+        if len(nova) < 6:
+            flash('A senha deve ter pelo menos 6 caracteres.', 'danger')
+        elif nova != conf:
+            flash('As senhas não coincidem.', 'danger')
+        else:
+            rest = Restaurante.query.filter_by(username=tok.email).first()
+            if rest:
+                rest.password = generate_password_hash(nova)
+                tok.usado = True
+                db.session.commit()
+                flash('Senha redefinida! Faça login.', 'success')
+                return redirect(url_for('restaurante_login'))
+    return render_template('resetar_senha.html', token=token, volta=url_for('restaurante_login'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — MESAS DO RESTAURANTE (Feature 3)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/restaurante/mesas')
+@requer_restaurante
+def restaurante_mesas():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    mesas = Mesa.query.filter_by(restaurante_id=rest.id).order_by(Mesa.numero).all()
+    return render_template('restaurante_mesas.html', restaurante=rest, mesas=mesas)
+
+
+@app.route('/restaurante/mesas/salvar', methods=['POST'])
+@requer_restaurante
+def restaurante_mesas_salvar():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    dados = request.get_json()
+    if not dados:
+        return jsonify({'ok': False, 'erro': 'Dados inválidos'}), 400
+
+    # Remove mesas antigas e recria
+    Mesa.query.filter_by(restaurante_id=rest.id).delete()
+    for m in dados.get('mesas', []):
+        numero = int(m.get('numero', 0))
+        if numero < 1 or numero > 50:
+            continue
+        mesa = Mesa(
+            restaurante_id=rest.id,
+            numero=numero,
+            nome=m.get('nome', '').strip() or None,
+            capacidade=int(m.get('capacidade', 4))
+        )
+        db.session.add(mesa)
+    db.session.commit()
+    return jsonify({'ok': True, 'total': Mesa.query.filter_by(restaurante_id=rest.id).count()})
+
+
+@app.route('/restaurante/mesas/status/<int:mid>', methods=['POST'])
+@requer_restaurante
+def restaurante_mesa_status(mid):
+    mesa = Mesa.query.get_or_404(mid)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if mesa.restaurante_id != rest.id:
+        return jsonify({'ok': False}), 403
+    mesa.status = request.json.get('status', 'livre')
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — ATENDIMENTO INTELIGENTE WHATSAPP (Feature 4)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/restaurante/atendimento')
+@requer_restaurante
+def restaurante_atendimento():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    mesas = Mesa.query.filter_by(restaurante_id=rest.id, ativa=True).order_by(Mesa.numero).all()
+    presentes = ClientePresente.query.filter_by(
+        restaurante_id=rest.id, saiu=False
+    ).order_by(ClientePresente.entrada_em.desc()).all()
+    return render_template('restaurante_atendimento.html',
+                           restaurante=rest, mesas=mesas, presentes=presentes)
+
+
+@app.route('/restaurante/atendimento/registrar', methods=['POST'])
+@requer_restaurante
+def restaurante_atendimento_registrar():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    telefone = ''.join(filter(str.isdigit, request.form.get('telefone', '')))
+    nome     = request.form.get('nome', '').strip()
+    mesa_id  = request.form.get('mesa_id') or None
+    if not telefone:
+        flash('Informe o telefone do cliente.', 'danger')
+        return redirect(url_for('restaurante_atendimento'))
+
+    # Verifica se já está presente
+    existente = ClientePresente.query.filter_by(
+        restaurante_id=rest.id, telefone=telefone, saiu=False
+    ).first()
+    if existente:
+        flash(f'Cliente com telefone {telefone} já está registrado.', 'warning')
+        return redirect(url_for('restaurante_atendimento'))
+
+    cliente = ClientePresente(
+        restaurante_id=rest.id,
+        mesa_id=int(mesa_id) if mesa_id else None,
+        telefone=telefone,
+        nome=nome or None
+    )
+    db.session.add(cliente)
+
+    # Atualiza status da mesa
+    if mesa_id:
+        mesa = Mesa.query.get(int(mesa_id))
+        if mesa:
+            mesa.status = 'ocupada'
+
+    db.session.commit()
+
+    # Monta link WhatsApp
+    tel_wa  = f"55{telefone}"
+    cardapio_link = url_for('cardapio_publico', username=rest.username, _external=True) \
+                   if 'cardapio_publico' in app.view_functions else f"http://localhost:5002/cardapio/{rest.username}"
+    mensagem = (
+        f"Olá! 👋 Bem-vindo(a) ao *{rest.nome}*!\n\n"
+        f"📱 Acesse nosso cardápio digital:\n{cardapio_link}\n\n"
+        f"💬 Responda com:\n"
+        f"*1* - Fazer pedido (informe o número do produto)\n"
+        f"*2* - Fechar conta\n"
+        f"*3* - Chamar garçom"
+    )
+    import urllib.parse
+    wa_link = f"https://wa.me/{tel_wa}?text={urllib.parse.quote(mensagem)}"
+    cliente.whatsapp_enviado = True
+    db.session.commit()
+
+    flash(f'Cliente registrado! <a href="{wa_link}" target="_blank" class="alert-link">Clique aqui para enviar WhatsApp</a>', 'success')
+    return redirect(url_for('restaurante_atendimento'))
+
+
+@app.route('/restaurante/atendimento/saida/<int:cid>', methods=['POST'])
+@requer_restaurante
+def restaurante_cliente_saida(cid):
+    cliente = ClientePresente.query.get_or_404(cid)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if cliente.restaurante_id != rest.id:
+        return jsonify({'ok': False}), 403
+    cliente.saiu    = True
+    cliente.saiu_em = datetime.utcnow()
+    if cliente.mesa_id:
+        mesa = Mesa.query.get(cliente.mesa_id)
+        if mesa:
+            mesa.status = 'livre'
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — CONTA / PAGAMENTO INTELIGENTE (Feature 5)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/restaurante/conta')
+@requer_restaurante
+def restaurante_conta_lista():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    contas = ContaMesa.query.filter_by(restaurante_id=rest.id, status='aberta')\
+                            .order_by(ContaMesa.criado_em.desc()).all()
+    mesas  = Mesa.query.filter_by(restaurante_id=rest.id, ativa=True).order_by(Mesa.numero).all()
+    return render_template('restaurante_conta.html', restaurante=rest, contas=contas, mesas=mesas)
+
+
+@app.route('/restaurante/conta/abrir', methods=['POST'])
+@requer_restaurante
+def restaurante_conta_abrir():
+    rest    = Restaurante.query.filter_by(username=session['restaurante']).first()
+    mesa_id = request.form.get('mesa_id') or None
+    conta = ContaMesa(restaurante_id=rest.id, mesa_id=int(mesa_id) if mesa_id else None)
+    db.session.add(conta)
+    if mesa_id:
+        mesa = Mesa.query.get(int(mesa_id))
+        if mesa:
+            mesa.status = 'ocupada'
+    db.session.commit()
+    return redirect(url_for('restaurante_conta_detalhe', cid=conta.id))
+
+
+@app.route('/restaurante/conta/<int:cid>')
+@requer_restaurante
+def restaurante_conta_detalhe(cid):
+    rest  = Restaurante.query.filter_by(username=session['restaurante']).first()
+    conta = ContaMesa.query.get_or_404(cid)
+    if conta.restaurante_id != rest.id:
+        return redirect(url_for('restaurante_conta_lista'))
+    itens_cardapio = ItemCardapio.query.join(Categoria).filter(
+        Categoria.restaurante_id == rest.id, ItemCardapio.disponivel == True
+    ).order_by(ItemCardapio.nome).all()
+    pix_payload = None
+    if conta.total > 0 and rest.chave_pix:
+        pix_payload = gerar_pix_payload(
+            rest.chave_pix, rest.nome, 'Brasil', conta.total, f'CONTA{conta.id}'
+        )
+    return render_template('restaurante_conta_detalhe.html',
+                           restaurante=rest, conta=conta,
+                           itens_cardapio=itens_cardapio, pix_payload=pix_payload)
+
+
+@app.route('/restaurante/conta/<int:cid>/item', methods=['POST'])
+@requer_restaurante
+def restaurante_conta_item(cid):
+    rest  = Restaurante.query.filter_by(username=session['restaurante']).first()
+    conta = ContaMesa.query.get_or_404(cid)
+    if conta.restaurante_id != rest.id or conta.status != 'aberta':
+        return jsonify({'ok': False}), 400
+    item_id  = request.json.get('item_id')
+    qtd      = int(request.json.get('qtd', 1))
+    item_obj = ItemCardapio.query.get(item_id)
+    if not item_obj:
+        return jsonify({'ok': False, 'erro': 'Item não encontrado'}), 404
+    itens = conta.itens
+    # Verifica se o item já está na conta
+    for i in itens:
+        if i['id'] == item_id:
+            i['qtd'] += qtd
+            i['subtotal'] = round(i['qtd'] * i['preco'], 2)
+            break
+    else:
+        itens.append({'id': item_id, 'nome': item_obj.nome,
+                      'preco': item_obj.preco, 'qtd': qtd,
+                      'subtotal': round(item_obj.preco * qtd, 2)})
+    conta.itens_json = json.dumps(itens)
+    conta.total      = round(sum(i['subtotal'] for i in itens), 2)
+    db.session.commit()
+    return jsonify({'ok': True, 'total': conta.total, 'itens': itens})
+
+
+@app.route('/restaurante/conta/<int:cid>/item/<int:idx>/remover', methods=['POST'])
+@requer_restaurante
+def restaurante_conta_remover_item(cid, idx):
+    rest  = Restaurante.query.filter_by(username=session['restaurante']).first()
+    conta = ContaMesa.query.get_or_404(cid)
+    if conta.restaurante_id != rest.id or conta.status != 'aberta':
+        return jsonify({'ok': False}), 400
+    itens = conta.itens
+    if 0 <= idx < len(itens):
+        itens.pop(idx)
+    conta.itens_json = json.dumps(itens)
+    conta.total      = round(sum(i['subtotal'] for i in itens), 2)
+    db.session.commit()
+    return jsonify({'ok': True, 'total': conta.total})
+
+
+@app.route('/restaurante/conta/<int:cid>/pagar', methods=['POST'])
+@requer_restaurante
+def restaurante_conta_pagar(cid):
+    rest  = Restaurante.query.filter_by(username=session['restaurante']).first()
+    conta = ContaMesa.query.get_or_404(cid)
+    if conta.restaurante_id != rest.id:
+        return jsonify({'ok': False}), 403
+    forma = request.json.get('forma', 'dinheiro')
+    conta.forma_pagamento = forma
+    conta.status  = 'paga'
+    conta.pago_em = datetime.utcnow()
+    if conta.mesa_rel:
+        conta.mesa_rel.status = 'livre'
+    if conta.cliente:
+        conta.cliente.saiu    = True
+        conta.cliente.saiu_em = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'ok': True, 'mensagem': f'Conta paga via {forma}!'})
+
+
+@app.route('/restaurante/conta/<int:cid>/cancelar', methods=['POST'])
+@requer_restaurante
+def restaurante_conta_cancelar(cid):
+    rest  = Restaurante.query.filter_by(username=session['restaurante']).first()
+    conta = ContaMesa.query.get_or_404(cid)
+    if conta.restaurante_id != rest.id:
+        return jsonify({'ok': False}), 403
+    conta.status = 'cancelada'
+    if conta.mesa_rel:
+        conta.mesa_rel.status = 'livre'
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@app.route('/restaurante/conta/historico')
+@requer_restaurante
+def restaurante_conta_historico():
+    rest  = Restaurante.query.filter_by(username=session['restaurante']).first()
+    contas = ContaMesa.query.filter_by(restaurante_id=rest.id)\
+                            .filter(ContaMesa.status.in_(['paga','cancelada']))\
+                            .order_by(ContaMesa.pago_em.desc()).limit(100).all()
+    return render_template('restaurante_conta_historico.html', restaurante=rest, contas=contas)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — APP CONFIRMAÇÃO SAÍDA (Feature 6 — Premium)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/restaurante/saida')
+def restaurante_saida_app():
+    """Página pública para tablet/celular na saída — sem login de gestor."""
+    username = request.args.get('r', '')
+    rest = Restaurante.query.filter_by(username=username).first()
+    if not rest:
+        return render_template('restaurante_saida.html', restaurante=None, erro='Restaurante não encontrado.')
+    return render_template('restaurante_saida.html', restaurante=rest, conta=None)
+
+
+@app.route('/restaurante/saida/consultar', methods=['POST'])
+def restaurante_saida_consultar():
+    """Consulta pelo telefone se o cliente tem conta aberta."""
+    username = request.form.get('username', '')
+    telefone = ''.join(filter(str.isdigit, request.form.get('telefone', '')))
+    rest = Restaurante.query.filter_by(username=username).first()
+    if not rest:
+        return jsonify({'ok': False, 'erro': 'Restaurante não encontrado'}), 404
+    cliente = ClientePresente.query.filter_by(
+        restaurante_id=rest.id, telefone=telefone, saiu=False
+    ).order_by(ClientePresente.entrada_em.desc()).first()
+    if not cliente:
+        return jsonify({'ok': False, 'erro': 'Nenhuma conta aberta para este telefone.'})
+    conta = ContaMesa.query.filter_by(
+        restaurante_id=rest.id, cliente_id=cliente.id, status='aberta'
+    ).first()
+    resultado = {
+        'ok': True,
+        'cliente_id': cliente.id,
+        'nome': cliente.nome or f'Cliente {telefone[-4:]}',
+        'entrada': cliente.entrada_em.strftime('%H:%M'),
+        'conta_id': conta.id if conta else None,
+        'total': conta.total if conta else 0,
+        'total_fmt': conta.total_fmt if conta else 'R$ 0,00',
+        'itens': conta.itens if conta else [],
+    }
+    return jsonify(resultado)
+
+
+@app.route('/restaurante/saida/confirmar', methods=['POST'])
+def restaurante_saida_confirmar():
+    """Confirma pagamento na saída."""
+    cid   = request.json.get('conta_id')
+    forma = request.json.get('forma', 'dinheiro')
+    conta = ContaMesa.query.get(cid) if cid else None
+    if not conta or conta.status != 'aberta':
+        return jsonify({'ok': False, 'erro': 'Conta não encontrada ou já paga.'})
+    conta.forma_pagamento = forma
+    conta.status  = 'paga'
+    conta.pago_em = datetime.utcnow()
+    if conta.mesa_rel:
+        conta.mesa_rel.status = 'livre'
+    if conta.cliente:
+        conta.cliente.saiu    = True
+        conta.cliente.saiu_em = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'ok': True, 'mensagem': 'Pagamento confirmado! Boa sorte! 👋'})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # BANCO — MIGRAÇÃO
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -2913,6 +3760,12 @@ def migrate_db():
     # Código único (4 chars) para Cliente e Restaurante
     add_col('cliente',     'codigo', 'VARCHAR(4)')
     add_col('restaurante', 'codigo', 'VARCHAR(4)')
+
+    # Sessão única por restaurante
+    add_col('restaurante', 'session_token', 'VARCHAR(64)')
+
+    # Novas tabelas — criadas automaticamente pelo db.create_all()
+    # acesso_temporario, auditoria_acesso, token_reset_senha, mesa, cliente_presente, conta_mesa
 
     conn.commit()
     conn.close()

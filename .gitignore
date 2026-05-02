@@ -1,18 +1,52 @@
-# Arquivos secretos - nunca enviar para o GitHub!
+# ── Segredos — NUNCA enviar para o GitHub ────────────────────────────────────
 .env
+painelgest/.env
 
-# Dados dos usuários
+# ── Bancos de dados SQLite ────────────────────────────────────────────────────
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+instance/
+
+# ── Dados dos usuários ────────────────────────────────────────────────────────
 data/users.json
 data/conhecimento.json
 data/evolucao.json
+data/memoria_permanente.json
+data/licenca.json
 
-# Logs
+# ── Logs ──────────────────────────────────────────────────────────────────────
 logs/
+*.log
 
-# Cache Python
+# ── Cache Python ──────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.Python
 
-# VS Code
+# ── Imagens e assets gerados ──────────────────────────────────────────────────
+assets/geradas/
+assets/img_*
+assets/original_*
+assets/screenshot*.png
+
+# ── Claude Code (ferramenta local — não faz parte do projeto) ─────────────────
+.claude/
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Ambiente virtual Python ───────────────────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── Temporários Windows ───────────────────────────────────────────────────────
+Thumbs.db
+desktop.ini

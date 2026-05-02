@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -10,7 +10,7 @@
     :root {
       --bg:#0b0d17; --surface:#131720; --surface2:#1c2133;
       --border:rgba(255,255,255,0.07); --text:#e2e8f0; --muted:#64748b;
-      --accent: {{ restaurante.cor_primaria or '#6366f1' }};
+      --accent: {{ restaurante.cor_primaria or '#f97316' }};
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
@@ -39,8 +39,8 @@
     .pg-table tbody tr:hover{background:var(--surface2)}
     .pg-table td{padding:11px 14px;font-size:13px;vertical-align:middle}
     .icon-btn{width:28px;height:28px;border-radius:7px;border:none;cursor:pointer;display:inline-grid;place-items:center;font-size:11px;transition:all .15s;text-decoration:none}
-    .ib-edit{background:rgba(99,102,241,.12);color:#818cf8}
-    .ib-edit:hover{background:rgba(99,102,241,.25);color:#818cf8}
+    .ib-edit{background:rgba(99,102,241,.12);color:#fdba74}
+    .ib-edit:hover{background:rgba(99,102,241,.25);color:#fdba74}
     .ib-delete{background:rgba(239,68,68,.1);color:#f87171}
     .ib-delete:hover{background:rgba(239,68,68,.2);color:#f87171}
     .ib-toggle-on{background:rgba(34,197,94,.1);color:#4ade80}
@@ -93,7 +93,7 @@
     <div class="pg-card">
       <div class="pg-card-header">
         <div class="pg-card-title">
-          <div style="width:28px;height:28px;border-radius:8px;background:rgba(99,102,241,.12);display:grid;place-items:center;color:#818cf8;font-size:12px;flex-shrink:0">
+          <div style="width:28px;height:28px;border-radius:8px;background:rgba(99,102,241,.12);display:grid;place-items:center;color:#fdba74;font-size:12px;flex-shrink:0">
             <i class="fas {{ cat.icone }}"></i>
           </div>
           {{ cat.nome }}

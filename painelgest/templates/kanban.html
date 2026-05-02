@@ -6,233 +6,214 @@
   <title>Kanban — {{ restaurante.nome }}</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <style>
     :root {
       --bg: #0b0d17; --surface: #131720; --surface2: #1c2133;
       --border: rgba(255,255,255,0.07); --text: #e2e8f0; --muted: #64748b;
+      --accent: {{ restaurante.cor_primaria or '#f97316' }};
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
     .kanban-header {
       background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 14px 24px; display: flex; align-items: center; gap: 14px;
+      padding: 12px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     }
-    .logo { font-size: 16px; font-weight: 700; }
-    .logo span { color: {{ restaurante.cor_primaria }}; }
-    .kanban-actions { margin-left: auto; display: flex; gap: 8px; }
+    .logo { font-size: 15px; font-weight: 700; }
+    .refresh-badge { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+    .refresh-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .kanban-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 
-    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px;
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
            border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none;
-           border: none; cursor: pointer; transition: all .15s; }
-    .btn-primary { background: {{ restaurante.cor_primaria }}; color: #fff; }
+           border: none; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:hover { opacity: .85; }
     .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
     .btn-ghost:hover { background: #232a3e; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; }
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% endwith %}
-    .flash { padding: 10px 24px; }
-    .flash-msg { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
-                 border-radius: 8px; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+    .flash { padding: 8px 20px; }
+    .flash-msg { display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+                 border-radius: 8px; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
     .flash-success { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.2); color: #4ade80; }
     .flash-danger  { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.2); color: #f87171; }
-    .flash-warning { background: rgba(234,179,8,.12); border: 1px solid rgba(234,179,8,.2); color: #facc15; }
 
     .kanban-board {
-      display: flex; gap: 14px; padding: 20px 24px; overflow-x: auto;
-      min-height: calc(100vh - 57px);
+      display: flex; gap: 12px; padding: 16px 20px; overflow-x: auto;
+      min-height: calc(100vh - 52px); align-items: flex-start;
     }
+
     .kanban-col {
-      flex: 0 0 280px; display: flex; flex-direction: column;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-      max-height: calc(100vh - 100px);
+      flex: 0 0 270px; display: flex; flex-direction: column;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      max-height: calc(100vh - 84px);
     }
     .kanban-col-header {
-      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
-      border-radius: 13px 13px 0 0; flex-shrink: 0;
+      border-radius: 11px 11px 0 0; flex-shrink: 0;
     }
-    .col-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
-    .col-icon { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 12px; }
-    .col-count { font-size: 11px; background: var(--surface2); border: 1px solid var(--border);
-                 padding: 2px 8px; border-radius: 20px; color: var(--muted); }
+    .col-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
+    .col-icon { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 11px; }
+    .col-count { font-size: 10px; background: var(--surface2); border: 1px solid var(--border);
+                 padding: 2px 8px; border-radius: 20px; color: var(--muted); min-width: 24px; text-align: center; }
 
-    .kanban-cards { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-    .kanban-cards.drag-over { background: rgba(255,255,255,.03); border-radius: 8px; }
+    .kanban-cards { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 7px; min-height: 60px; }
 
     .kanban-card {
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
-      padding: 12px 14px; cursor: grab; transition: all .15s;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
+      padding: 10px 12px; cursor: grab; transition: all .15s;
       border-left: 3px solid transparent;
     }
-    .kanban-card:active { cursor: grabbing; }
-    .kanban-card:hover { border-color: rgba(255,255,255,.12); transform: translateY(-1px); }
-    .kanban-card.dragging { opacity: .4; }
+    .kanban-card:hover { border-color: rgba(255,255,255,.12); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+    .kanban-card.sortable-chosen { cursor: grabbing; opacity: .85; transform: scale(1.02); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+    .kanban-card.sortable-ghost { opacity: .35; }
 
-    .card-numero { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
-    .card-cliente { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-    .card-total { font-size: 14px; font-weight: 700; color: #4ade80; margin-bottom: 8px; }
-    .card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
-    .tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
-    .tag-balcao    { background: rgba(99,102,241,.15); color: #818cf8; }
-    .tag-ifood     { background: rgba(239,68,68,.15);  color: #f87171; }
-    .tag-whatsapp  { background: rgba(37,211,102,.15); color: #4ade80; }
-    .tag-app       { background: rgba(6,182,212,.15);  color: #22d3ee; }
-    .tag-pix       { background: rgba(245,158,11,.15); color: #fbbf24; }
-    .card-actions { display: flex; gap: 5px; justify-content: flex-end; }
+    .card-numero { font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .card-cliente { font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+    .card-total { font-size: 14px; font-weight: 700; color: #4ade80; margin-bottom: 6px; }
+    .card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+    .tag { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 20px; }
+    .tag-balcao   { background: rgba(249,115,22,.15); color: #fb923c; }
+    .tag-ifood    { background: rgba(239,68,68,.15);  color: #f87171; }
+    .tag-whatsapp { background: rgba(37,211,102,.15); color: #4ade80; }
+    .tag-app      { background: rgba(6,182,212,.15);  color: #22d3ee; }
+
+    .card-itens { font-size: 11px; color: var(--muted); margin-bottom: 7px; max-height: 36px; overflow: hidden; line-height: 1.5; }
+    .card-obs { font-size: 10px; color: #fbbf24; margin-bottom: 7px; background: rgba(251,191,36,.06); padding: 4px 7px; border-radius: 5px; border: 1px solid rgba(251,191,36,.12); }
+    .card-actions { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
+    .card-time { font-size: 10px; color: var(--muted); margin-right: auto; }
     .card-btn { width: 26px; height: 26px; border-radius: 6px; border: none; cursor: pointer;
                 display: grid; place-items: center; font-size: 11px; transition: all .15s; text-decoration: none; }
     .cb-print { background: rgba(6,182,212,.1); color: #22d3ee; }
     .cb-print:hover { background: rgba(6,182,212,.2); }
+    .cb-wa  { background: rgba(37,211,102,.1); color: #4ade80; }
+    .cb-wa:hover { background: rgba(37,211,102,.2); }
     .cb-del { background: rgba(239,68,68,.1); color: #f87171; }
     .cb-del:hover { background: rgba(239,68,68,.2); }
 
-    .col-empty { text-align: center; padding: 30px 16px; color: var(--muted); font-size: 12px; }
-    .col-empty i { font-size: 24px; opacity: .3; display: block; margin-bottom: 8px; }
-
     .ifood-badge { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.2);
-                   color: #f87171; font-size: 10px; padding: 1px 7px; border-radius: 4px; }
+                   color: #f87171; font-size: 9px; padding: 1px 5px; border-radius: 4px; }
 
-    /* Modal novo pedido */
-    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    .col-empty { text-align: center; padding: 24px 12px; color: var(--muted); font-size: 12px; }
+    .col-empty i { font-size: 20px; opacity: .25; display: block; margin-bottom: 6px; }
+
+    /* Modal */
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75);
                       z-index: 500; align-items: center; justify-content: center; }
     .modal-backdrop.open { display: flex; }
-    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-             width: 560px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
-    .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border);
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+             width: 580px; max-width: 96vw; max-height: 92vh; overflow-y: auto; }
+    .modal-header { padding: 18px 22px; border-bottom: 1px solid var(--border);
                     display: flex; align-items: center; justify-content: space-between; }
-    .modal-title { font-size: 15px; font-weight: 600; }
-    .modal-body { padding: 24px; }
-    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border);
-                    display: flex; gap: 10px; justify-content: flex-end; }
-    .form-group { margin-bottom: 16px; }
-    .label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 500; color: var(--muted); }
+    .modal-title { font-size: 14px; font-weight: 600; }
+    .modal-body { padding: 20px 22px; }
+    .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border);
+                    display: flex; gap: 8px; justify-content: flex-end; }
+    .form-group { margin-bottom: 14px; }
+    .label { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 500; color: var(--muted); }
     .input, .select, .textarea {
       width: 100%; background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 13px;
+      border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 13px;
       font-family: 'Inter', sans-serif; outline: none; transition: border .15s;
     }
-    .input:focus, .select:focus, .textarea:focus { border-color: {{ restaurante.cor_primaria }}; }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(249,115,22,.12); }
     .select option { background: var(--surface2); }
-    .textarea { resize: vertical; min-height: 70px; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .textarea { resize: vertical; min-height: 60px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-    .itens-lista { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
-    .item-row { display: grid; grid-template-columns: 1fr 60px 90px 28px; gap: 8px;
-                padding: 8px 10px; align-items: center; border-bottom: 1px solid var(--border); }
+    .itens-lista { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+    .item-row { display: grid; grid-template-columns: 1fr 58px 88px 26px; gap: 6px;
+                padding: 7px 8px; align-items: center; border-bottom: 1px solid var(--border); }
     .item-row:last-child { border-bottom: none; }
-    .item-row-header { background: var(--surface); font-size: 11px; font-weight: 600; color: var(--muted);
-                       text-transform: uppercase; letter-spacing: .6px; }
-    .btn-add-item { background: var(--surface2); border: 1px dashed var(--border); border-radius: 8px;
-                    padding: 8px; width: 100%; text-align: center; cursor: pointer; color: var(--muted);
-                    font-size: 12px; transition: all .15s; }
-    .btn-add-item:hover { border-color: {{ restaurante.cor_primaria }}; color: {{ restaurante.cor_primaria }}; }
+    .item-row-header { background: var(--surface); font-size: 10px; font-weight: 600; color: var(--muted);
+                       text-transform: uppercase; letter-spacing: .5px; }
+    .btn-add-item { background: var(--surface2); border: 1px dashed var(--border); border-radius: 7px;
+                    padding: 7px; width: 100%; text-align: center; cursor: pointer; color: var(--muted);
+                    font-size: 11px; transition: all .15s; }
+    .btn-add-item:hover { border-color: var(--accent); color: var(--accent); }
     .btn-rem-item { background: rgba(239,68,68,.1); border: none; color: #f87171; border-radius: 5px;
-                    width: 24px; height: 24px; cursor: pointer; font-size: 10px; }
+                    width: 22px; height: 22px; cursor: pointer; font-size: 10px; }
+
+    .cat-group { margin-bottom: 8px; }
+    .cat-label { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .cat-items { display: flex; flex-wrap: wrap; gap: 4px; }
+    .item-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+                 padding: 4px 10px; font-size: 11px; cursor: pointer; transition: all .12s; white-space: nowrap; }
+    .item-chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(249,115,22,.06); }
   </style>
 </head>
 <body>
 
 <header class="kanban-header">
   {% if restaurante.logo_path %}
-  <img src="{{ url_for('static', filename=restaurante.logo_path) }}"
-       style="height:32px;border-radius:6px" alt="Logo">
+  <img src="{{ url_for('static', filename=restaurante.logo_path) }}" style="height:30px;border-radius:6px" alt="">
   {% endif %}
-  <div class="logo">{{ restaurante.nome }}</div>
+  <div class="logo">🍽 {{ restaurante.nome }}</div>
+  <div class="refresh-badge">
+    <span class="dot"></span>
+    <span id="refresh-status">Ao vivo</span>
+  </div>
   <div class="kanban-actions">
-    <a href="{{ url_for('restaurante_dashboard') }}" class="btn btn-ghost">
-      <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
-    <button class="btn btn-primary" onclick="document.getElementById('modal-novo').classList.add('open')">
+    <a href="{{ url_for('restaurante_mesas') }}" class="btn btn-ghost btn-sm"><i class="fas fa-chair"></i> Mesas</a>
+    <a href="{{ url_for('restaurante_cardapio') }}" class="btn btn-ghost btn-sm"><i class="fas fa-utensils"></i> Cardápio</a>
+    <a href="{{ url_for('restaurante_dashboard') }}" class="btn btn-ghost btn-sm"><i class="fas fa-gauge-high"></i> Dashboard</a>
+    <button class="btn btn-primary btn-sm" onclick="document.getElementById('modal-novo').classList.add('open')">
       <i class="fas fa-plus"></i> Novo Pedido
     </button>
   </div>
 </header>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-<div class="flash">
-  {% for cat, msg in messages %}
-  <div class="flash-msg flash-{{ cat }}">{{ msg }}</div>
-  {% endfor %}
-</div>
-{% endif %}
+{% if messages %}<div class="flash">{% for cat, msg in messages %}<div class="flash-msg flash-{{ cat }}">{{ msg }}</div>{% endfor %}</div>{% endif %}
 {% endwith %}
 
 <div class="kanban-board" id="kanban-board">
   {% for col in colunas %}
-  {% set col_pedidos = pedidos[col.key] %}
   <div class="kanban-col" data-col="{{ col.key }}">
     <div class="kanban-col-header" style="border-top: 3px solid {{ col.cor }}">
       <div class="col-title">
-        <div class="col-icon" style="background:{{ col.cor }}22;color:{{ col.cor }}">
-          <i class="fas {{ col.icone }}"></i>
-        </div>
+        <div class="col-icon" style="background:{{ col.cor }}22;color:{{ col.cor }}"><i class="fas {{ col.icone }}"></i></div>
         {{ col.nome }}
       </div>
-      <span class="col-count">{{ col_pedidos|length }}</span>
+      <span class="col-count" id="count-{{ col.key }}">{{ pedidos[col.key]|length }}</span>
     </div>
-    <div class="kanban-cards" id="col-{{ col.key }}"
-         ondragover="dragOver(event)" ondrop="drop(event,'{{ col.key }}')" ondragleave="dragLeave(event)">
-
-      {% if col_pedidos %}
-        {% for pedido in col_pedidos %}
-        <div class="kanban-card" draggable="true" data-id="{{ pedido.id }}"
-             ondragstart="dragStart(event)" ondragend="dragEnd(event)"
-             style="border-left-color:{{ col.cor }}">
-          <div class="card-numero">
-            Pedido #{{ pedido.numero }}
-            {% if pedido.codigo_ifood %}
-            <span class="ifood-badge ms-1">iFood: {{ pedido.codigo_ifood }}</span>
-            {% endif %}
-          </div>
-          <div class="card-cliente">
-            <i class="fas fa-user" style="color:var(--muted);font-size:11px;margin-right:5px"></i>
-            {{ pedido.cliente_nome or 'Cliente' }}
-          </div>
-          <div class="card-total">{{ pedido.total_fmt }}</div>
-          <div class="card-tags">
-            <span class="tag tag-{{ pedido.origem }}">
-              <i class="fas {{ 'fa-store' if pedido.origem=='balcao' else 'fa-mobile' if pedido.origem=='ifood' else 'fa-comment' if pedido.origem=='whatsapp' else 'fa-mobile-screen' }}"></i>
-              {{ pedido.origem.capitalize() }}
-            </span>
-            {% if pedido.forma_pagamento %}
-            <span class="tag" style="background:rgba(100,116,139,.15);color:var(--muted)">
-              <i class="fas fa-credit-card" style="margin-right:3px"></i>{{ pedido.forma_pagamento }}
-            </span>
-            {% endif %}
-          </div>
-          {% if pedido.itens %}
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;max-height:48px;overflow:hidden">
-            {% for item in pedido.itens[:3] %}
-            {{ item.qtd }}x {{ item.nome }}{% if not loop.last %}, {% endif %}
-            {% endfor %}
-            {% if pedido.itens|length > 3 %}...{% endif %}
-          </div>
-          {% endif %}
-          <div class="card-actions">
-            <a href="{{ url_for('imprimir_comanda', id=pedido.id) }}" target="_blank"
-               class="card-btn cb-print" title="Imprimir Comanda">
-              <i class="fas fa-print"></i>
-            </a>
-            <a href="{{ url_for('excluir_pedido', id=pedido.id) }}" class="card-btn cb-del"
-               title="Excluir" onclick="return confirm('Excluir pedido #{{ pedido.numero }}?')">
-              <i class="fas fa-trash"></i>
-            </a>
-          </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right">
-            {{ pedido.criado_em.strftime('%H:%M') }}
-          </div>
+    <div class="kanban-cards" id="col-{{ col.key }}" data-col="{{ col.key }}">
+      {% for pedido in pedidos[col.key] %}
+      <div class="kanban-card" data-id="{{ pedido.id }}" style="border-left-color:{{ col.cor }}">
+        <div class="card-numero">
+          Pedido #{{ pedido.numero }}
+          {% if pedido.codigo_ifood %}<span class="ifood-badge"><i class="fas fa-motorcycle"></i> iFood: {{ pedido.codigo_ifood }}</span>{% endif %}
         </div>
-        {% endfor %}
-      {% else %}
-      <div class="col-empty">
-        <i class="fas {{ col.icone }}"></i>
-        Nenhum pedido
+        <div class="card-cliente"><i class="fas fa-user" style="color:var(--muted);font-size:10px;margin-right:4px"></i>{{ pedido.cliente_nome or 'Cliente' }}</div>
+        <div class="card-total">{{ pedido.total_fmt }}</div>
+        <div class="card-tags">
+          <span class="tag tag-{{ pedido.origem }}">
+            <i class="fas {{ 'fa-store' if pedido.origem=='balcao' else 'fa-motorcycle' if pedido.origem=='ifood' else 'fa-comment' if pedido.origem=='whatsapp' else 'fa-mobile-screen' }}"></i>
+            {{ pedido.origem.capitalize() }}
+          </span>
+          {% if pedido.forma_pagamento %}<span class="tag" style="background:rgba(100,116,139,.15);color:var(--muted)">{{ pedido.forma_pagamento }}</span>{% endif %}
+        </div>
+        {% if pedido.itens %}<div class="card-itens">{% for it in pedido.itens[:3] %}{{ it.qtd }}x {{ it.nome }}{% if not loop.last %}, {% endif %}{% endfor %}{% if pedido.itens|length > 3 %}...{% endif %}</div>{% endif %}
+        {% if pedido.observacoes %}<div class="card-obs"><i class="fas fa-note-sticky fa-xs"></i> {{ pedido.observacoes[:60] }}</div>{% endif %}
+        <div class="card-actions">
+          <span class="card-time">{{ pedido.criado_em.strftime('%H:%M') }}</span>
+          <a href="{{ url_for('imprimir_comanda', id=pedido.id) }}" target="_blank" class="card-btn cb-print" title="Imprimir Comanda"><i class="fas fa-print"></i></a>
+          {% if restaurante.whatsapp and col.key == 'pronto' %}
+          <button class="card-btn cb-wa" title="Notificar pelo WhatsApp"
+                  onclick="notificarWA('{{ pedido.cliente_nome or 'Cliente' }}','{{ pedido.numero }}')">
+            <i class="fab fa-whatsapp"></i></button>
+          {% endif %}
+          <button class="card-btn cb-del" title="Excluir"
+                  onclick="excluirPedido({{ pedido.id }},{{ pedido.numero }},this)"><i class="fas fa-trash"></i></button>
+        </div>
       </div>
-      {% endif %}
-
+      {% else %}
+      <div class="col-empty" id="empty-{{ col.key }}"><i class="fas {{ col.icone }}"></i>Nenhum pedido</div>
+      {% endfor %}
     </div>
   </div>
   {% endfor %}
@@ -242,22 +223,19 @@
 <div class="modal-backdrop" id="modal-novo">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title"><i class="fas fa-plus-circle me-2" style="color:{{ restaurante.cor_primaria }}"></i>Novo Pedido</span>
-      <button onclick="document.getElementById('modal-novo').classList.remove('open')"
-              style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">
-        <i class="fas fa-xmark"></i>
-      </button>
+      <span class="modal-title"><i class="fas fa-plus-circle me-2" style="color:var(--accent)"></i>Novo Pedido</span>
+      <button onclick="document.getElementById('modal-novo').classList.remove('open')" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer"><i class="fas fa-xmark"></i></button>
     </div>
     <form method="POST" action="{{ url_for('novo_pedido_kanban') }}">
     <div class="modal-body">
       <div class="grid2">
         <div class="form-group">
-          <label class="label">Nome do Cliente</label>
-          <input type="text" name="cliente_nome" class="input" placeholder="Ex: João Silva">
+          <label class="label">Cliente</label>
+          <input type="text" name="cliente_nome" class="input" placeholder="Nome do cliente">
         </div>
         <div class="form-group">
           <label class="label">Origem</label>
-          <select name="origem" class="select">
+          <select name="origem" class="select" onchange="this.value==='ifood'?ifoodRow.style.display='grid':ifoodRow.style.display='none'">
             <option value="balcao">Balcão</option>
             <option value="ifood">iFood</option>
             <option value="whatsapp">WhatsApp</option>
@@ -265,59 +243,51 @@
           </select>
         </div>
       </div>
-
-      <div class="grid2" id="ifood-row" style="display:none">
+      <div class="grid2" id="ifoodRow" style="display:none">
         <div class="form-group">
-          <label class="label">Código de Confirmação iFood</label>
-          <input type="text" name="codigo_ifood" class="input" placeholder="Ex: 1234">
+          <label class="label"><i class="fas fa-motorcycle" style="color:#ef4444"></i> Código iFood</label>
+          <input type="text" name="codigo_ifood" class="input" placeholder="Ex: 1234" maxlength="10">
         </div>
         <div></div>
       </div>
-
       <div class="form-group">
         <label class="label">Forma de Pagamento</label>
         <select name="forma_pagamento" class="select">
           <option value="">-- Selecione --</option>
-          {% if restaurante.formas_pagamento %}
-            {% for fp in restaurante.formas_pagamento %}
-            <option value="{{ fp }}">{{ fp }}</option>
-            {% endfor %}
-          {% else %}
-            <option value="Dinheiro">Dinheiro</option>
-            <option value="Pix">Pix</option>
-            <option value="Cartão de Débito">Cartão de Débito</option>
-            <option value="Cartão de Crédito">Cartão de Crédito</option>
-          {% endif %}
+          {% if restaurante.formas_pagamento %}{% for fp in restaurante.formas_pagamento %}<option>{{ fp }}</option>{% endfor %}
+          {% else %}<option>Dinheiro</option><option>Pix</option><option>Cartão de Débito</option><option>Cartão de Crédito</option>{% endif %}
         </select>
       </div>
-
-      <!-- Itens -->
+      {% if categorias %}
       <div class="form-group">
-        <label class="label">Itens do Pedido</label>
-        <div class="itens-lista" id="itens-lista">
-          <div class="item-row item-row-header">
-            <span>Item</span><span>Qtd</span><span>Preço</span><span></span>
-          </div>
-          <div class="item-row" id="item-row-0">
-            <input type="text" name="item_nome" class="input" placeholder="Nome do item" style="padding:5px 8px">
-            <input type="number" name="item_qtd" class="input" value="1" min="1" style="padding:5px 8px">
-            <input type="number" name="item_preco" class="input" placeholder="0.00" step="0.01" style="padding:5px 8px">
-            <span></span>
+        <label class="label"><i class="fas fa-utensils me-1"></i>Cardápio rápido — clique para adicionar</label>
+        {% for cat in categorias %}
+        <div class="cat-group">
+          <div class="cat-label">{{ cat.nome }}</div>
+          <div class="cat-items">
+            {% for item in cat.itens if item.ativo %}
+            <span class="item-chip" onclick="addItem('{{ item.nome }}',{{ item.preco }})">{{ item.nome }} R${{ '%.2f'|format(item.preco) }}</span>
+            {% endfor %}
           </div>
         </div>
-        <button type="button" class="btn-add-item" onclick="addItem()">
-          <i class="fas fa-plus me-1"></i> Adicionar item
-        </button>
+        {% endfor %}
       </div>
-
+      {% endif %}
+      <div class="form-group">
+        <label class="label">Itens</label>
+        <div class="itens-lista" id="itens-lista">
+          <div class="item-row item-row-header"><span>Item</span><span>Qtd</span><span>Preço</span><span></span></div>
+        </div>
+        <button type="button" class="btn-add-item" onclick="addItem()"><i class="fas fa-plus me-1"></i>Adicionar item</button>
+      </div>
       <div class="grid2">
         <div class="form-group">
           <label class="label">Total (R$)</label>
-          <input type="number" name="total" id="total-field" class="input" step="0.01" min="0" placeholder="0.00">
+          <input type="number" name="total" id="total-field" class="input" step="0.01" min="0" placeholder="0.00" readonly>
         </div>
         <div class="form-group">
           <label class="label">Observações</label>
-          <textarea name="observacoes" class="textarea" placeholder="Sem cebola, etc..." style="min-height:42px"></textarea>
+          <textarea name="observacoes" class="textarea" placeholder="Sem cebola, extra molho..."></textarea>
         </div>
       </div>
     </div>
@@ -330,68 +300,88 @@
 </div>
 
 <script>
-let dragId = null;
+const COLUNAS = {{ colunas | tojson }};
 
-function dragStart(e) {
-  dragId = e.currentTarget.dataset.id;
-  e.currentTarget.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
-}
-function dragEnd(e) {
-  e.currentTarget.classList.remove('dragging');
-}
-function dragOver(e) {
-  e.preventDefault();
-  e.currentTarget.classList.add('drag-over');
-}
-function dragLeave(e) {
-  e.currentTarget.classList.remove('drag-over');
-}
-function drop(e, novaColuna) {
-  e.preventDefault();
-  e.currentTarget.classList.remove('drag-over');
-  if (!dragId) return;
-  fetch(`/restaurante/kanban/${dragId}/mover`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({coluna: novaColuna})
-  }).then(r => r.json()).then(() => location.reload());
-}
-
-// iFood row toggle
-document.querySelector('[name=origem]').addEventListener('change', function() {
-  document.getElementById('ifood-row').style.display = this.value === 'ifood' ? 'grid' : 'none';
+// SortableJS em cada coluna
+document.querySelectorAll('.kanban-cards').forEach(col => {
+  Sortable.create(col, {
+    group: 'kanban', animation: 150,
+    ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+    onEnd(evt) {
+      const id     = evt.item.dataset.id;
+      const colKey = evt.to.dataset.col;
+      const cor    = (COLUNAS.find(c => c.key === colKey) || {}).cor;
+      if (cor) evt.item.style.borderLeftColor = cor;
+      fetch(`/restaurante/kanban/${id}/mover`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({coluna: colKey})
+      }).then(r => r.json()).then(atualizarContadores);
+    }
+  });
 });
 
-// Add item row
-let itemCount = 1;
-function addItem() {
+function atualizarContadores() {
+  document.querySelectorAll('.kanban-col').forEach(col => {
+    const key   = col.dataset.col;
+    const cards = col.querySelectorAll('.kanban-card').length;
+    const cnt   = document.getElementById('count-' + key);
+    if (cnt) cnt.textContent = cards;
+    const empty = document.getElementById('empty-' + key);
+    if (empty) empty.style.display = cards ? 'none' : 'block';
+  });
+}
+
+function excluirPedido(id, num, btn) {
+  if (!confirm(`Excluir pedido #${num}?`)) return;
+  fetch(`/restaurante/kanban/${id}/excluir`, {
+    method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'}
+  }).then(r => r.json()).then(d => {
+    if (d.ok) { btn.closest('.kanban-card').remove(); atualizarContadores(); }
+  });
+}
+
+function notificarWA(cliente, numero) {
+  const msg = encodeURIComponent(`Olá ${cliente}! Seu pedido #${numero} está PRONTO! 🍽`);
+  const wa  = '{{ restaurante.whatsapp or "" }}'.replace(/\D/g,'');
+  window.open('https://wa.me/' + (wa || '') + '?text=' + msg, '_blank');
+}
+
+// Auto-refresh a cada 30s se usuário estiver idle
+let lastTouch = Date.now();
+['mousemove','touchstart','keydown'].forEach(ev => document.addEventListener(ev, () => lastTouch = Date.now()));
+setInterval(() => {
+  if (Date.now() - lastTouch > 8000) {
+    document.getElementById('refresh-status').textContent = 'Atualizando…';
+    location.reload();
+  }
+}, 30000);
+
+// Itens
+function addItem(nome, preco) {
   const lista = document.getElementById('itens-lista');
   const row = document.createElement('div');
   row.className = 'item-row';
-  row.id = `item-row-${itemCount}`;
   row.innerHTML = `
-    <input type="text" name="item_nome" class="input" placeholder="Nome do item" style="padding:5px 8px">
-    <input type="number" name="item_qtd" class="input" value="1" min="1" style="padding:5px 8px">
-    <input type="number" name="item_preco" class="input" placeholder="0.00" step="0.01" style="padding:5px 8px">
+    <input type="text" name="item_nome" class="input" value="${nome||''}" placeholder="Nome" style="padding:5px 7px;font-size:12px">
+    <input type="number" name="item_qtd" class="input" value="1" min="1" style="padding:5px 7px;font-size:12px">
+    <input type="number" name="item_preco" class="input" value="${preco||''}" placeholder="0.00" step="0.01" style="padding:5px 7px;font-size:12px">
     <button type="button" class="btn-rem-item" onclick="this.closest('.item-row').remove();calcTotal()">
-      <i class="fas fa-minus"></i>
-    </button>`;
+      <i class="fas fa-minus"></i></button>`;
   lista.appendChild(row);
-  itemCount++;
   row.querySelectorAll('input').forEach(i => i.addEventListener('input', calcTotal));
+  calcTotal();
 }
+
 function calcTotal() {
-  let total = 0;
-  const rows = document.querySelectorAll('#itens-lista .item-row:not(.item-row-header)');
-  rows.forEach(r => {
-    const qtd   = parseFloat(r.querySelector('[name=item_qtd]')?.value || 0);
-    const preco = parseFloat(r.querySelector('[name=item_preco]')?.value || 0);
-    total += qtd * preco;
+  let t = 0;
+  document.querySelectorAll('#itens-lista .item-row:not(.item-row-header)').forEach(r => {
+    t += (parseFloat(r.querySelector('[name=item_qtd]')?.value||0)) *
+         (parseFloat(r.querySelector('[name=item_preco]')?.value||0));
   });
-  document.getElementById('total-field').value = total.toFixed(2);
+  document.getElementById('total-field').value = t.toFixed(2);
 }
-document.querySelectorAll('#item-row-0 input').forEach(i => i.addEventListener('input', calcTotal));
+
+atualizarContadores();
 </script>
 </body>
 </html>

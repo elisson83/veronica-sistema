@@ -229,7 +229,7 @@ class Restaurante(db.Model):
     telefone             = db.Column(db.String(30),  nullable=True)
     endereco             = db.Column(db.String(200), nullable=True)
     descricao            = db.Column(db.Text,        nullable=True)
-    cor_primaria         = db.Column(db.String(10),  default='#6366f1')
+    cor_primaria         = db.Column(db.String(10),  default='#f97316')
     logo_path            = db.Column(db.String(300), nullable=True)
     formas_pagamento_json= db.Column(db.Text,        nullable=True)
     instagram            = db.Column(db.String(100), nullable=True)
@@ -2557,7 +2557,7 @@ def excluir_sub_admin(id):
 # ══════════════════════════════════════════════════════════════════════════════
 
 COLUNAS_KANBAN = [
-    {'key': 'novo',      'nome': 'Novos',       'icone': 'fa-bell',          'cor': '#6366f1'},
+    {'key': 'novo',      'nome': 'Novos',       'icone': 'fa-bell',          'cor': '#f97316'},
     {'key': 'preparo',   'nome': 'Em Preparo',  'icone': 'fa-fire-burner',   'cor': '#f59e0b'},
     {'key': 'pronto',    'nome': 'Pronto',      'icone': 'fa-check-circle',  'cor': '#22c55e'},
     {'key': 'entrega',   'nome': 'Em Entrega',  'icone': 'fa-motorcycle',    'cor': '#06b6d4'},
@@ -2574,8 +2574,10 @@ def restaurante_kanban():
         pedidos_por_coluna[col['key']] = PedidoKanban.query.filter_by(
             restaurante_id=restaurante.id, coluna=col['key']
         ).order_by(PedidoKanban.criado_em).all()
+    categorias = Categoria.query.filter_by(restaurante_id=restaurante.id, ativo=True).all()
     return render_template('kanban.html', restaurante=restaurante,
-                           pedidos=pedidos_por_coluna, colunas=COLUNAS_KANBAN)
+                           pedidos=pedidos_por_coluna, colunas=COLUNAS_KANBAN,
+                           categorias=categorias)
 
 
 @app.route('/restaurante/kanban/novo', methods=['GET', 'POST'])
@@ -2627,13 +2629,38 @@ def mover_pedido(id):
     return jsonify({'ok': True, 'coluna': pedido.coluna})
 
 
-@app.route('/restaurante/kanban/<int:id>/excluir')
+@app.route('/restaurante/kanban/api')
+@requer_restaurante
+def kanban_api():
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    resultado = {}
+    for col in COLUNAS_KANBAN:
+        pedidos = PedidoKanban.query.filter_by(
+            restaurante_id=restaurante.id, coluna=col['key']
+        ).order_by(PedidoKanban.criado_em).all()
+        resultado[col['key']] = [{
+            'id': p.id, 'numero': p.numero, 'cliente_nome': p.cliente_nome or 'Cliente',
+            'total_fmt': p.total_fmt, 'origem': p.origem,
+            'forma_pagamento': p.forma_pagamento or '',
+            'codigo_ifood': p.codigo_ifood or '',
+            'observacoes': p.observacoes or '',
+            'itens': p.itens[:3],
+            'itens_total': len(p.itens),
+            'hora': p.criado_em.strftime('%H:%M'),
+            'whatsapp_cliente': '',
+        } for p in pedidos]
+    return jsonify(resultado)
+
+
+@app.route('/restaurante/kanban/<int:id>/excluir', methods=['POST', 'GET'])
 @requer_restaurante
 def excluir_pedido(id):
     restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
     pedido = PedidoKanban.query.filter_by(id=id, restaurante_id=restaurante.id).first_or_404()
     db.session.delete(pedido)
     db.session.commit()
+    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'ok': True})
     flash('Pedido removido.', 'success')
     return redirect(url_for('restaurante_kanban'))
 

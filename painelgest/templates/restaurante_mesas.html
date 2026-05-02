@@ -1,4 +1,4 @@
-{% extends 'dashboard_restaurante.html' %}
+﻿{% extends 'dashboard_restaurante.html' %}
 {% block title %}Mesas — {{ restaurante.nome }}{% endblock %}
 
 {% block content %}
@@ -7,7 +7,7 @@
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
     <div>
       <h2 style="font-size:20px;font-weight:700;color:#e2e8f0">
-        <i class="fas fa-chair" style="color:#6366f1;margin-right:8px"></i>Gerenciar Mesas
+        <i class="fas fa-chair" style="color:#f97316;margin-right:8px"></i>Gerenciar Mesas
       </h2>
       <p style="color:#64748b;font-size:13px;margin-top:4px">Configure até 50 mesas com numeração personalizada</p>
     </div>
@@ -24,7 +24,7 @@
   <!-- Grid de mesas -->
   <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px;margin-bottom:24px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <span style="font-weight:600;color:#e2e8f0">Mesas configuradas: <span id="total-mesas" style="color:#6366f1">{{ mesas|length }}</span></span>
+      <span style="font-weight:600;color:#e2e8f0">Mesas configuradas: <span id="total-mesas" style="color:#f97316">{{ mesas|length }}</span></span>
       <span style="font-size:12px;color:#64748b">Máximo: 50 mesas</span>
     </div>
     <div id="grid-mesas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
@@ -65,7 +65,7 @@
   <!-- Mapa visual de status -->
   <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px">
     <h3 style="font-size:16px;font-weight:600;color:#e2e8f0;margin-bottom:16px">
-      <i class="fas fa-map-marked-alt" style="color:#6366f1;margin-right:8px"></i>Mapa de Status ao Vivo
+      <i class="fas fa-map-marked-alt" style="color:#f97316;margin-right:8px"></i>Mapa de Status ao Vivo
     </h3>
     <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
       <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8">
@@ -91,15 +91,15 @@
 </div>
 
 <style>
-.btn-add { background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.3); color: #818cf8;
+.btn-add { background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.3); color: #fdba74;
            padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.btn-save { background: #6366f1; border: none; color: #fff;
+.btn-save { background: #f97316; border: none; color: #fff;
             padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.btn-save:hover { background: #4f46e5; }
+.btn-save:hover { background: #ea6f00; }
 .mesa-card { background: #1c2133; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; overflow: hidden; }
 .mesa-header { display: flex; align-items: center; justify-content: space-between;
                padding: 10px 14px; background: rgba(99,102,241,.1); border-bottom: 1px solid rgba(255,255,255,.06); }
-.mesa-num { font-weight: 700; font-size: 13px; color: #818cf8; }
+.mesa-num { font-weight: 700; font-size: 13px; color: #fdba74; }
 .btn-remover { background: none; border: none; color: #f87171; cursor: pointer; font-size: 14px; padding: 2px 6px; }
 .mesa-body { padding: 14px; }
 .field-group { margin-bottom: 10px; }
@@ -107,7 +107,7 @@
                      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
 .field-group input { width: 100%; background: #0b0d17; border: 1px solid rgba(255,255,255,.08);
                      border-radius: 8px; padding: 7px 10px; color: #e2e8f0; font-size: 13px; outline: none; }
-.field-group input:focus { border-color: #6366f1; }
+.field-group input:focus { border-color: #f97316; }
 .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 .status-livre { background: rgba(16,185,129,.15); color: #10b981; border: 1px solid rgba(16,185,129,.3); }
 .status-ocupada { background: rgba(239,68,68,.15); color: #f87171; border: 1px solid rgba(239,68,68,.3); }

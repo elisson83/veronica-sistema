@@ -1,4 +1,4 @@
-{% extends 'dashboard_restaurante.html' %}
+﻿{% extends 'dashboard_restaurante.html' %}
 {% block title %}Contas — {{ restaurante.nome }}{% endblock %}
 
 {% block content %}
@@ -7,15 +7,15 @@
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
     <div>
       <h2 style="font-size:20px;font-weight:700;color:#e2e8f0">
-        <i class="fas fa-receipt" style="color:#6366f1;margin-right:8px"></i>Contas Abertas
+        <i class="fas fa-receipt" style="color:#f97316;margin-right:8px"></i>Contas Abertas
       </h2>
       <p style="color:#64748b;font-size:13px;margin-top:4px">{{ contas|length }} conta(s) aberta(s)</p>
     </div>
     <div style="display:flex;gap:10px">
-      <a href="{{ url_for('restaurante_conta_historico') }}" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none">
+      <a href="{{ url_for('restaurante_conta_historico') }}" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#fdba74;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none">
         <i class="fas fa-history"></i> Histórico
       </a>
-      <button onclick="abrirConta()" style="background:#6366f1;border:none;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">
+      <button onclick="abrirConta()" style="background:#f97316;border:none;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">
         <i class="fas fa-plus"></i> Abrir Conta
       </button>
     </div>
@@ -35,7 +35,7 @@
         </select>
         <div style="display:flex;gap:10px">
           <button type="button" onclick="fecharModal()" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;padding:11px;border-radius:10px;font-size:13px;cursor:pointer">Cancelar</button>
-          <button type="submit" style="flex:2;background:#6366f1;border:none;color:#fff;padding:11px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Abrir Conta</button>
+          <button type="submit" style="flex:2;background:#f97316;border:none;color:#fff;padding:11px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Abrir Conta</button>
         </div>
       </form>
     </div>
@@ -72,7 +72,7 @@
         {% endif %}
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <a href="{{ url_for('restaurante_conta_detalhe', cid=conta.id) }}"
-             style="flex:1;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8;padding:9px;border-radius:8px;font-size:12px;text-align:center;text-decoration:none;font-weight:600;min-width:80px">
+             style="flex:1;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#fdba74;padding:9px;border-radius:8px;font-size:12px;text-align:center;text-decoration:none;font-weight:600;min-width:80px">
             <i class="fas fa-plus"></i> Itens
           </a>
           <button onclick="pagarConta({{ conta.id }}, 'pix')" title="PIX"
@@ -80,7 +80,7 @@
             <i class="fas fa-qrcode"></i>
           </button>
           <button onclick="pagarConta({{ conta.id }}, 'cartao')" title="Cartão"
-                  style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8;padding:9px 12px;border-radius:8px;font-size:14px;cursor:pointer">
+                  style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#fdba74;padding:9px 12px;border-radius:8px;font-size:14px;cursor:pointer">
             <i class="fas fa-credit-card"></i>
           </button>
           <button onclick="pagarConta({{ conta.id }}, 'dinheiro')" title="Dinheiro"
@@ -94,7 +94,7 @@
     <div style="grid-column:1/-1;text-align:center;padding:64px;color:#475569">
       <i class="fas fa-receipt" style="font-size:48px;opacity:.2;display:block;margin-bottom:16px"></i>
       Nenhuma conta aberta no momento.<br>
-      <button onclick="abrirConta()" style="margin-top:16px;background:#6366f1;border:none;color:#fff;padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer">
+      <button onclick="abrirConta()" style="margin-top:16px;background:#f97316;border:none;color:#fff;padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer">
         <i class="fas fa-plus"></i> Abrir primeira conta
       </button>
     </div>

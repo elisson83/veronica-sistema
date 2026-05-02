@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -148,7 +148,7 @@
               <input type="color" name="cor_primaria" value="{{ restaurante.cor_primaria }}"
                      style="width:48px;height:40px;border:none;border-radius:8px;cursor:pointer;background:none;padding:0">
               <input type="text" id="cor-hex" value="{{ restaurante.cor_primaria }}"
-                     class="input" style="flex:1" placeholder="#6366f1"
+                     class="input" style="flex:1" placeholder="#f97316"
                      oninput="document.querySelector('[name=cor_primaria]').value=this.value">
             </div>
           </div>
@@ -179,7 +179,7 @@
         </div>
         <div class="grid2">
           <div class="form-group">
-            <label class="label"><i class="fas fa-circle-dot" style="color:#6366f1;margin-right:4px"></i>Raio de Entrega (km)</label>
+            <label class="label"><i class="fas fa-circle-dot" style="color:#f97316;margin-right:4px"></i>Raio de Entrega (km)</label>
             <input type="number" name="raio_entrega_km" class="input" value="{{ restaurante.raio_entrega_km or 5 }}" min="0.5" max="50" step="0.5">
             <div style="font-size:11px;color:var(--muted);margin-top:4px">Distância máxima que o restaurante atende via delivery.</div>
           </div>
@@ -261,7 +261,7 @@
         <!-- Comparação MP vs PIX -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
           <div style="padding:14px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px">
-            <div style="font-size:12px;font-weight:700;color:#818cf8;margin-bottom:6px">
+            <div style="font-size:12px;font-weight:700;color:#fdba74;margin-bottom:6px">
               <i class="fas fa-bolt me-1"></i>Mercado Pago Automático
             </div>
             <ul style="font-size:11px;color:var(--muted);padding-left:14px;margin:0;line-height:1.8">

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -11,7 +11,7 @@
     :root {
       --bg:#0b0d17; --surface:#131720; --surface2:#1c2133;
       --border:rgba(255,255,255,0.07); --text:#e2e8f0; --muted:#64748b;
-      --accent: {{ restaurante.cor_primaria or '#6366f1' }};
+      --accent: {{ restaurante.cor_primaria or '#f97316' }};
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
@@ -151,8 +151,8 @@
     <!-- Legenda -->
     <div class="panel-section">
       <div class="panel-title">Legenda</div>
-      <div class="legend-item"><div class="legend-color" style="background:#6366f1;border-radius:50%"></div>Restaurante</div>
-      <div class="legend-item"><div class="legend-color" style="background:rgba(99,102,241,.2);border:2px solid #6366f1;border-radius:50%"></div>Área de entrega</div>
+      <div class="legend-item"><div class="legend-color" style="background:#f97316;border-radius:50%"></div>Restaurante</div>
+      <div class="legend-item"><div class="legend-color" style="background:rgba(99,102,241,.2);border:2px solid #f97316;border-radius:50%"></div>Área de entrega</div>
       <div class="legend-item"><div class="legend-color" style="background:#f59e0b;border-radius:50%"></div>Motoboy (fora da área)</div>
       <div class="legend-item"><div class="legend-color" style="background:#10b981;border-radius:50%"></div>Motoboy (dentro da área)</div>
     </div>
@@ -182,7 +182,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 // Ícones
 const iconeRestaurante = L.divIcon({
-  html: '<div style="background:var(--accent,#6366f1);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.6);border:3px solid #fff"><i class="fas fa-store" style="color:#fff;font-size:18px"></i></div>',
+  html: '<div style="background:var(--accent,#f97316);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.6);border:3px solid #fff"><i class="fas fa-store" style="color:#fff;font-size:18px"></i></div>',
   iconSize:[44,44], iconAnchor:[22,22], className:''
 });
 
@@ -266,8 +266,8 @@ function desenharCirculo(lat, lng, raioKm) {
   if (circulo) mapa.removeLayer(circulo);
   circulo = L.circle([lat, lng], {
     radius: raioKm * 1000,
-    color: '#6366f1',
-    fillColor: '#6366f1',
+    color: '#f97316',
+    fillColor: '#f97316',
     fillOpacity: 0.08,
     weight: 2,
     dashArray: '6,4'
@@ -342,7 +342,7 @@ async function salvarRaio() {
       raio_entrega_km: raio,
       lat_restaurante: posRestaurante ? posRestaurante[0] : '',
       lng_restaurante: posRestaurante ? posRestaurante[1] : '',
-      cor_primaria: '{{ restaurante.cor_primaria or "#6366f1" }}'
+      cor_primaria: '{{ restaurante.cor_primaria or "#f97316" }}'
     })
   });
   msg.style.color = '#4ade80';

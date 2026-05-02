@@ -1,4 +1,4 @@
-{% extends 'dashboard_restaurante.html' %}
+﻿{% extends 'dashboard_restaurante.html' %}
 {% block title %}Conta #{{ conta.id }} — {{ restaurante.nome }}{% endblock %}
 
 {% block content %}
@@ -11,7 +11,7 @@
     <h2 style="font-size:20px;font-weight:700;color:#e2e8f0">
       Conta #{{ conta.id }} — {% if conta.mesa_rel %}{{ conta.mesa_rel.label }}{% else %}Balcão{% endif %}
     </h2>
-    <span style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:3px 12px;font-size:12px">
+    <span style="background:rgba(99,102,241,.15);color:#fdba74;border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:3px 12px;font-size:12px">
       {{ conta.status|title }}
     </span>
   </div>
@@ -34,7 +34,7 @@
               <div style="font-size:13px;font-weight:600;color:#e2e8f0">{{ item.nome }}</div>
               <div style="font-size:12px;color:#64748b">R$ {{ "%.2f"|format(item.preco) }}</div>
             </div>
-            <button type="button" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;pointer-events:none">
+            <button type="button" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#fdba74;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;pointer-events:none">
               <i class="fas fa-plus"></i>
             </button>
           </div>
@@ -45,7 +45,7 @@
       <!-- Itens da conta -->
       <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:20px">
         <h3 style="font-size:15px;font-weight:600;color:#e2e8f0;margin-bottom:14px">
-          <i class="fas fa-list" style="color:#6366f1;margin-right:8px"></i>Itens da Conta
+          <i class="fas fa-list" style="color:#f97316;margin-right:8px"></i>Itens da Conta
         </h3>
         <div id="itens-conta" style="display:flex;flex-direction:column;gap:8px">
           {% for i, item in enumerate(conta.itens) %}
@@ -110,7 +110,7 @@
             <i class="fas fa-qrcode"></i> Confirmar PIX
           </button>
           {% endif %}
-          <button onclick="pagar('cartao')" class="btn-pag" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8">
+          <button onclick="pagar('cartao')" class="btn-pag" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#fdba74">
             <i class="fas fa-credit-card"></i> Cartão — Chamar com Maquininha
           </button>
           <button onclick="pagar('dinheiro')" class="btn-pag" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#f59e0b">

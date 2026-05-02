@@ -1,4 +1,4 @@
-{% extends 'dashboard_restaurante.html' %}
+﻿{% extends 'dashboard_restaurante.html' %}
 {% block title %}Atendimento — {{ restaurante.nome }}{% endblock %}
 
 {% block content %}
@@ -6,7 +6,7 @@
 
   <div style="margin-bottom:24px">
     <h2 style="font-size:20px;font-weight:700;color:#e2e8f0">
-      <i class="fas fa-bell-concierge" style="color:#6366f1;margin-right:8px"></i>Atendimento Inteligente
+      <i class="fas fa-bell-concierge" style="color:#f97316;margin-right:8px"></i>Atendimento Inteligente
     </h2>
     <p style="color:#64748b;font-size:13px;margin-top:4px">
       Registre o cliente na entrada — sistema envia Oi automático no WhatsApp com cardápio e opções
@@ -66,7 +66,7 @@
         <div style="font-size:12px;color:#94a3b8;line-height:1.7;white-space:pre-line">Olá! 👋 Bem-vindo(a) ao <strong style="color:#e2e8f0">{{ restaurante.nome }}</strong>!
 
 📱 Acesse nosso cardápio digital:
-<em style="color:#6366f1">[link do cardápio]</em>
+<em style="color:#f97316">[link do cardápio]</em>
 
 💬 Responda com:
 <strong style="color:#10b981">1</strong> — Fazer pedido
@@ -78,8 +78,8 @@
     <!-- Clientes presentes -->
     <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px">
       <h3 style="font-size:16px;font-weight:600;color:#e2e8f0;margin-bottom:16px">
-        <i class="fas fa-users" style="color:#6366f1;margin-right:8px"></i>Clientes Presentes
-        <span style="background:rgba(99,102,241,.15);color:#818cf8;border-radius:20px;padding:2px 10px;font-size:12px;margin-left:8px">{{ presentes|length }}</span>
+        <i class="fas fa-users" style="color:#f97316;margin-right:8px"></i>Clientes Presentes
+        <span style="background:rgba(99,102,241,.15);color:#fdba74;border-radius:20px;padding:2px 10px;font-size:12px;margin-left:8px">{{ presentes|length }}</span>
       </h3>
       <div style="display:flex;flex-direction:column;gap:10px;max-height:480px;overflow-y:auto">
         {% for c in presentes %}
@@ -94,7 +94,7 @@
             </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <a href="/restaurante/conta/abrir" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:6px 12px;font-size:12px;text-decoration:none;font-weight:600">
+            <a href="/restaurante/conta/abrir" style="background:rgba(99,102,241,.15);color:#fdba74;border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:6px 12px;font-size:12px;text-decoration:none;font-weight:600">
               <i class="fas fa-receipt"></i> Conta
             </a>
             <button onclick="registrarSaida({{ c.id }}, this)"

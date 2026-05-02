@@ -1,4 +1,4 @@
-{% extends 'dashboard_restaurante.html' %}
+﻿{% extends 'dashboard_restaurante.html' %}
 {% block title %}Histórico de Contas — {{ restaurante.nome }}{% endblock %}
 
 {% block content %}
@@ -6,7 +6,7 @@
   <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
     <a href="{{ url_for('restaurante_conta_lista') }}" style="color:#64748b;text-decoration:none"><i class="fas fa-arrow-left"></i> Contas</a>
     <h2 style="font-size:20px;font-weight:700;color:#e2e8f0">
-      <i class="fas fa-history" style="color:#6366f1;margin-right:8px"></i>Histórico (últimas 100)
+      <i class="fas fa-history" style="color:#f97316;margin-right:8px"></i>Histórico (últimas 100)
     </h2>
   </div>
   <div style="background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden">

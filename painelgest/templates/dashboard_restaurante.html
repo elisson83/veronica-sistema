@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -10,7 +10,7 @@
     :root {
       --bg:#0b0d17; --surface:#131720; --surface2:#1c2133;
       --border:rgba(255,255,255,0.07); --text:#e2e8f0; --muted:#64748b;
-      --accent: {{ restaurante.cor_primaria or '#6366f1' }};
+      --accent: {{ restaurante.cor_primaria or '#f97316' }};
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14px}
@@ -48,7 +48,7 @@
     .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px;transition:transform .2s}
     .stat-card:hover{transform:translateY(-2px)}
     .stat-icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:15px}
-    .si-accent{background:rgba(99,102,241,.12);color:#818cf8}
+    .si-accent{background:rgba(99,102,241,.12);color:#fdba74}
     .si-green{background:rgba(34,197,94,.12);color:#4ade80}
     .si-cyan{background:rgba(6,182,212,.12);color:#22d3ee}
     .si-yellow{background:rgba(234,179,8,.12);color:#facc15}
@@ -248,7 +248,7 @@
     <!-- Ações Rápidas -->
     <div class="quick-grid">
       <a href="{{ url_for('restaurante_kanban') }}" class="quick-card">
-        <i class="fas fa-table-columns" style="color:#818cf8"></i>
+        <i class="fas fa-table-columns" style="color:#fdba74"></i>
         <div>
           <div style="font-size:14px;font-weight:600">Kanban</div>
           <div style="font-size:11px;color:var(--muted)">Gerenciar pedidos</div>
@@ -322,7 +322,7 @@
           {% if categorias %}
             {% for cat in categorias %}
             <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
-              <div style="width:32px;height:32px;border-radius:8px;background:rgba(99,102,241,.12);display:grid;place-items:center;color:#818cf8;font-size:13px;flex-shrink:0">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(99,102,241,.12);display:grid;place-items:center;color:#fdba74;font-size:13px;flex-shrink:0">
                 <i class="fas {{ cat.icone }}"></i>
               </div>
               <div style="flex:1">

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Link Inválido — PainelFrota</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  body { background: #0a0a12; color: #e2e8f0; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card-err { background: #13131f; border: 1px solid #3b1515; border-radius: 16px; padding: 48px 40px; max-width: 420px; width: 100%; text-align: center; }
+  .icon-err { font-size: 3.5rem; color: #ef4444; margin-bottom: 20px; }
+  h3 { color: #f87171; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="card-err">
+  <div class="icon-err"><i class="fas fa-circle-xmark"></i></div>
+  <h3>Link inválido</h3>
+  <p class="text-muted">{{ motivo }}</p>
+  <p class="text-muted" style="font-size:.84rem;margin-top:12px">
+    Solicite um novo link ao responsável pela frota.
+  </p>
+</div>
+</body>
+</html>

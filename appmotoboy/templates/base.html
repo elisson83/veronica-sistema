@@ -12,7 +12,7 @@
     --surface: #1a1a24;
     --card:    #22222f;
     --border:  #2e2e3e;
-    --accent:  #f59e0b;
+    --accent:  #10b981;
     --success: #10b981;
     --danger:  #ef4444;
     --text:    #e2e8f0;
@@ -130,6 +130,9 @@
   </a>
   <a href="{{ url_for('ganhos') }}" class="{% if request.endpoint in ['ganhos','historico'] %}active{% endif %}">
     <i class="fas fa-wallet"></i>Ganhos
+  </a>
+  <a href="{{ url_for('ranking') }}" class="{% if request.endpoint=='ranking' %}active{% endif %}">
+    <i class="fas fa-trophy"></i>Ranking
   </a>
   <a href="{{ url_for('perfil') }}" class="{% if request.endpoint=='perfil' %}active{% endif %}">
     <i class="fas fa-user"></i>Perfil

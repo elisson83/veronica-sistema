@@ -1,4 +1,5 @@
 import os
+import sys
 import math
 import secrets
 import smtplib
@@ -8,6 +9,8 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
 
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -17,7 +20,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'motoboy-secret-2025'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_MOTOBOY', 'motoboy-secret-2025-change-me')
+init_seguranca(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'motoboy.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -207,14 +211,23 @@ def load_user(uid): return Motoboy.query.get(int(uid))
 @app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
+        ip = get_ip()
+        if ip_bloqueado(ip):
+            flash('Muitas tentativas. Aguarde 15 minutos.', 'danger')
+            return render_template('login.html')
         email = request.form.get('email', '').strip().lower()
         senha = request.form.get('senha', '')
         mb = (Motoboy.query.filter(db.func.lower(Motoboy.email) == email).first() or
               Motoboy.query.filter_by(username=email).first())
         if mb and mb.check_senha(senha):
+            limpar_falhas(ip)
             login_user(mb)
             return redirect(url_for('dashboard'))
-        flash('E-mail ou senha incorretos', 'danger')
+        bloqueou = registrar_falha(ip)
+        if bloqueou:
+            flash('Conta bloqueada por 15 min por excesso de tentativas.', 'danger')
+        else:
+            flash('E-mail ou senha incorretos', 'danger')
     return render_template('login.html')
 
 
@@ -504,6 +517,38 @@ def ganhos():
         ganhos_mes=ganhos_mes, qtd_mes=qtd_mes,
         ganhos_total=ganhos_total, ultimas=ultimas
     )
+
+# ─── RANKING ─────────────────────────────────────────────────────────────────
+
+@app.route('/ranking')
+@login_required
+def ranking():
+    inicio_mes = date.today().replace(day=1)
+    mbs = Motoboy.query.filter_by(ativo=True).all()
+
+    lista = []
+    for mb in mbs:
+        qtd = Entrega.query.filter(
+            Entrega.motoboy_id == mb.id,
+            Entrega.status == 'entregue',
+            db.func.date(Entrega.entregue_em) >= inicio_mes
+        ).count()
+        ganho = db.session.query(db.func.sum(Entrega.valor_total_taxa)).filter(
+            Entrega.motoboy_id == mb.id,
+            Entrega.status == 'entregue',
+            db.func.date(Entrega.entregue_em) >= inicio_mes
+        ).scalar() or 0.0
+        lista.append({'id': mb.id, 'nome': mb.nome, 'codigo': mb.codigo, 'qtd': qtd, 'ganho': ganho})
+
+    lista.sort(key=lambda x: x['qtd'], reverse=True)
+
+    for pos, item in enumerate(lista, 1):
+        item['posicao'] = pos
+        item['eu'] = (item['id'] == current_user.id)
+
+    minha_pos = next((x for x in lista if x['eu']), None)
+    return render_template('ranking.html', lista=lista, minha_pos=minha_pos, mes=inicio_mes)
+
 
 # ─── TURNOS SEMANAIS ─────────────────────────────────────────────────────────
 

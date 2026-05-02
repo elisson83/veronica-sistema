@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Convites — PainelFrota{% endblock %}
+{% block page_title %}Links de Convite para Restaurantes{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- Gerar novo convite -->
+  <div class="col-12">
+    <div class="card p-4">
+      <h6 class="mb-3"><i class="fas fa-plus-circle me-2" style="color:var(--accent)"></i>Gerar novo link</h6>
+      <form method="post" action="{{ url_for('novo_convite') }}" class="d-flex gap-2 flex-wrap">
+        <input type="text" name="campanha" class="form-control" style="max-width:320px"
+               placeholder="Rótulo (opcional) — ex: Bairro Centro, Ifood Mai/2025">
+        <button class="btn btn-primary" type="submit">
+          <i class="fas fa-link me-1"></i>Gerar Link
+        </button>
+      </form>
+      <small class="text-muted mt-2 d-block">
+        Envie o link para o restaurante. Ao acessar, ele preenche os dados e é cadastrado automaticamente nesta frota.
+      </small>
+    </div>
+  </div>
+
+  <!-- Lista de convites -->
+  <div class="col-12">
+    <div class="card p-0" style="overflow:hidden">
+      <div class="px-4 py-3 border-bottom" style="border-color:var(--border)!important">
+        <span class="fw-600">Convites gerados</span>
+        <span class="badge ms-2" style="background:var(--accent);color:#fff">{{ convites|length }}</span>
+      </div>
+      {% if convites %}
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0" style="background:transparent">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th class="px-4 py-3">Rótulo / Campanha</th>
+              <th class="px-4 py-3">Link de Cadastro</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Restaurante</th>
+              <th class="px-4 py-3">Criado em</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in convites %}
+            {% set link = base_url + '/cadastro-convite/' + c.token %}
+            <tr>
+              <td class="px-4 py-3">
+                {{ c.campanha or '<span class="text-muted">—</span>'|safe }}
+              </td>
+              <td class="px-4 py-3">
+                <div class="d-flex align-items-center gap-2">
+                  <a href="{{ link }}" target="_blank" class="text-info text-truncate d-inline-block" style="max-width:260px;font-size:12px">
+                    {{ link }}
+                  </a>
+                  <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);padding:3px 10px;font-size:11px"
+                          onclick="copiar('{{ link }}', this)">
+                    <i class="fas fa-copy me-1"></i>Copiar
+                  </button>
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                {% if c.usado %}
+                <span class="badge" style="background:#064e3b33;color:#6ee7b7;border:1px solid #065f46">Utilizado</span>
+                {% else %}
+                <span class="badge" style="background:#1e3a5f33;color:#93c5fd;border:1px solid #1e3a5f">Disponível</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3">
+                {% if c.restaurante %}
+                  <span style="color:var(--accent)">{{ c.restaurante.nome }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-muted" style="font-size:12px">
+                {{ c.criado_em.strftime('%d/%m/%Y %H:%M') }}
+              </td>
+              <td class="px-4 py-3">
+                {% if not c.usado %}
+                <form method="post" action="{{ url_for('excluir_convite', cid=c.id) }}"
+                      onsubmit="return confirm('Excluir este convite?')">
+                  <button class="btn btn-sm" style="background:#3b151522;color:#f87171;border:1px solid #3b1515;padding:3px 10px;font-size:11px">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-5">
+        <i class="fas fa-link fa-2x mb-2 d-block" style="opacity:.3"></i>
+        Nenhum convite gerado ainda. Use o formulário acima para criar um link.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+function copiar(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+    btn.style.color = '#6ee7b7';
+    setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy me-1"></i>Copiar'; btn.style.color = ''; }, 2000);
+  });
+}
+</script>
+{% endblock %}

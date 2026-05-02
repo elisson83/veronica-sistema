@@ -1,4 +1,5 @@
 import os
+import sys
 import io
 import json
 import math
@@ -8,6 +9,8 @@ import logging
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), encoding='utf-8-sig')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -24,6 +27,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'painelgest2024super')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///painelgest.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+init_seguranca(app)
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
 PLANOS = {
@@ -960,6 +964,10 @@ def login():
     if 'administrador' in session:
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
+        ip = get_ip()
+        if ip_bloqueado(ip):
+            flash('Muitas tentativas. Aguarde 15 minutos.', 'danger')
+            return render_template('login.html')
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         admin = Administrador.query.filter(
@@ -969,9 +977,14 @@ def login():
             if admin.bloqueado:
                 flash('Conta bloqueada. Entre em contato com o suporte.', 'danger')
                 return render_template('login.html')
+            limpar_falhas(ip)
             session['administrador'] = admin.email
             return redirect(url_for('dashboard'))
-        flash('E-mail ou senha inválidos.', 'danger')
+        bloqueou = registrar_falha(ip)
+        if bloqueou:
+            flash('Conta bloqueada por 15 min por excesso de tentativas.', 'danger')
+        else:
+            flash('E-mail ou senha inválidos.', 'danger')
     return render_template('login.html')
 
 
@@ -1029,13 +1042,22 @@ def super_login():
     if 'super_admin' in session:
         return redirect(url_for('super_dashboard'))
     if request.method == 'POST':
+        ip = get_ip()
+        if ip_bloqueado(ip):
+            flash('Muitas tentativas. Aguarde 15 minutos.', 'danger')
+            return render_template('super_login.html')
         username = request.form['username']
         password = request.form['password']
         sa = SuperAdmin.query.filter_by(username=username).first()
         if sa and check_password_hash(sa.password, password):
+            limpar_falhas(ip)
             session['super_admin'] = username
             return redirect(url_for('super_dashboard'))
-        flash('Credenciais inválidas.', 'danger')
+        bloqueou = registrar_falha(ip)
+        if bloqueou:
+            flash('Conta bloqueada por 15 min por excesso de tentativas.', 'danger')
+        else:
+            flash('Credenciais inválidas.', 'danger')
     return render_template('super_login.html')
 
 
@@ -1506,11 +1528,15 @@ def mp_pendente():
 @app.route('/restaurante/login', methods=['GET', 'POST'])
 def restaurante_login():
     if request.method == 'POST':
+        ip = get_ip()
+        if ip_bloqueado(ip):
+            flash('Muitas tentativas. Aguarde 15 minutos.', 'danger')
+            return render_template('login_restaurante.html')
         username = request.form['username']
         password = request.form['password']
         restaurante = Restaurante.query.filter_by(username=username).first()
         if restaurante and check_password_hash(restaurante.password, password):
-            # Sessão única: invalida qualquer sessão anterior
+            limpar_falhas(ip)
             tok = secrets.token_hex(16)
             restaurante.session_token = tok
             db.session.commit()
@@ -1518,7 +1544,11 @@ def restaurante_login():
             session['restaurante_id']    = restaurante.id
             session['restaurante_token'] = tok
             return redirect(url_for('restaurante_dashboard'))
-        flash('Login ou senha inválidos.', 'danger')
+        bloqueou = registrar_falha(ip)
+        if bloqueou:
+            flash('Conta bloqueada por 15 min por excesso de tentativas.', 'danger')
+        else:
+            flash('Login ou senha inválidos.', 'danger')
     return render_template('login_restaurante.html')
 
 
@@ -2131,6 +2161,10 @@ def dono_login():
     if 'dono' in session:
         return redirect(url_for('dono_dashboard'))
     if request.method == 'POST':
+        ip = get_ip()
+        if ip_bloqueado(ip):
+            flash('Muitas tentativas. Aguarde 15 minutos.', 'danger')
+            return render_template('dono_login.html')
         email = request.form.get('email', '').strip().lower()
         senha = request.form.get('senha', '')
         dono  = DonoDaEmpresa.query.filter(
@@ -2138,10 +2172,15 @@ def dono_login():
             DonoDaEmpresa.ativo == True
         ).first()
         if dono and dono.check_senha(senha):
+            limpar_falhas(ip)
             session['dono'] = dono.email
             _registrar_acesso(dono.email, 'dono')
             return redirect(url_for('dono_dashboard'))
-        flash('E-mail ou senha inválidos.', 'danger')
+        bloqueou = registrar_falha(ip)
+        if bloqueou:
+            flash('Conta bloqueada por 15 min por excesso de tentativas.', 'danger')
+        else:
+            flash('E-mail ou senha inválidos.', 'danger')
     return render_template('dono_login.html')
 
 

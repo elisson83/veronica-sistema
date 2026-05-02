@@ -1,4 +1,5 @@
 import os
+import sys
 import io
 import math
 import json
@@ -11,6 +12,8 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, make_response, send_file
 
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -21,7 +24,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'frota-secret-2025'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_FROTA', 'frota-secret-2025-change-me')
+init_seguranca(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'frota.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
@@ -188,6 +192,20 @@ class ConfigFrota(db.Model):
     valor = db.Column(db.String(500))
 
 
+class ConviteRestaurante(db.Model):
+    """Link de convite para o restaurante se cadastrar na frota."""
+    id            = db.Column(db.Integer, primary_key=True)
+    token         = db.Column(db.String(64), unique=True, nullable=False)
+    campanha      = db.Column(db.String(100))          # rótulo opcional
+    usado         = db.Column(db.Boolean, default=False)
+    restaurante_id= db.Column(db.Integer, db.ForeignKey('restaurante_conectado.id'), nullable=True)
+    criado_por    = db.Column(db.Integer, db.ForeignKey('admin_frota.id'))
+    criado_em     = db.Column(db.DateTime, default=datetime.utcnow)
+    usado_em      = db.Column(db.DateTime)
+    restaurante   = db.relationship('RestauranteConectado', backref='convite', foreign_keys=[restaurante_id])
+    criador       = db.relationship('AdminFrota', foreign_keys=[criado_por])
+
+
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 def calcular_adicionais(hora=None, chuva=False, feriado=False):
@@ -302,14 +320,23 @@ def load_user(uid): return AdminFrota.query.get(int(uid))
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        ip = get_ip()
+        if ip_bloqueado(ip):
+            flash('Muitas tentativas. Aguarde 15 minutos.', 'danger')
+            return render_template('login.html')
         email = request.form.get('email', '').strip().lower()
         senha = request.form.get('senha', '')
         adm = (AdminFrota.query.filter(db.func.lower(AdminFrota.email) == email).first() or
                AdminFrota.query.filter_by(username=email).first())
         if adm and adm.check_senha(senha):
+            limpar_falhas(ip)
             login_user(adm)
             return redirect(url_for('dashboard'))
-        flash('E-mail ou senha incorretos', 'danger')
+        bloqueou = registrar_falha(ip)
+        if bloqueou:
+            flash('Acesso bloqueado por 15 min por excesso de tentativas.', 'danger')
+        else:
+            flash('E-mail ou senha incorretos', 'danger')
     return render_template('login.html')
 
 
@@ -1102,6 +1129,81 @@ def resetar_senha_frota(token):
                 flash('Senha redefinida! Faça login.', 'success')
                 return redirect(url_for('login'))
     return render_template('resetar_senha.html', token=token)
+
+
+# ─── CONVITES PARA RESTAURANTES ──────────────────────────────────────────────
+
+@app.route('/convites')
+@login_required
+def convites():
+    lista = ConviteRestaurante.query.order_by(ConviteRestaurante.criado_em.desc()).all()
+    base_url = request.host_url.rstrip('/')
+    return render_template('convites.html', convites=lista, base_url=base_url)
+
+
+@app.route('/convites/novo', methods=['POST'])
+@login_required
+def novo_convite():
+    campanha = request.form.get('campanha', '').strip() or None
+    c = ConviteRestaurante(
+        token=secrets.token_urlsafe(32),
+        campanha=campanha,
+        criado_por=current_user.id
+    )
+    db.session.add(c)
+    db.session.commit()
+    flash('Link de convite gerado!', 'success')
+    return redirect(url_for('convites'))
+
+
+@app.route('/convites/<int:cid>/excluir', methods=['POST'])
+@login_required
+def excluir_convite(cid):
+    c = ConviteRestaurante.query.get_or_404(cid)
+    if c.usado:
+        flash('Convite já utilizado, não pode ser excluído.', 'warning')
+    else:
+        db.session.delete(c)
+        db.session.commit()
+        flash('Convite excluído.', 'success')
+    return redirect(url_for('convites'))
+
+
+@app.route('/cadastro-convite/<token>', methods=['GET', 'POST'])
+def cadastro_via_convite(token):
+    convite = ConviteRestaurante.query.filter_by(token=token).first()
+    if not convite:
+        return render_template('convite_invalido.html', motivo='Link não encontrado.')
+    if convite.usado:
+        return render_template('convite_invalido.html', motivo='Este link já foi utilizado.')
+
+    if request.method == 'POST':
+        nome      = request.form.get('nome', '').strip()
+        telefone  = request.form.get('telefone', '').strip()
+        endereco  = request.form.get('endereco', '').strip()
+        taxa      = float(request.form.get('taxa_padrao', 5.0) or 5.0)
+
+        if not nome:
+            flash('Nome do restaurante é obrigatório.', 'danger')
+            return render_template('cadastro_convite.html', convite=convite)
+
+        rest = RestauranteConectado(
+            nome=nome,
+            token_qr=secrets.token_urlsafe(24),
+            telefone=telefone,
+            endereco=endereco,
+            taxa_padrao=taxa,
+        )
+        db.session.add(rest)
+        db.session.flush()
+
+        convite.usado          = True
+        convite.restaurante_id = rest.id
+        convite.usado_em       = datetime.utcnow()
+        db.session.commit()
+        return render_template('cadastro_convite_ok.html', restaurante=rest)
+
+    return render_template('cadastro_convite.html', convite=convite)
 
 
 # ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────

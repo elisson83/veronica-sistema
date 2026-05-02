@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Ranking do Mês{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <i class="fa fa-trophy" style="color:var(--accent);font-size:1.5rem"></i>
+    <div>
+      <h4 class="mb-0">Ranking do Mês</h4>
+      <small class="text-muted">{{ mes.strftime('%B/%Y') }} — apenas suas posição e dados são visíveis</small>
+    </div>
+  </div>
+
+  {% if minha_pos %}
+  <div class="card mb-4 p-3" style="border:2px solid var(--accent)">
+    <div class="d-flex align-items-center gap-3">
+      <div style="font-size:2.5rem;font-weight:900;color:var(--accent);min-width:56px;text-align:center">
+        #{{ minha_pos.posicao }}
+      </div>
+      <div class="flex-grow-1">
+        <div class="fw-semibold">{{ minha_pos.nome }} <span class="badge" style="background:var(--accent);color:#000;font-size:11px">VOCÊ</span></div>
+        <div class="text-muted" style="font-size:13px">{{ minha_pos.qtd }} entregas &nbsp;|&nbsp; R$ {{ '%.2f'|format(minha_pos.ganho) }} este mês</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card p-0" style="overflow:hidden">
+    <table class="table table-dark table-hover mb-0" style="background:var(--card)">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th style="width:52px;padding:12px 16px">#</th>
+          <th style="padding:12px 16px">Motoboy</th>
+          <th style="padding:12px 16px;text-align:right">Entregas</th>
+          <th style="padding:12px 16px;text-align:right">Ganhos</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in lista %}
+        <tr {% if item.eu %}style="background:rgba(16,185,129,0.10);border-left:3px solid var(--accent)"{% endif %}>
+          <td style="padding:11px 16px;font-weight:700;color:
+            {%- if item.posicao == 1 %}#fbbf24
+            {%- elif item.posicao == 2 %}#94a3b8
+            {%- elif item.posicao == 3 %}#d97706
+            {%- else %}var(--muted){% endif %}">
+            {% if item.posicao == 1 %}🥇
+            {% elif item.posicao == 2 %}🥈
+            {% elif item.posicao == 3 %}🥉
+            {% else %}{{ item.posicao }}{% endif %}
+          </td>
+          <td style="padding:11px 16px">
+            {% if item.eu %}
+              <span class="fw-semibold" style="color:var(--accent)">{{ item.nome }}</span>
+              <span class="badge ms-1" style="background:var(--accent);color:#000;font-size:10px">VOCÊ</span>
+            {% else %}
+              <span style="color:var(--muted)">Motoboy #{{ item.posicao }}</span>
+            {% endif %}
+          </td>
+          <td style="padding:11px 16px;text-align:right">
+            {% if item.eu %}
+              <span class="fw-semibold">{{ item.qtd }}</span>
+            {% else %}
+              <span style="color:var(--muted)">—</span>
+            {% endif %}
+          </td>
+          <td style="padding:11px 16px;text-align:right">
+            {% if item.eu %}
+              <span class="fw-semibold" style="color:var(--accent)">R$ {{ '%.2f'|format(item.ganho) }}</span>
+            {% else %}
+              <span style="color:var(--muted)">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-muted py-4">Nenhuma entrega registrada este mês.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="text-muted mt-3" style="font-size:12px">
+    <i class="fa fa-lock me-1"></i>
+    Nomes e ganhos dos outros motoboys são mantidos em sigilo. Você vê apenas sua posição e seus dados.
+  </p>
+
+</div>
+{% endblock %}

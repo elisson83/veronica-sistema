@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}CRM — {{ cliente.nome_cliente }}{% endblock %}
+{% block page_title %}{{ cliente.nome_cliente or 'Cliente' }}{% endblock %}
+{% block page_sub %}
+  {% set seg = cliente.segmento %}
+  <span class="badge badge-{{ seg[1] }}">{{ seg[0] }}</span>
+{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('crm') }}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> CRM</a>
+{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Dados do Cliente</span></div>
+    <div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:#64748b;font-size:13px">Telefone</span>
+          <span style="font-size:13px">
+            {% if cliente.telefone %}
+            <a href="https://wa.me/55{{ cliente.telefone }}" target="_blank" style="color:#4ade80"><i class="fab fa-whatsapp"></i> {{ cliente.telefone }}</a>
+            {% else %}—{% endif %}
+          </span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:#64748b;font-size:13px">Total de pedidos</span>
+          <span style="font-size:13px;font-weight:600">{{ cliente.total_pedidos }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:#64748b;font-size:13px">Valor total gasto</span>
+          <span style="font-size:13px;font-weight:700;color:#4ade80">R$ {{ '%.2f'|format(cliente.valor_total or 0) }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:#64748b;font-size:13px">Ticket médio</span>
+          <span style="font-size:13px">R$ {{ '%.2f'|format(cliente.ticket_medio or 0) }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:#64748b;font-size:13px">Último pedido</span>
+          <span style="font-size:13px">{{ cliente.ultimo_pedido.strftime('%d/%m/%Y') if cliente.ultimo_pedido else '—' }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:#64748b;font-size:13px">Cadastrado em</span>
+          <span style="font-size:11px;color:#64748b">{{ cliente.criado_em.strftime('%d/%m/%Y') }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Notas Internas</span></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('crm_nota', cid=cliente.id) }}" style="margin-bottom:16px">
+        <div style="display:flex;gap:8px">
+          <input type="text" name="nota" class="form-control" placeholder="Adicionar observação..." required>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i></button>
+        </div>
+      </form>
+      {% if cliente.notas %}
+      <div style="max-height:300px;overflow-y:auto">
+        {% for linha in cliente.notas.split('\n') %}
+        {% if linha.strip() %}
+        <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;color:#94a3b8">{{ linha }}</div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="color:#64748b;font-size:13px;text-align:center;padding:20px">Nenhuma nota ainda.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}

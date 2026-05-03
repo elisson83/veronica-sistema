@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}Conexões{% endblock %}
+{% block page_title %}Conexões Externas{% endblock %}
+{% block page_sub %}Gerencie como seu restaurante se conecta a outros painéis{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('dashboard') }}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<!-- Código do Restaurante -->
+<div style="background:linear-gradient(135deg,rgba(249,115,22,.1),rgba(249,115,22,.03));border:1px solid rgba(249,115,22,.25);border-radius:14px;padding:24px;margin-bottom:24px">
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">Código de Identificação do Restaurante</div>
+      <div style="font-size:36px;font-weight:800;letter-spacing:4px;color:#f97316">{{ restaurante.codigo }}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px">Compartilhe este código para conectar a qualquer painel</div>
+    </div>
+    <div style="margin-left:auto;display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Link de Cadastro Compartilhável:</div>
+      <div style="background:#1c2133;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;font-size:12px;color:#e2e8f0;font-family:monospace;max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        {{ link_cadastro }}
+      </div>
+      <button onclick="copyLink()" class="btn btn-ghost btn-sm"><i class="fas fa-copy"></i> Copiar Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- Como funciona -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-header"><span class="card-title"><i class="fas fa-info-circle me-2" style="color:#22d3ee"></i>Como Funciona</span></div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      <div style="background:#1c2133;border-radius:10px;padding:16px;text-align:center">
+        <i class="fas fa-share-nodes" style="font-size:24px;color:#f97316;margin-bottom:10px;display:block"></i>
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">1. Compartilhar</div>
+        <div style="font-size:12px;color:#64748b">Gestor, ADM Frota ou Motoboy recebe o link ou o código</div>
+      </div>
+      <div style="background:#1c2133;border-radius:10px;padding:16px;text-align:center">
+        <i class="fas fa-keyboard" style="font-size:24px;color:#4ade80;margin-bottom:10px;display:block"></i>
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">2. Conectar</div>
+        <div style="font-size:12px;color:#64748b">A outra parte digita o código <strong>{{ restaurante.codigo }}</strong> no painel deles</div>
+      </div>
+      <div style="background:#1c2133;border-radius:10px;padding:16px;text-align:center">
+        <i class="fas fa-check-circle" style="font-size:24px;color:#a78bfa;margin-bottom:10px;display:block"></i>
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">3. Ativar</div>
+        <div style="font-size:12px;color:#64748b">Cada conexão é independente — ative ou desative quando quiser</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;background:rgba(249,115,22,.05);border:1px solid rgba(249,115,22,.15);border-radius:8px;padding:12px 16px;font-size:12px;color:#94a3b8">
+      <strong style="color:#fb923c">Quem pode usar o código:</strong><br>
+      🏢 <strong>Gestor de Redes Sociais</strong> — conecta para administrar suas redes sociais no PainelGest<br>
+      🏍️ <strong>Motoboy</strong> — conecta para receber suas entregas via AppMotoboy<br>
+      🚛 <strong>ADM Frota</strong> — conecta para vincular os motoboys da frota ao seu restaurante<br>
+      👤 <strong>Você mesmo</strong> — conecta a qualquer painel manualmente abaixo
+    </div>
+  </div>
+</div>
+
+<!-- Adicionar Conexão -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-header"><span class="card-title"><i class="fas fa-plus me-2" style="color:#4ade80"></i>Adicionar Conexão Manual</span></div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('nova_conexao') }}" style="display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:12px;align-items:end">
+      <div>
+        <label class="form-label">Tipo *</label>
+        <select name="tipo" class="form-control" required>
+          <option value="">Selecione...</option>
+          <option value="painelgest">PainelGest (Gestor)</option>
+          <option value="painelfrota">PainelFrota</option>
+          <option value="appmotoboy">AppMotoboy</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">URL do Painel</label>
+        <input type="text" name="url_painel" class="form-control" placeholder="http://...">
+      </div>
+      <div>
+        <label class="form-label">Descrição</label>
+        <input type="text" name="descricao" class="form-control" placeholder="Ex: Gestor do João">
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Conexões Existentes -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title"><i class="fas fa-plug me-2" style="color:#a78bfa"></i>Conexões ({{ conexoes|length }})</span>
+  </div>
+  <div class="card-body">
+    {% if conexoes %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Descrição</th>
+          <th>URL do Painel</th>
+          <th>Token</th>
+          <th>Status</th>
+          <th>Criado em</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cx in conexoes %}
+        <tr>
+          <td>
+            {% if cx.tipo == 'painelgest' %}<span class="badge badge-blue"><i class="fas fa-building me-1"></i>PainelGest</span>
+            {% elif cx.tipo == 'painelfrota' %}<span class="badge badge-orange"><i class="fas fa-truck-fast me-1"></i>PainelFrota</span>
+            {% elif cx.tipo == 'appmotoboy' %}<span class="badge badge-green"><i class="fas fa-motorcycle me-1"></i>AppMotoboy</span>
+            {% else %}<span class="badge badge-gray">{{ cx.tipo }}</span>{% endif %}
+          </td>
+          <td>{{ cx.descricao or '—' }}</td>
+          <td style="font-size:11px;color:#64748b">{{ cx.url_painel or '—' }}</td>
+          <td><code style="font-size:10px;color:#a78bfa;background:rgba(139,92,246,.1);padding:2px 6px;border-radius:4px">{{ cx.token_conexao[:16] }}...</code></td>
+          <td><span class="badge {% if cx.ativa %}badge-green{% else %}badge-gray{% endif %}">{% if cx.ativa %}Ativa{% else %}Inativa{% endif %}</span></td>
+          <td style="font-size:11px;color:#64748b">{{ cx.criado_em.strftime('%d/%m/%y %H:%M') }}</td>
+          <td>
+            {% if cx.ativa %}
+            <form method="post" action="{{ url_for('desativar_conexao', cid=cx.id) }}" style="display:inline">
+              <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-unlink"></i></button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center;padding:40px;color:#64748b">
+      <i class="fas fa-plug" style="font-size:36px;opacity:.2;display:block;margin-bottom:12px"></i>
+      <div style="font-size:14px;font-weight:500;margin-bottom:6px">Nenhuma conexão ainda</div>
+      <div style="font-size:12px">Compartilhe seu código <strong style="color:#f97316">{{ restaurante.codigo }}</strong> para começar a conectar</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function copyLink() {
+  navigator.clipboard.writeText('{{ link_cadastro }}').then(() => alert('Link copiado!'));
+}
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cardápio — {{ restaurante.nome }}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root { --cor: {{ restaurante.cor_primaria or '#f97316' }}; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background:#0f1320; color:#e2e8f0; min-height:100vh; }
+  .hero { background:linear-gradient(135deg, var(--cor) 0%, rgba(0,0,0,.8) 100%); padding:32px 20px; text-align:center; }
+  .hero-logo { width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,.3); margin-bottom:12px; }
+  .hero-nome { font-size:26px; font-weight:800; color:#fff; }
+  .hero-desc { font-size:14px; color:rgba(255,255,255,.7); margin-top:6px; }
+  .hero-info { display:flex; justify-content:center; gap:16px; margin-top:12px; flex-wrap:wrap; }
+  .hero-info span { font-size:12px; color:rgba(255,255,255,.8); }
+  .container { max-width:600px; margin:0 auto; padding:20px; }
+  .nav-cats { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:20px; }
+  .nav-cats::-webkit-scrollbar { height:2px; }
+  .nav-cat { white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:13px; background:#1c2133; color:#94a3b8; border:1px solid rgba(255,255,255,.08); cursor:pointer; transition:all .15s; }
+  .nav-cat.active, .nav-cat:hover { background:var(--cor); color:#fff; border-color:var(--cor); }
+  .cat-section { margin-bottom:28px; }
+  .cat-titulo { font-size:16px; font-weight:700; color:var(--cor); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .item-card { background:#1c2133; border:1px solid rgba(255,255,255,.05); border-radius:12px; padding:14px; margin-bottom:10px; display:flex; gap:12px; align-items:center; }
+  .item-info { flex:1 }
+  .item-nome { font-size:14px; font-weight:600; }
+  .item-desc { font-size:12px; color:#64748b; margin-top:3px; }
+  .item-preco { font-size:15px; font-weight:700; color:#4ade80; white-space:nowrap; }
+  .item-preco-promo { font-size:12px; color:#64748b; text-decoration:line-through; }
+  .item-preco-atual { color:var(--cor); }
+  .badge-destaque { background:var(--cor); color:#fff; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; }
+  .footer { text-align:center; padding:32px 20px; color:#64748b; font-size:12px; }
+  .vazio { text-align:center; padding:60px 20px; color:#64748b; }
+  .wa-btn { position:fixed; bottom:20px; right:20px; background:#25d366; color:#fff; width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; text-decoration:none; box-shadow:0 4px 12px rgba(37,211,102,.4); z-index:100; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  {% if restaurante.logo_path %}
+  <img src="/static/{{ restaurante.logo_path }}" alt="{{ restaurante.nome }}" class="hero-logo">
+  {% else %}
+  <div style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:28px;font-weight:800;color:#fff">
+    {{ restaurante.nome[0].upper() }}
+  </div>
+  {% endif %}
+  <div class="hero-nome">{{ restaurante.nome }}</div>
+  {% if restaurante.descricao %}<div class="hero-desc">{{ restaurante.descricao }}</div>{% endif %}
+  <div class="hero-info">
+    {% if restaurante.endereco %}<span><i class="fas fa-map-marker-alt"></i> {{ restaurante.endereco }}</span>{% endif %}
+    {% if restaurante.telefone %}<span><i class="fas fa-phone"></i> {{ restaurante.telefone }}</span>{% endif %}
+  </div>
+</div>
+
+<div class="container">
+  {% if categorias %}
+  <!-- Navegação rápida -->
+  <div class="nav-cats">
+    {% for cat in categorias %}
+    {% if cat.itens_disponiveis %}
+    <a class="nav-cat" href="#cat-{{ cat.id }}">
+      <i class="fas {{ cat.icone }} me-1"></i>{{ cat.nome }}
+    </a>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <!-- Categorias e itens -->
+  {% for cat in categorias %}
+  {% if cat.itens_disponiveis %}
+  <div class="cat-section" id="cat-{{ cat.id }}">
+    <div class="cat-titulo">
+      <i class="fas {{ cat.icone }}"></i>{{ cat.nome }}
+      <span style="font-size:12px;color:#64748b;font-weight:400">({{ cat.itens_disponiveis|length }} itens)</span>
+    </div>
+    {% for item in cat.itens_disponiveis %}
+    <div class="item-card">
+      <div class="item-info">
+        <div class="item-nome">
+          {{ item.nome }}
+          {% if item.destaque %}<span class="badge-destaque">⭐ Destaque</span>{% endif %}
+        </div>
+        {% if item.descricao %}<div class="item-desc">{{ item.descricao }}</div>{% endif %}
+      </div>
+      <div style="text-align:right">
+        {% if item.preco_promo %}
+        <div class="item-preco-promo">{{ item.preco_fmt }}</div>
+        <div class="item-preco item-preco-atual">{{ item.preco_promo_fmt }}</div>
+        {% else %}
+        <div class="item-preco">{{ item.preco_fmt }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  {% else %}
+  <div class="vazio">
+    <i class="fas fa-utensils" style="font-size:48px;opacity:.2;display:block;margin-bottom:16px"></i>
+    <div>Cardápio ainda não configurado.</div>
+  </div>
+  {% endif %}
+</div>
+
+{% if restaurante.whatsapp %}
+<a href="https://wa.me/55{{ restaurante.whatsapp }}" target="_blank" class="wa-btn" title="Falar pelo WhatsApp">
+  <i class="fab fa-whatsapp"></i>
+</a>
+{% endif %}
+
+<div class="footer">
+  <div>Cardápio digital — {{ restaurante.nome }}</div>
+  <div style="margin-top:4px;opacity:.5">Powered by PainelRestaurante</div>
+</div>
+
+<script>
+document.querySelectorAll('.nav-cat').forEach(function(el) {
+  el.addEventListener('click', function(e) {
+    e.preventDefault();
+    document.querySelectorAll('.nav-cat').forEach(function(a) { a.classList.remove('active'); });
+    this.classList.add('active');
+    var target = document.querySelector(this.getAttribute('href'));
+    if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+});
+</script>
+</body>
+</html>

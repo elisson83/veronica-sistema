@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}Conta #{{ conta.id }}{% endblock %}
+{% block page_title %}Conta #{{ conta.id }}{% endblock %}
+{% block page_sub %}{{ conta.mesa_rel.label if conta.mesa_rel else 'Sem mesa' }}{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('conta_lista') }}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Contas</a>
+{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<!-- Itens -->
+<div>
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Itens do Cardápio</span>
+  </div>
+  <div class="card-body" style="padding:0;max-height:320px;overflow-y:auto">
+    {% for item in itens_cardapio %}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer"
+         onclick="adicionarItem({{ item.id }}, '{{ item.nome|e }}', {{ item.preco }})"
+         onmouseover="this.style.background='rgba(249,115,22,.08)'" onmouseout="this.style.background='none'">
+      <div>
+        <div style="font-size:13px">{{ item.nome }}</div>
+        <div style="font-size:11px;color:#64748b">{{ item.categoria.nome }}</div>
+      </div>
+      <span style="font-weight:600;color:#4ade80;font-size:13px">{{ item.preco_fmt }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+</div>
+<!-- Conta -->
+<div>
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Resumo da Conta</span>
+    <span class="badge {% if conta.status=='aberta' %}badge-orange{% else %}badge-green{% endif %}">{{ conta.status.upper() }}</span>
+  </div>
+  <div class="card-body">
+    {% if conta.itens %}
+    {% for i, item in enumerate(conta.itens) %}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+      <div>
+        <span style="font-size:13px">{{ item.qtd }}x {{ item.nome }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;color:#4ade80">R$ {{ '%.2f'|format(item.subtotal) }}</span>
+        <button onclick="removerItem({{ conta.id }}, {{ loop.index0 }})" style="width:22px;height:22px;background:rgba(239,68,68,.1);border:none;border-radius:5px;color:#f87171;cursor:pointer;font-size:11px"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;color:#64748b;padding:20px">Nenhum item ainda.</div>
+    {% endif %}
+
+    <div style="border-top:1px solid rgba(255,255,255,.1);margin-top:12px;padding-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="font-size:15px;font-weight:600">Total</span>
+        <span style="font-size:24px;font-weight:800;color:#4ade80" id="total-display">{{ conta.total_fmt }}</span>
+      </div>
+      {% if conta.status == 'aberta' %}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        {% for forma in ['dinheiro','pix','credito','debito'] %}
+        <button class="btn btn-ghost btn-sm" onclick="pagarConta('{{ forma }}')">
+          {{ {'dinheiro':'💵 Dinheiro','pix':'⚡ PIX','credito':'💳 Crédito','debito':'💳 Débito'}[forma] }}
+        </button>
+        {% endfor %}
+      </div>
+      <button onclick="cancelarConta()" class="btn btn-danger btn-sm" style="width:100%"><i class="fas fa-ban"></i> Cancelar Conta</button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function adicionarItem(id, nome, preco) {
+  fetch('/conta/{{ conta.id }}/item', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({item_id: id, qtd: 1})
+  }).then(r=>r.json()).then(d => { if(d.ok) location.reload(); });
+}
+function removerItem(cid, idx) {
+  fetch('/conta/'+cid+'/item/'+idx+'/remover', {method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); });
+}
+function pagarConta(forma) {
+  if(!confirm('Confirmar pagamento via '+forma+'?')) return;
+  fetch('/conta/{{ conta.id }}/pagar', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({forma: forma})
+  }).then(r=>r.json()).then(d=>{ if(d.ok) { alert(d.mensagem); location.href='/conta'; } });
+}
+function cancelarConta() {
+  if(!confirm('Cancelar esta conta?')) return;
+  fetch('/conta/{{ conta.id }}/cancelar', {method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok) location.href='/conta'; });
+}
+</script>
+{% endblock %}

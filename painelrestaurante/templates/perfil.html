@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block title %}Perfil{% endblock %}
+{% block page_title %}Perfil & Configurações{% endblock %}
+{% block page_sub %}{{ restaurante.nome }} • Código: {{ restaurante.codigo }}{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+
+<div>
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-store me-2" style="color:#f97316"></i>Dados do Restaurante</span></div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">Nome do Restaurante</label>
+        <input type="text" name="nome" class="form-control" value="{{ restaurante.nome }}">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Telefone / WhatsApp</label>
+          <input type="text" name="telefone" class="form-control" value="{{ restaurante.telefone or '' }}" placeholder="(11) 99999-9999">
+        </div>
+        <div class="form-group">
+          <label class="form-label">WhatsApp Business</label>
+          <input type="text" name="whatsapp" class="form-control" value="{{ restaurante.whatsapp or '' }}" placeholder="5511999998888">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Endereço</label>
+        <input type="text" name="endereco" class="form-control" value="{{ restaurante.endereco or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea name="descricao" class="form-control" rows="3">{{ restaurante.descricao or '' }}</textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Instagram</label>
+          <input type="text" name="instagram" class="form-control" value="{{ restaurante.instagram or '' }}" placeholder="@usuario">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Facebook</label>
+          <input type="text" name="facebook" class="form-control" value="{{ restaurante.facebook or '' }}">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-credit-card me-2" style="color:#fbbf24"></i>Pagamentos</span></div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">Chave PIX</label>
+        <input type="text" name="chave_pix" class="form-control" value="{{ restaurante.chave_pix or '' }}" placeholder="CPF, CNPJ, e-mail ou telefone">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Link de Pagamento</label>
+        <input type="text" name="link_pagamento" class="form-control" value="{{ restaurante.link_pagamento or '' }}" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Formas de Pagamento Aceitas</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+          {% for forma in formas_disponiveis %}
+          <label style="display:flex;align-items:center;gap:6px;background:#1c2133;border:1px solid rgba(255,255,255,.07);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px">
+            <input type="checkbox" name="forma_pagamento" value="{{ forma }}"
+                   {% if forma in restaurante.formas_pagamento %}checked{% endif %}> {{ forma }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-lock me-2" style="color:#94a3b8"></i>Alterar Senha</span></div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Nova Senha</label>
+          <input type="password" name="nova_senha" class="form-control" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar</label>
+          <input type="password" name="conf_senha" class="form-control">
+        </div>
+      </div>
+      <div class="form-hint">Deixe em branco para manter a senha atual.</div>
+    </div>
+  </div>
+</div>
+
+<div>
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-palette me-2" style="color:#a78bfa"></i>Aparência</span></div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">Logo do Restaurante</label>
+        <input type="file" name="logo" class="form-control" accept="image/*">
+        {% if restaurante.logo_path %}
+        <div style="margin-top:8px"><img src="{{ url_for('static', filename=restaurante.logo_path) }}" style="width:64px;height:64px;object-fit:cover;border-radius:10px"></div>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cor Principal</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" name="cor_primaria" value="{{ restaurante.cor_primaria or '#f97316' }}" style="width:48px;height:36px;border:none;background:none;cursor:pointer">
+          <span style="font-size:12px;color:#64748b">{{ restaurante.cor_primaria or '#f97316' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-map-marker-alt me-2" style="color:#22d3ee"></i>Localização</span></div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label class="form-label">Latitude</label>
+          <input type="number" name="lat_restaurante" class="form-control" step="any" value="{{ restaurante.lat or '' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Longitude</label>
+          <input type="number" name="lng_restaurante" class="form-control" step="any" value="{{ restaurante.lng or '' }}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Raio de Entrega (km)</label>
+        <input type="number" name="raio_entrega_km" class="form-control" step="0.5" min="0" value="{{ restaurante.raio_entrega_km or 5 }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-crown me-2" style="color:#facc15"></i>Plano</span></div>
+    <div class="card-body">
+      <div style="text-align:center;padding:10px 0">
+        <div class="badge plan-badge-{{ restaurante.plano }}" style="font-size:14px;padding:8px 16px;margin-bottom:10px">{{ restaurante.info_plano.nome }}</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:4px">R$ {{ '%.2f'|format(restaurante.info_plano.preco) }}/mês</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:12px">{{ restaurante.info_plano.descricao }}</div>
+        <ul style="text-align:left;font-size:11px;color:#94a3b8;list-style:none;margin-bottom:12px">
+          {% for r in restaurante.info_plano.recursos %}
+          <li style="margin-bottom:4px"><i class="fas fa-check" style="color:#4ade80;margin-right:6px"></i>{{ r }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alterar Plano</label>
+        <select name="plano" class="form-control">
+          {% for chave, plano in PLANOS.items() %}
+          <option value="{{ chave }}" {% if chave == restaurante.plano %}selected{% endif %}>
+            {{ plano.nome }} — R$ {{ '%.2f'|format(plano.preco) }}/mês
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div style="margin-top:4px">
+  <button type="submit" class="btn btn-primary" style="padding:11px 28px"><i class="fas fa-save"></i> Salvar Todas as Configurações</button>
+</div>
+</form>
+{% endblock %}

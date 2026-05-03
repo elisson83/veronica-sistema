@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastrar Restaurante — PainelRestaurante</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#0b0d17;color:#e2e8f0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
+    .box{width:100%;max-width:520px;background:#131720;border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:36px 32px}
+    .logo{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+    .logo-icon{width:44px;height:44px;background:#f97316;border-radius:12px;display:grid;place-items:center;font-size:18px;color:#fff;flex-shrink:0}
+    .logo-text{font-size:18px;font-weight:700}
+    .logo-sub{font-size:12px;color:#64748b}
+    h2{font-size:20px;font-weight:700;margin-bottom:6px}
+    .subtitle{font-size:13px;color:#64748b;margin-bottom:24px}
+    .form-group{margin-bottom:16px}
+    .form-label{display:block;font-size:13px;font-weight:500;color:#94a3b8;margin-bottom:6px}
+    .form-control{width:100%;padding:10px 12px;background:#1c2133;border:1px solid rgba(255,255,255,.07);border-radius:8px;color:#e2e8f0;font-size:13px;font-family:inherit;transition:border-color .15s}
+    .form-control:focus{outline:none;border-color:#f97316}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .plano-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+    .plano-card{border:2px solid rgba(255,255,255,.07);border-radius:10px;padding:14px 10px;cursor:pointer;text-align:center;transition:all .15s}
+    .plano-card:hover{border-color:rgba(249,115,22,.4)}
+    .plano-card.selected{border-color:#f97316;background:rgba(249,115,22,.08)}
+    .plano-card input[type=radio]{display:none}
+    .plano-nome{font-size:13px;font-weight:700;margin-bottom:4px}
+    .plano-preco{font-size:12px;color:#64748b;margin-bottom:6px}
+    .plano-desc{font-size:10px;color:#94a3b8}
+    .btn-cadastrar{width:100%;padding:12px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:opacity .15s}
+    .btn-cadastrar:hover{opacity:.9}
+    .link-login{display:block;text-align:center;margin-top:20px;font-size:13px;color:#64748b}
+    .link-login a{color:#f97316;text-decoration:none}
+    .flash-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2);color:#f87171;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px}
+    .flash-success{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.2);color:#4ade80;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px}
+    .ref-box{background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:#fb923c;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+    .eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#64748b;cursor:pointer;padding:4px}
+    .input-wrap{position:relative}
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">
+    <div class="logo-icon"><i class="fas fa-store"></i></div>
+    <div>
+      <div class="logo-text">PainelRestaurante</div>
+      <div class="logo-sub">Cadastro gratuito</div>
+    </div>
+  </div>
+  <h2 style="margin-top:18px">Cadastrar meu Restaurante</h2>
+  <p class="subtitle">Preencha os dados abaixo. Você receberá um código único para conectar a outros painéis.</p>
+
+  {% if ref %}
+  <div class="ref-box"><i class="fas fa-link"></i> Você foi convidado pelo código <strong>{{ ref }}</strong></div>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for cat, msg in messages %}
+  <div class="flash-{{ cat }}">{{ msg }}</div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <form method="post">
+    <input type="hidden" name="ref" value="{{ ref }}">
+
+    <div class="form-group">
+      <label class="form-label">Nome do Restaurante *</label>
+      <input type="text" name="nome" class="form-control" required placeholder="Ex: Pizzaria do João">
+    </div>
+
+    <div class="row2">
+      <div class="form-group">
+        <label class="form-label">Usuário (login) *</label>
+        <input type="text" name="username" class="form-control" required placeholder="pizzariajose">
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail (opcional)</label>
+        <input type="email" name="email" class="form-control" placeholder="contato@email.com">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="form-group">
+        <label class="form-label">Senha *</label>
+        <div class="input-wrap">
+          <input type="password" id="p1" name="password" class="form-control" required placeholder="Mínimo 6 caracteres">
+          <button type="button" class="eye-btn" onclick="toggleSenha('p1',this)"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirmar Senha *</label>
+        <div class="input-wrap">
+          <input type="password" id="p2" name="confirm" class="form-control" required placeholder="Repita a senha">
+          <button type="button" class="eye-btn" onclick="toggleSenha('p2',this)"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Escolha seu Plano</label>
+      <div class="plano-grid">
+        {% for chave, plano in PLANOS.items() %}
+        <label class="plano-card {% if chave == 'basico' %}selected{% endif %}" id="card_{{ chave }}">
+          <input type="radio" name="plano" value="{{ chave }}" {% if chave == 'basico' %}checked{% endif %}
+                 onchange="selectPlano('{{ chave }}')">
+          <div><i class="fas {{ plano.icone }}" style="font-size:20px;margin-bottom:8px;color:#f97316"></i></div>
+          <div class="plano-nome">{{ plano.nome }}</div>
+          <div class="plano-preco">R$ {{ '%.2f'|format(plano.preco) }}/mês</div>
+          <div class="plano-desc">{{ plano.descricao }}</div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <button type="submit" class="btn-cadastrar"><i class="fas fa-store" style="margin-right:8px"></i>Cadastrar Restaurante</button>
+  </form>
+  <div class="link-login">Já tem conta? <a href="{{ url_for('login') }}">Fazer login →</a></div>
+</div>
+
+<script>
+function selectPlano(chave) {
+  document.querySelectorAll('.plano-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card_' + chave).classList.add('selected');
+}
+function toggleSenha(id, btn) {
+  const input = document.getElementById(id);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye','fa-eye-slash'); }
+  else { input.type = 'password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
+}
+</script>
+</body>
+</html>

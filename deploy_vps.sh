@@ -61,6 +61,7 @@ server { listen 5002; location / { proxy_pass http://127.0.0.1:5002; } }
 server { listen 5003; location / { proxy_pass http://127.0.0.1:5003; } }
 server { listen 5004; location / { proxy_pass http://127.0.0.1:5004; } }
 server { listen 5005; location / { proxy_pass http://127.0.0.1:5005; } }
+server { listen 5006; location / { proxy_pass http://127.0.0.1:5006; } }
 NGINX
 ln -sf /etc/nginx/sites-available/veronica /etc/nginx/sites-enabled/veronica
 rm -f /etc/nginx/sites-enabled/default
@@ -89,12 +90,17 @@ echo "PainelFrota PID: $!"
 nohup python run_dono_5005.py > /var/log/painel_dono.log 2>&1 &
 echo "PainelDono PID: $!"
 
+# PainelRestaurante — porta 5006
+mkdir -p /opt/veronica-sistema/painelrestaurante/instance
+nohup python painelrestaurante/app.py > /var/log/painelrestaurante.log 2>&1 &
+echo "PainelRestaurante PID: $!"
+
 sleep 5
 
 # Verificar serviços
 echo ""
 echo "=== STATUS DOS SERVICOS ==="
-for port in 5002 5003 5004 5005; do
+for port in 5002 5003 5004 5005 5006; do
     if curl -s -o /dev/null -w "%{http_code}" http://localhost:$port/login 2>/dev/null | grep -qE "^[23]"; then
         echo "  :$port — OK"
     else
@@ -107,7 +113,7 @@ echo ""
 echo "=== LINKS DE ACESSO ==="
 echo "  Super Admin:        http://$IP:5002/super/login"
 echo "  PainelGest:         http://$IP:5002/login"
-echo "  PainelRestaurante:  http://$IP:5002/restaurante/login"
+echo "  PainelRestaurante:  http://$IP:5006  (independente, porta 5006)"
 echo "  Painel do Dono:     http://$IP:5002/dono/login"
 echo "  AppMotoboy:         http://$IP:5003/login"
 echo "  PainelFrota:        http://$IP:5004/login"

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Contas{% endblock %}
+{% block page_title %}Contas / Pagamentos{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('conta_historico') }}" class="btn btn-ghost"><i class="fas fa-history"></i> Histórico</a>
+  <button onclick="document.getElementById('modal-abrir').style.display='flex'" class="btn btn-primary"><i class="fas fa-plus"></i> Abrir Conta</button>
+{% endblock %}
+{% block content %}
+{% if contas %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+{% for conta in contas %}
+<a href="{{ url_for('conta_detalhe', cid=conta.id) }}" style="text-decoration:none;color:inherit">
+  <div class="card" style="margin-bottom:0;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <div class="card-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:16px;font-weight:700">Conta #{{ conta.id }}</span>
+        <span class="badge badge-orange">Aberta</span>
+      </div>
+      {% if conta.mesa_rel %}<div style="font-size:12px;color:#64748b;margin-bottom:6px"><i class="fas fa-chair me-1"></i>{{ conta.mesa_rel.label }}</div>{% endif %}
+      <div style="font-size:24px;font-weight:700;color:#4ade80;margin-bottom:8px">{{ conta.total_fmt }}</div>
+      <div style="font-size:11px;color:#64748b">{{ conta.criado_em.strftime('%H:%M') }} • {{ conta.itens|length }} iten(s)</div>
+    </div>
+  </div>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<div style="text-align:center;padding:60px 20px;color:#64748b">
+  <i class="fas fa-receipt" style="font-size:48px;opacity:.2;display:block;margin-bottom:16px"></i>
+  <div style="font-size:15px;font-weight:500;margin-bottom:8px">Nenhuma conta aberta</div>
+  <button onclick="document.getElementById('modal-abrir').style.display='flex'" class="btn btn-primary"><i class="fas fa-plus"></i> Abrir primeira conta</button>
+</div>
+{% endif %}
+
+<!-- Modal Abrir Conta -->
+<div id="modal-abrir" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#131720;border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:28px;width:360px">
+    <div style="font-size:16px;font-weight:700;margin-bottom:20px">Abrir Nova Conta</div>
+    <form method="post" action="{{ url_for('conta_abrir') }}">
+      <div class="form-group">
+        <label class="form-label">Mesa (opcional)</label>
+        <select name="mesa_id" class="form-control">
+          <option value="">Sem mesa</option>
+          {% for mesa in mesas %}
+          <option value="{{ mesa.id }}">{{ mesa.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn btn-primary">Abrir Conta</button>
+        <button type="button" onclick="document.getElementById('modal-abrir').style.display='none'" class="btn btn-ghost">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Histórico de Contas{% endblock %}
+{% block page_title %}Histórico de Contas{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('conta_lista') }}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Contas Abertas</a>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header"><span class="card-title">Últimas 100 contas encerradas</span></div>
+  {% if contas %}
+  <table class="table">
+    <thead>
+      <tr><th>#</th><th>Mesa</th><th>Total</th><th>Pagamento</th><th>Status</th><th>Data</th></tr>
+    </thead>
+    <tbody>
+      {% for c in contas %}
+      <tr>
+        <td>{{ c.id }}</td>
+        <td>{{ c.mesa_rel.label if c.mesa_rel else '—' }}</td>
+        <td style="font-weight:600;color:#4ade80">{{ c.total_fmt }}</td>
+        <td>{{ c.forma_pagamento or '—' }}</td>
+        <td><span class="badge {% if c.status=='paga' %}badge-green{% else %}badge-red{% endif %}">{{ c.status }}</span></td>
+        <td style="font-size:11px;color:#64748b">{{ c.pago_em.strftime('%d/%m/%y %H:%M') if c.pago_em else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="card-body" style="text-align:center;color:#64748b;padding:40px">Nenhum histórico ainda.</div>
+  {% endif %}
+</div>
+{% endblock %}

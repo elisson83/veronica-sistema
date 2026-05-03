@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Atendimento{% endblock %}
+{% block page_title %}Atendimento WhatsApp{% endblock %}
+{% block page_sub %}Registre clientes e envie boas-vindas automáticas{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div>
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-user-plus me-2" style="color:#4ade80"></i>Registrar Entrada</span></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('atendimento_registrar') }}">
+        <div class="form-group">
+          <label class="form-label">Telefone do Cliente *</label>
+          <input type="tel" name="telefone" class="form-control" required placeholder="(11) 99999-9999" autofocus>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nome (opcional)</label>
+          <input type="text" name="nome" class="form-control" placeholder="João da Silva">
+        </div>
+        {% if mesas %}
+        <div class="form-group">
+          <label class="form-label">Mesa</label>
+          <select name="mesa_id" class="form-control">
+            <option value="">Sem mesa</option>
+            {% for mesa in mesas %}
+            <option value="{{ mesa.id }}" {% if mesa.status=='ocupada' %}disabled{% endif %}>
+              {{ mesa.label }} {% if mesa.status=='ocupada' %}(Ocupada){% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary" style="width:100%">
+          <i class="fab fa-whatsapp"></i> Registrar + Enviar WhatsApp
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+<div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="fas fa-users me-2" style="color:#22d3ee"></i>Clientes Presentes ({{ presentes|length }})</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      {% if presentes %}
+      {% for c in presentes %}
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div style="width:36px;height:36px;border-radius:50%;background:#1c2133;display:grid;place-items:center;color:#64748b;font-size:13px;font-weight:700;flex-shrink:0">
+          {{ (c.nome or c.telefone)[0].upper() }}
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:500">{{ c.nome or 'Cliente' }}</div>
+          <div style="font-size:11px;color:#64748b">{{ c.telefone }} • {{ c.mesa.label if c.mesa else 'Sem mesa' }} • Entrada: {{ c.entrada_em.strftime('%H:%M') }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          {% if c.whatsapp_enviado %}<i class="fab fa-whatsapp" style="color:#4ade80" title="WhatsApp enviado"></i>{% endif %}
+          <button onclick="registrarSaida({{ c.id }}, this)" class="btn btn-ghost btn-sm"><i class="fas fa-sign-out-alt"></i> Sair</button>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="text-align:center;padding:32px;color:#64748b">
+        <i class="fas fa-users" style="font-size:32px;opacity:.2;display:block;margin-bottom:12px"></i>
+        Nenhum cliente registrado agora.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function registrarSaida(cid, btn) {
+  btn.disabled = true;
+  fetch('/atendimento/saida/'+cid, {method:'POST'})
+    .then(r=>r.json()).then(d => { if(d.ok) location.reload(); else btn.disabled=false; });
+}
+</script>
+{% endblock %}

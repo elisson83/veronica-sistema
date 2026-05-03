@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Nova Categoria{% endblock %}
+{% block page_title %}Nova Categoria{% endblock %}
+{% block content %}
+<div style="max-width:480px">
+  <div class="card">
+    <div class="card-header"><span class="card-title">Criar Categoria</span></div>
+    <div class="card-body">
+      <form method="post">
+        <div class="form-group">
+          <label class="form-label">Nome *</label>
+          <input type="text" name="nome" class="form-control" required placeholder="Ex: Pratos Principais">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição</label>
+          <input type="text" name="descricao" class="form-control" placeholder="Opcional">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ícone (FontAwesome)</label>
+          <input type="text" name="icone" class="form-control" value="fa-utensils" placeholder="fa-utensils">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ordem</label>
+          <input type="number" name="ordem" class="form-control" value="0" min="0">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Criar</button>
+          <a href="{{ url_for('cardapio') }}" class="btn btn-ghost">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

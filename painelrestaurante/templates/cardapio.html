@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Cardápio{% endblock %}
+{% block page_title %}Cardápio{% endblock %}
+{% block page_sub %}Gerencie categorias e itens{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('nova_categoria') }}" class="btn btn-ghost"><i class="fas fa-folder-plus"></i> Nova Categoria</a>
+  <a href="{{ url_for('novo_item') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Novo Item</a>
+{% endblock %}
+{% block content %}
+{% if not categorias %}
+<div style="text-align:center;padding:60px 20px;color:#64748b">
+  <i class="fas fa-book-open" style="font-size:48px;opacity:.2;display:block;margin-bottom:16px"></i>
+  <div style="font-size:16px;font-weight:600;margin-bottom:8px">Cardápio vazio</div>
+  <div style="font-size:13px;margin-bottom:24px">Crie uma categoria e adicione seus produtos</div>
+  <a href="{{ url_for('nova_categoria') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Criar primeira categoria</a>
+</div>
+{% else %}
+{% for cat in categorias %}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fas {{ cat.icone }} me-2" style="color:#fdba74"></i>{{ cat.nome }}
+      <span class="badge {% if cat.ativo %}badge-green{% else %}badge-gray{% endif %}" style="margin-left:8px">{{ cat.itens|length }} itens</span>
+    </span>
+    <div style="display:flex;gap:8px">
+      <a href="{{ url_for('novo_item') }}?categoria_id={{ cat.id }}" class="btn btn-ghost btn-sm"><i class="fas fa-plus"></i> Item</a>
+      <a href="{{ url_for('editar_categoria', id=cat.id) }}" class="btn btn-ghost btn-sm"><i class="fas fa-pencil"></i></a>
+      <a href="{{ url_for('excluir_categoria', id=cat.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Excluir categoria e todos os itens?')"><i class="fas fa-trash"></i></a>
+    </div>
+  </div>
+  {% if cat.itens %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Item</th><th>Preço</th><th>Promo</th><th>Status</th><th>Destaque</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in cat.itens %}
+      <tr>
+        <td>
+          <div style="font-weight:500">{{ item.nome }}</div>
+          {% if item.descricao %}<div style="font-size:11px;color:#64748b">{{ item.descricao[:60] }}</div>{% endif %}
+        </td>
+        <td style="font-weight:600;color:#4ade80">{{ item.preco_fmt }}</td>
+        <td>{% if item.preco_promo %}<span style="color:#fbbf24;font-weight:600">{{ item.preco_promo_fmt }}</span>{% else %}<span style="color:#475569">—</span>{% endif %}</td>
+        <td>
+          <a href="{{ url_for('toggle_item', id=item.id) }}" class="badge {% if item.disponivel %}badge-green{% else %}badge-red{% endif %}" style="cursor:pointer;text-decoration:none">
+            {% if item.disponivel %}Disponível{% else %}Indisponível{% endif %}
+          </a>
+        </td>
+        <td>{% if item.destaque %}<i class="fas fa-star" style="color:#fbbf24"></i>{% else %}<i class="far fa-star" style="color:#475569"></i>{% endif %}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <a href="{{ url_for('editar_item', id=item.id) }}" class="btn btn-ghost btn-sm"><i class="fas fa-pencil"></i></a>
+            <a href="{{ url_for('excluir_item', id=item.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Excluir item?')"><i class="fas fa-trash"></i></a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="card-body" style="color:#64748b;font-size:13px;text-align:center;padding:20px">
+    Nenhum item nesta categoria.
+    <a href="{{ url_for('novo_item') }}?categoria_id={{ cat.id }}" style="color:#f97316">Adicionar item →</a>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

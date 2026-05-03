@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Mapa de Entregas{% endblock %}
+{% block page_title %}Mapa de Entregas{% endblock %}
+{% block page_sub %}Visualize motoboys e raio de entrega{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:280px 1fr;gap:20px">
+<!-- Painel lateral -->
+<div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Posição do Restaurante</span></div>
+    <div class="card-body">
+      <div style="font-size:12px;color:#64748b;margin-bottom:8px">Clique no mapa para definir a posição.</div>
+      <div class="form-group">
+        <label class="form-label">Raio de entrega (km)</label>
+        <input type="number" id="raio-km" value="{{ restaurante.raio_entrega_km or 5 }}" min="1" max="50" class="form-control" step="0.5">
+      </div>
+      <button onclick="salvarPosicao()" class="btn btn-primary btn-sm" style="width:100%"><i class="fas fa-save"></i> Salvar</button>
+      {% if restaurante.lat and restaurante.lng %}
+      <div style="margin-top:10px;font-size:11px;color:#64748b">
+        📍 {{ '%.5f'|format(restaurante.lat) }}, {{ '%.5f'|format(restaurante.lng) }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="card-header"><span class="card-title">Motoboys Online ({{ motoboys|length }})</span></div>
+    <div class="card-body" style="padding:0">
+      {% if motoboys %}
+      {% for m in motoboys %}
+      <div style="padding:8px 16px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px">
+        <div style="font-weight:500">{{ m.nome }}</div>
+        <div style="color:#64748b">{{ m.telefone or 'Sem telefone' }}</div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="padding:20px;text-align:center;color:#64748b;font-size:12px">Nenhum motoboy online.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<!-- Mapa -->
+<div class="card" style="margin-bottom:0">
+  <div id="mapa" style="height:500px;border-radius:12px;background:#1c2133;display:flex;align-items:center;justify-content:center">
+    <div style="text-align:center;color:#64748b">
+      <i class="fas fa-map-marked-alt" style="font-size:48px;opacity:.2;display:block;margin-bottom:12px"></i>
+      <div>Mapa Leaflet carregando...</div>
+      <div style="font-size:11px;margin-top:4px">Verifique sua conexão com a internet</div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var lat0 = {{ restaurante.lat or -23.55 }};
+var lng0 = {{ restaurante.lng or -46.63 }};
+var raio = {{ restaurante.raio_entrega_km or 5 }};
+var motoboys = {{ motoboys|tojson }};
+
+document.addEventListener('DOMContentLoaded', function() {
+  var map = L.map('mapa').setView([lat0, lng0], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  var marcadorRest = L.marker([lat0, lng0], {
+    icon: L.divIcon({className:'', html:'<div style="background:#f97316;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.5)"></div>'})
+  }).addTo(map).bindPopup('{{ restaurante.nome }}').openPopup();
+
+  var circulo = L.circle([lat0, lng0], {radius: raio * 1000, color:'#f97316', fillOpacity:.08}).addTo(map);
+
+  motoboys.forEach(function(m) {
+    if (m.lat && m.lng) {
+      L.marker([m.lat, m.lng], {
+        icon: L.divIcon({className:'', html:'<div style="background:#22c55e;width:14px;height:14px;border-radius:50%;border:2px solid #fff"></div>'})
+      }).addTo(map).bindPopup(m.nome + (m.telefone ? '<br>' + m.telefone : ''));
+    }
+  });
+
+  map.on('click', function(e) {
+    lat0 = e.latlng.lat;
+    lng0 = e.latlng.lng;
+    marcadorRest.setLatLng([lat0, lng0]);
+    circulo.setLatLng([lat0, lng0]);
+  });
+
+  document.getElementById('raio-km').addEventListener('input', function() {
+    circulo.setRadius(parseFloat(this.value) * 1000);
+  });
+});
+
+function salvarPosicao() {
+  fetch('/mapa/salvar_pos', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({lat: lat0, lng: lng0, raio: parseFloat(document.getElementById('raio-km').value)})
+  }).then(r=>r.json()).then(d => { if(d.ok) alert('Posição salva!'); });
+}
+</script>
+{% endblock %}

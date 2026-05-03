@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Mesas{% endblock %}
+{% block page_title %}Gerenciar Mesas{% endblock %}
+{% block page_sub %}Até 50 mesas{% endblock %}
+{% block topbar_actions %}
+  <button onclick="salvarMesas()" class="btn btn-primary"><i class="fas fa-save"></i> Salvar Mesas</button>
+{% endblock %}
+{% block content %}
+<div class="card" style="margin-bottom:16px">
+  <div class="card-header"><span class="card-title">Adicionar Mesa</span></div>
+  <div class="card-body">
+    <div style="display:flex;gap:10px;align-items:flex-end">
+      <div><label class="form-label">Número</label><input type="number" id="nova-numero" class="form-control" style="width:80px" min="1" max="50" value="1"></div>
+      <div><label class="form-label">Nome (opcional)</label><input type="text" id="nova-nome" class="form-control" style="width:140px" placeholder="VIP, Varanda..."></div>
+      <div><label class="form-label">Capacidade</label><input type="number" id="nova-cap" class="form-control" style="width:80px" min="1" value="4"></div>
+      <button type="button" onclick="adicionarMesa()" class="btn btn-primary"><i class="fas fa-plus"></i> Adicionar</button>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header"><span class="card-title">Mesas ({{ mesas|length }})</span></div>
+  <div class="card-body" id="mesas-container">
+    {% if mesas %}
+    {% for mesa in mesas %}
+    <div class="mesa-row" data-id="{{ mesa.id }}" data-numero="{{ mesa.numero }}"
+         style="display:grid;grid-template-columns:60px 100px 80px 100px auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <span style="font-size:13px;font-weight:600">#{{ mesa.numero }}</span>
+      <input type="text" class="form-control" value="{{ mesa.nome or '' }}" placeholder="Nome" style="height:32px;font-size:12px">
+      <input type="number" class="form-control" value="{{ mesa.capacidade }}" min="1" style="height:32px;font-size:12px">
+      <select class="form-control" style="height:32px;font-size:12px" onchange="mudarStatus({{ mesa.id }}, this.value)">
+        <option value="livre" {% if mesa.status=='livre' %}selected{% endif %}>Livre</option>
+        <option value="ocupada" {% if mesa.status=='ocupada' %}selected{% endif %}>Ocupada</option>
+        <option value="reservada" {% if mesa.status=='reservada' %}selected{% endif %}>Reservada</option>
+      </select>
+      <button type="button" onclick="this.closest('.mesa-row').remove()" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;color:#64748b;padding:32px">Nenhuma mesa cadastrada ainda.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function adicionarMesa() {
+  var num = document.getElementById('nova-numero').value;
+  var nome = document.getElementById('nova-nome').value;
+  var cap = document.getElementById('nova-cap').value;
+  if (!num) return;
+  var row = document.createElement('div');
+  row.className = 'mesa-row';
+  row.dataset.numero = num;
+  row.style.cssText = 'display:grid;grid-template-columns:60px 100px 80px 100px auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)';
+  row.innerHTML = '<span style="font-size:13px;font-weight:600">#'+num+'</span>'
+    +'<input type="text" class="form-control" value="'+nome+'" placeholder="Nome" style="height:32px;font-size:12px">'
+    +'<input type="number" class="form-control" value="'+cap+'" min="1" style="height:32px;font-size:12px">'
+    +'<select class="form-control" style="height:32px;font-size:12px"><option value="livre">Livre</option><option value="ocupada">Ocupada</option><option value="reservada">Reservada</option></select>'
+    +'<button type="button" onclick="this.closest(\'.mesa-row\').remove()" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>';
+  document.getElementById('mesas-container').appendChild(row);
+}
+function salvarMesas() {
+  var mesas = [];
+  document.querySelectorAll('.mesa-row').forEach(function(row) {
+    var inputs = row.querySelectorAll('input');
+    var sel = row.querySelector('select');
+    mesas.push({numero: row.dataset.numero || inputs[0].value, nome: inputs[0].value||inputs[1] && inputs[1].value, capacidade: inputs.length>1 ? inputs[1].value : 4});
+  });
+  fetch('/mesas/salvar', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({mesas: mesas})
+  }).then(r=>r.json()).then(d => {
+    if(d.ok) { alert('Mesas salvas! Total: '+d.total); location.reload(); }
+    else alert('Erro ao salvar.');
+  });
+}
+function mudarStatus(id, status) {
+  fetch('/mesas/status/'+id, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({status: status})
+  });
+}
+</script>
+{% endblock %}

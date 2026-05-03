@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Vagas de Plantão{% endblock %}
+{% block page_title %}Vagas de Motoboy{% endblock %}
+{% block page_sub %}Abra vagas para motoboys de plantão hoje{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div>
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-plus-circle me-2" style="color:#4ade80"></i>Abrir Vaga</span></div>
+    <div class="card-body">
+      <form method="post">
+        <div class="form-group">
+          <label class="form-label">Quantidade de Motoboys</label>
+          <input type="number" name="vagas_total" class="form-control" value="2" min="1" max="20" required>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group">
+            <label class="form-label">Início</label>
+            <input type="time" name="horario_inicio" class="form-control" value="18:00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fim</label>
+            <input type="time" name="horario_fim" class="form-control" value="23:00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Observação</label>
+          <input type="text" name="observacao" class="form-control" placeholder="Ex: Apenas delivery">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%"><i class="fas fa-motorcycle"></i> Abrir Vaga Hoje</button>
+      </form>
+    </div>
+  </div>
+</div>
+<div>
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-list me-2" style="color:#22d3ee"></i>Vagas Recentes</span></div>
+    <div class="card-body" style="padding:0">
+      {% if vagas_hoje %}
+      {% for v in vagas_hoje %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div>
+          <div style="font-size:13px;font-weight:600">
+            {{ v.vagas_total }} motoboy(s) — {{ v.horario_inicio }}–{{ v.horario_fim }}
+          </div>
+          <div style="font-size:11px;color:#64748b">
+            {{ v.data.strftime('%d/%m/%Y') }} • {{ v.vagas_livres }} livre(s) de {{ v.vagas_total }}
+            {% if v.observacao %} • {{ v.observacao }}{% endif %}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge {% if v.status=='aberta' %}badge-green{% else %}badge-red{% endif %}">{{ v.status }}</span>
+          {% if v.status == 'aberta' %}
+          <form method="post" action="{{ url_for('fechar_vaga', vid=v.id) }}" style="margin:0">
+            <button type="submit" class="btn btn-ghost btn-sm"><i class="fas fa-times"></i> Fechar</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="text-align:center;padding:40px;color:#64748b">
+        <i class="fas fa-motorcycle" style="font-size:36px;opacity:.2;display:block;margin-bottom:12px"></i>
+        Nenhuma vaga aberta ainda hoje.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}

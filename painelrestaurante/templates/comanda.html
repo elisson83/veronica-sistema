@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comanda #{{ pedido.numero }} — {{ restaurante.nome }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Courier New', monospace; background:#fff; color:#000; padding:20px; max-width:300px; margin:0 auto; }
+  .header { text-align:center; margin-bottom:12px; padding-bottom:10px; border-bottom:2px dashed #000; }
+  .header h1 { font-size:18px; font-weight:bold; }
+  .header p { font-size:12px; margin-top:4px; }
+  .info { margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #000; }
+  .info-row { display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px; }
+  .itens { margin-bottom:10px; }
+  .item-row { display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px; }
+  .item-nome { flex:1; }
+  .item-qtd { width:30px; text-align:center; }
+  .item-preco { width:60px; text-align:right; }
+  .divider { border-top:1px dashed #000; margin:8px 0; }
+  .total { display:flex; justify-content:space-between; font-size:15px; font-weight:bold; margin-bottom:12px; }
+  .footer { text-align:center; font-size:10px; padding-top:10px; border-top:2px dashed #000; }
+  @media print {
+    .no-print { display:none !important; }
+    body { padding:0; }
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>{{ restaurante.nome }}</h1>
+  {% if restaurante.telefone %}<p>Tel: {{ restaurante.telefone }}</p>{% endif %}
+  {% if restaurante.endereco %}<p>{{ restaurante.endereco }}</p>{% endif %}
+</div>
+
+<div class="info">
+  <div class="info-row"><span>COMANDA</span><span>#{{ pedido.numero }}</span></div>
+  <div class="info-row"><span>Data</span><span>{{ pedido.criado_em.strftime('%d/%m/%Y') }}</span></div>
+  <div class="info-row"><span>Hora</span><span>{{ pedido.criado_em.strftime('%H:%M') }}</span></div>
+  {% if pedido.cliente_nome %}<div class="info-row"><span>Cliente</span><span>{{ pedido.cliente_nome }}</span></div>{% endif %}
+  {% if pedido.origem %}<div class="info-row"><span>Origem</span><span>{{ pedido.origem.upper() }}</span></div>{% endif %}
+  {% if pedido.forma_pagamento %}<div class="info-row"><span>Pagamento</span><span>{{ pedido.forma_pagamento }}</span></div>{% endif %}
+</div>
+
+<div class="itens">
+  <div class="item-row" style="font-weight:bold;margin-bottom:6px">
+    <span class="item-nome">ITEM</span><span class="item-qtd">QTD</span><span class="item-preco">VALOR</span>
+  </div>
+  <div class="divider"></div>
+  {% for item in pedido.itens %}
+  <div class="item-row">
+    <span class="item-nome">{{ item.nome }}</span>
+    <span class="item-qtd">{{ item.qtd }}</span>
+    <span class="item-preco">R${{ '%.2f'|format(item.preco|float * item.qtd|int) }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="divider"></div>
+<div class="total">
+  <span>TOTAL</span>
+  <span>{{ pedido.total_fmt }}</span>
+</div>
+
+{% if pedido.observacoes %}
+<div style="font-size:11px;margin-bottom:10px;padding:6px;border:1px dashed #000">
+  OBS: {{ pedido.observacoes }}
+</div>
+{% endif %}
+
+<div class="footer">
+  <p>Obrigado pela preferência!</p>
+  <p style="margin-top:4px">Powered by PainelRestaurante</p>
+</div>
+
+<div class="no-print" style="text-align:center;margin-top:20px">
+  <button onclick="window.print()" style="padding:10px 20px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨️ Imprimir</button>
+  <button onclick="window.close()" style="padding:10px 20px;background:#334155;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-left:8px">✕ Fechar</button>
+</div>
+</body>
+</html>

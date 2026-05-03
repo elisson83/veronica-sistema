@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Novo Pedido{% endblock %}
+{% block page_title %}Novo Pedido{% endblock %}
+{% block content %}
+<div style="max-width:680px">
+<div class="card">
+  <div class="card-header"><span class="card-title">Criar Pedido Manual</span></div>
+  <div class="card-body">
+    <form method="post">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Nome do Cliente</label>
+          <input type="text" name="cliente_nome" class="form-control" placeholder="Opcional">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Origem</label>
+          <select name="origem" class="form-control">
+            <option value="balcao">Balcão</option>
+            <option value="delivery">Delivery</option>
+            <option value="ifood">iFood</option>
+            <option value="whatsapp">WhatsApp</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Forma de Pagamento</label>
+          <select name="forma_pagamento" class="form-control">
+            <option value="">Selecione...</option>
+            {% for forma in formas %}<option value="{{ forma }}">{{ forma }}</option>{% endfor %}
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Pix">Pix</option>
+            <option value="Cartão de Débito">Cartão de Débito</option>
+            <option value="Cartão de Crédito">Cartão de Crédito</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Código iFood</label>
+          <input type="text" name="codigo_ifood" class="form-control" placeholder="Se for pedido iFood">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observações</label>
+        <textarea name="observacoes" class="form-control" rows="2" placeholder="Sem cebola, etc."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Itens do Pedido</label>
+        {% if categorias %}
+        <div style="background:#1c2133;border-radius:10px;padding:12px;margin-bottom:12px;max-height:200px;overflow-y:auto">
+          {% for cat in categorias %}
+          <div style="font-size:11px;color:#64748b;text-transform:uppercase;padding:6px 0 3px;font-weight:600">{{ cat.nome }}</div>
+          {% for item in cat.itens %}
+          {% if item.disponivel %}
+          <button type="button" onclick="adicionarItem('{{ item.nome|e }}','{{ item.preco }}')"
+                  style="display:block;width:100%;text-align:left;padding:5px 8px;background:none;border:none;color:#e2e8f0;cursor:pointer;border-radius:6px;font-size:12px;transition:background .1s"
+                  onmouseover="this.style.background='rgba(249,115,22,.1)'" onmouseout="this.style.background='none'">
+            {{ item.nome }} — <span style="color:#4ade80">{{ item.preco_fmt }}</span>
+          </button>
+          {% endif %}
+          {% endfor %}
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div id="itens-container">
+          <div class="item-row" style="display:grid;grid-template-columns:2fr 60px 80px 32px;gap:8px;margin-bottom:8px;align-items:center">
+            <input type="text" name="item_nome[]" class="form-control" placeholder="Nome do item">
+            <input type="number" name="item_qtd[]" class="form-control" value="1" min="1">
+            <input type="number" name="item_preco[]" class="form-control" step="0.01" placeholder="0.00">
+            <button type="button" onclick="this.closest('.item-row').remove();calcularTotal()" style="width:32px;height:36px;background:rgba(239,68,68,.12);border:none;border-radius:7px;color:#f87171;cursor:pointer"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+        <button type="button" onclick="adicionarLinha()" class="btn btn-ghost btn-sm" style="margin-top:4px">
+          <i class="fas fa-plus"></i> Adicionar linha
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Total (R$)</label>
+        <input type="number" name="total" id="total" class="form-control" step="0.01" min="0" value="0" placeholder="Calculado automaticamente">
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Criar Pedido</button>
+        <a href="{{ url_for('kanban') }}" class="btn btn-ghost">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function adicionarLinha(nome, preco) {
+  var row = document.createElement('div');
+  row.className = 'item-row';
+  row.style.cssText = 'display:grid;grid-template-columns:2fr 60px 80px 32px;gap:8px;margin-bottom:8px;align-items:center';
+  row.innerHTML = '<input type="text" name="item_nome[]" class="form-control" placeholder="Nome do item" value="'+(nome||'')+'">'
+    +'<input type="number" name="item_qtd[]" class="form-control" value="1" min="1">'
+    +'<input type="number" name="item_preco[]" class="form-control" step="0.01" placeholder="0.00" value="'+(preco||'')+'" oninput="calcularTotal()">'
+    +'<button type="button" onclick="this.closest(\'.item-row\').remove();calcularTotal()" style="width:32px;height:36px;background:rgba(239,68,68,.12);border:none;border-radius:7px;color:#f87171;cursor:pointer"><i class="fas fa-times"></i></button>';
+  document.getElementById('itens-container').appendChild(row);
+  if (preco) calcularTotal();
+}
+function adicionarItem(nome, preco) { adicionarLinha(nome, preco); }
+function calcularTotal() {
+  var total = 0;
+  document.querySelectorAll('[name="item_preco[]"]').forEach(function(el) {
+    var p = parseFloat(el.value)||0;
+    var row = el.closest('.item-row');
+    var q = parseInt(row.querySelector('[name="item_qtd[]"]').value)||1;
+    total += p*q;
+  });
+  document.getElementById('total').value = total.toFixed(2);
+}
+document.getElementById('itens-container').addEventListener('input', calcularTotal);
+</script>
+{% endblock %}

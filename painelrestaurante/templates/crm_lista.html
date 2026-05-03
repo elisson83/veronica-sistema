@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}CRM — Clientes{% endblock %}
+{% block page_title %}CRM de Clientes{% endblock %}
+{% block page_sub %}Histórico e segmentação dos seus clientes{% endblock %}
+{% block topbar_actions %}
+  <form method="post" action="{{ url_for('crm_importar') }}" style="display:inline">
+    <button type="submit" class="btn btn-ghost"><i class="fas fa-sync-alt"></i> Importar dos Pedidos</button>
+  </form>
+  <a href="{{ url_for('crm_novo') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Novo Cliente</a>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header"><span class="card-title">Clientes ({{ clientes_crm|length }})</span></div>
+  {% if clientes_crm %}
+  <table class="table">
+    <thead>
+      <tr><th>Nome</th><th>Telefone</th><th>Pedidos</th><th>Total gasto</th><th>Ticket médio</th><th>Segmento</th><th>Último pedido</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in clientes_crm %}
+      {% set seg = c.segmento %}
+      <tr style="cursor:pointer" onclick="location.href='{{ url_for('crm_detalhe', cid=c.id) }}'">
+        <td style="font-weight:500">{{ c.nome_cliente or '—' }}</td>
+        <td style="font-size:12px;color:#64748b">{{ c.telefone or '—' }}</td>
+        <td>{{ c.total_pedidos }}</td>
+        <td style="color:#4ade80;font-weight:600">R$ {{ '%.2f'|format(c.valor_total or 0) }}</td>
+        <td style="color:#94a3b8">R$ {{ '%.2f'|format(c.ticket_medio or 0) }}</td>
+        <td><span class="badge badge-{{ seg[1] }}">{{ seg[0] }}</span></td>
+        <td style="font-size:11px;color:#64748b">{{ c.ultimo_pedido.strftime('%d/%m/%y') if c.ultimo_pedido else '—' }}</td>
+        <td><a href="{{ url_for('crm_detalhe', cid=c.id) }}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="card-body" style="text-align:center;color:#64748b;padding:40px">
+    <i class="fas fa-users" style="font-size:40px;opacity:.2;display:block;margin-bottom:12px"></i>
+    Nenhum cliente cadastrado ainda.<br>
+    <a href="{{ url_for('crm_novo') }}" class="btn btn-primary" style="margin-top:12px"><i class="fas fa-plus"></i> Adicionar Primeiro</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

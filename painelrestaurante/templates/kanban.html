@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% block title %}Kanban{% endblock %}
+{% block page_title %}Kanban de Pedidos{% endblock %}
+{% block page_sub %}Arraste para mover entre colunas{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('novo_pedido') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Novo Pedido</a>
+{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<style>
+  .kanban-board{display:flex;gap:14px;overflow-x:auto;padding-bottom:12px;min-height:70vh}
+  .kanban-col{min-width:240px;width:240px;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+  .col-header{padding:10px 12px;border-radius:10px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;background:#131720;border:1px solid var(--border)}
+  .col-header-dot{width:8px;height:8px;border-radius:50%}
+  .col-count{margin-left:auto;background:rgba(255,255,255,.08);color:var(--muted);font-size:11px;padding:2px 7px;border-radius:8px}
+  .col-body{display:flex;flex-direction:column;gap:8px;min-height:60px;padding:4px 0}
+  .pedido-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:grab;transition:transform .15s,box-shadow .15s}
+  .pedido-card:active{cursor:grabbing}
+  .pedido-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+  .card-header-k{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .card-num{font-size:13px;font-weight:700}
+  .card-hora{font-size:10px;color:var(--muted)}
+  .card-cliente{font-size:12px;font-weight:500;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card-total{font-size:14px;font-weight:700;color:#4ade80}
+  .card-origem{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:6px;margin-bottom:8px}
+  .origem-balcao{background:rgba(99,102,241,.12);color:#818cf8}
+  .origem-delivery{background:rgba(249,115,22,.12);color:#fb923c}
+  .origem-ifood{background:rgba(239,68,68,.12);color:#f87171}
+  .origem-whatsapp{background:rgba(34,197,94,.12);color:#4ade80}
+  .card-itens{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .card-actions{display:flex;gap:6px}
+  .act-btn{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;border:none;cursor:pointer;font-size:11px;text-decoration:none;transition:background .15s}
+  .act-print{background:rgba(6,182,212,.12);color:#22d3ee}
+  .act-delete{background:rgba(239,68,68,.08);color:#f87171}
+  .act-print:hover{background:rgba(6,182,212,.25)}
+  .act-delete:hover{background:rgba(239,68,68,.2)}
+  .drop-placeholder{height:60px;border:2px dashed rgba(255,255,255,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+  .sortable-ghost{opacity:.3}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kanban-board" id="kanban-board">
+  {% for col in colunas %}
+  <div class="kanban-col">
+    <div class="col-header">
+      <span class="col-header-dot" style="background:{{ col.cor }}"></span>
+      <i class="fas {{ col.icone }}" style="color:{{ col.cor }}"></i>
+      {{ col.nome }}
+      <span class="col-count" id="count-{{ col.key }}">{{ pedidos[col.key]|length }}</span>
+    </div>
+    <div class="col-body sortable-list" id="col-{{ col.key }}" data-col="{{ col.key }}">
+      {% for pedido in pedidos[col.key] %}
+      <div class="pedido-card" data-id="{{ pedido.id }}">
+        <div class="card-header-k">
+          <span class="card-num">#{{ pedido.numero }}</span>
+          <span class="card-hora">{{ pedido.criado_em.strftime('%H:%M') }}</span>
+        </div>
+        <div class="card-cliente"><i class="fas fa-user" style="opacity:.4;margin-right:4px"></i>{{ pedido.cliente_nome or 'Cliente' }}</div>
+        <div>
+          <span class="card-origem origem-{{ pedido.origem }}">{{ pedido.origem }}</span>
+        </div>
+        {% if pedido.itens %}
+        <div class="card-itens">
+          {% for item in pedido.itens[:2] %}{{ item.qtd }}x {{ item.nome }}{% if not loop.last %}, {% endif %}{% endfor %}
+          {% if pedido.itens|length > 2 %} +{{ pedido.itens|length - 2 }} itens{% endif %}
+        </div>
+        {% endif %}
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span class="card-total">{{ pedido.total_fmt }}</span>
+          <div class="card-actions">
+            <a href="{{ url_for('comanda', id=pedido.id) }}" target="_blank" class="act-btn act-print" title="Comanda"><i class="fas fa-print"></i></a>
+            <button class="act-btn act-delete" onclick="excluirPedido({{ pedido.id }})" title="Excluir"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      {% if not pedidos[col.key] %}
+      <div class="drop-placeholder"><i class="fas fa-inbox me-2"></i>Vazio</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('.sortable-list').forEach(function(list) {
+  new Sortable(list, {
+    group: 'kanban',
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    onEnd: function(evt) {
+      var id    = evt.item.dataset.id;
+      var coluna = evt.to.dataset.col;
+      fetch('/kanban/' + id + '/mover', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({coluna: coluna})
+      });
+      // Atualiza contadores
+      document.querySelectorAll('.sortable-list').forEach(function(l) {
+        var key   = l.dataset.col;
+        var count = l.querySelectorAll('.pedido-card').length;
+        var el    = document.getElementById('count-' + key);
+        if (el) el.textContent = count;
+      });
+    }
+  });
+});
+
+function excluirPedido(id) {
+  if (!confirm('Remover este pedido?')) return;
+  fetch('/kanban/' + id + '/excluir', {
+    method: 'POST',
+    headers: {'X-Requested-With':'XMLHttpRequest'}
+  }).then(function() { location.reload(); });
+}
+
+// Auto-refresh a cada 30s
+setInterval(function() {
+  fetch('/kanban/api').then(r => r.json()).then(function(data) {
+    // Implementar atualização parcial se necessário
+  });
+}, 30000);
+</script>
+{% endblock %}

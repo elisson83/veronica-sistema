@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Motoboys Parceiros{% endblock %}
+{% block page_title %}Motoboys Parceiros{% endblock %}
+{% block page_sub %}Cadastre seus entregadores parceiros{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div>
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-user-plus me-2" style="color:#4ade80"></i>Adicionar Parceiro</span></div>
+    <div class="card-body">
+      <form method="post">
+        <input type="hidden" name="acao" value="novo">
+        <div class="form-group">
+          <label class="form-label">Nome *</label>
+          <input type="text" name="nome" class="form-control" required placeholder="João Silva">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefone</label>
+          <input type="tel" name="telefone" class="form-control" placeholder="(11) 99999-9999">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group">
+            <label class="form-label">Latitude</label>
+            <input type="number" name="lat" class="form-control" step="any" placeholder="-23.5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Longitude</label>
+            <input type="number" name="lng" class="form-control" step="any" placeholder="-46.6">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%"><i class="fas fa-plus"></i> Adicionar</button>
+      </form>
+    </div>
+  </div>
+</div>
+<div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="fas fa-users me-2" style="color:#22d3ee"></i>Parceiros ({{ parceiros|length }})</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      {% if parceiros %}
+      {% for p in parceiros %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;border-radius:50%;background:#1c2133;display:grid;place-items:center;color:#64748b;font-size:14px;font-weight:700">
+            {{ p.nome[0].upper() }}
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:500">{{ p.nome }}</div>
+            <div style="font-size:11px;color:#64748b">
+              {% if p.telefone %}<a href="https://wa.me/55{{ p.telefone }}" target="_blank" style="color:#4ade80"><i class="fab fa-whatsapp"></i> {{ p.telefone }}</a>{% else %}Sem telefone{% endif %}
+              {% if p.lat and p.lng %} • 📍 {{ '%.4f'|format(p.lat) }},{{ '%.4f'|format(p.lng) }}{% endif %}
+            </div>
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('excluir_parceiro', pid=p.id) }}" style="margin:0">
+          <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remover parceiro?')"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="text-align:center;padding:40px;color:#64748b">
+        <i class="fas fa-users" style="font-size:36px;opacity:.2;display:block;margin-bottom:12px"></i>
+        Nenhum parceiro cadastrado.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}

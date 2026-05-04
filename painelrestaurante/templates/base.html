@@ -178,6 +178,15 @@
   <a href="{{ url_for('perfil') }}" class="nav-item {% if request.endpoint=='perfil' %}active{% endif %}">
     <i class="fas fa-sliders"></i> Perfil &amp; Config
   </a>
+  <a href="{{ url_for('chat') }}" class="nav-item {% if request.endpoint=='chat' %}active{% endif %}">
+    <i class="fas fa-comments"></i> Chat
+  </a>
+  <a href="{{ url_for('links_cadastro') }}" class="nav-item {% if request.endpoint=='links_cadastro' %}active{% endif %}">
+    <i class="fas fa-link"></i> Links
+  </a>
+  <a href="{{ url_for('configuracoes') }}" class="nav-item {% if request.endpoint=='configuracoes' %}active{% endif %}">
+    <i class="fas fa-gear"></i> Configurações
+  </a>
   <a href="{{ url_for('logout') }}" class="nav-item">
     <i class="fas fa-sign-out-alt"></i> Sair
   </a>

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Links de Cadastro{% endblock %}
+{% block topbar_title %}Links de Cadastro{% endblock %}
+{% block topbar_sub %}Compartilhe estes links para novos usuários se cadastrarem{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px">
+
+  {% for nome, url in links.items() %}
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title">
+        {% if nome == 'gestor' %}<i class="fas fa-user-tie me-2" style="color:#f59e0b"></i>Gestor
+        {% elif nome == 'restaurante' %}<i class="fas fa-utensils me-2" style="color:#f97316"></i>Restaurante
+        {% elif nome == 'motoboy' %}<i class="fas fa-motorcycle me-2" style="color:#10b981"></i>AppMotoboy
+        {% elif nome == 'frota' %}<i class="fas fa-truck-fast me-2" style="color:#8b5cf6"></i>PainelFrota
+        {% endif %}
+      </span>
+    </div>
+    <div style="padding:16px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" value="{{ url }}" id="link-{{ nome }}"
+               style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:#94a3b8;font-size:12px;font-family:monospace"
+               readonly onclick="this.select()">
+        <button onclick="copiar('link-{{ nome }}')" class="btn-accent" style="padding:8px 14px;font-size:12px;flex-shrink:0">
+          <i class="fas fa-copy"></i> Copiar
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+<div style="margin-top:20px;padding:14px 18px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;font-size:12px;color:#fbbf24;max-width:900px">
+  <i class="fas fa-info-circle me-2"></i>
+  Compartilhe estes links diretamente com seus parceiros. O cadastro é gratuito no 1º mês.
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function copiar(id) {
+  const el = document.getElementById(id);
+  el.select();
+  document.execCommand('copy');
+  const btn = el.nextElementSibling;
+  btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+  setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i> Copiar', 2000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Chat{% endblock %}
+{% block content %}
+<div class="container py-3">
+  <h5 class="mb-3"><i class="fas fa-comments me-2" style="color:var(--accent)"></i>Chat Interno</h5>
+
+  <div id="chat-msgs" style="height:calc(100vh - 260px);overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+    {% for m in msgs %}
+    <div style="display:flex;gap:8px;align-items:flex-start;{% if m.usuario_nome==usuario_nome %}flex-direction:row-reverse{% endif %}">
+      <div style="width:28px;height:28px;border-radius:50%;background:{% if m.painel_origem=='motoboy' %}var(--accent){% elif m.painel_origem=='restaurante' %}#f97316{% else %}#8b5cf6{% endif %};display:grid;place-items:center;font-size:11px;color:#000;font-weight:700;flex-shrink:0">{{ m.usuario_nome[0]|upper }}</div>
+      <div style="max-width:75%">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px;{% if m.usuario_nome==usuario_nome %}text-align:right{% endif %}">{{ m.usuario_nome }} • {{ m.criado_em.strftime('%H:%M') }}</div>
+        <div style="background:{% if m.usuario_nome==usuario_nome %}var(--accent){% else %}var(--surface){% endif %};color:{% if m.usuario_nome==usuario_nome %}#000{% else %}var(--text){% endif %};padding:7px 11px;border-radius:10px;font-size:13px;word-break:break-word">{{ m.mensagem }}</div>
+      </div>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5"><i class="fas fa-comments fa-2x mb-2 d-block"></i>Nenhuma mensagem ainda.</div>
+    {% endfor %}
+  </div>
+
+  <div class="d-flex gap-2">
+    <input type="text" id="msg-input" class="form-control" placeholder="Digite sua mensagem…" onkeydown="if(event.key==='Enter')enviar()">
+    <button onclick="enviar()" class="btn btn-accent"><i class="fas fa-paper-plane"></i></button>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let ultimoId = {{ msgs[-1].id if msgs else 0 }};
+function scrollFim(){ const c=document.getElementById('chat-msgs'); c.scrollTop=c.scrollHeight; }
+scrollFim();
+function enviar(){
+  const input=document.getElementById('msg-input');
+  const texto=input.value.trim(); if(!texto)return; input.value='';
+  fetch('/chat/enviar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mensagem:texto})})
+    .then(r=>r.json()).then(d=>{if(d.ok){ultimoId=d.id;carregar();}});
+}
+function carregar(){
+  fetch('/chat/mensagens?desde='+ultimoId).then(r=>r.json()).then(msgs=>{
+    if(!msgs.length)return;
+    const c=document.getElementById('chat-msgs');
+    msgs.forEach(m=>{
+      const eu=(m.nome==='{{ usuario_nome }}');
+      const div=document.createElement('div');
+      div.style.cssText='display:flex;gap:8px;align-items:flex-start;'+(eu?'flex-direction:row-reverse':'');
+      const cor=m.painel==='motoboy'?'var(--accent)':m.painel==='restaurante'?'#f97316':'#8b5cf6';
+      const textCor=m.painel==='motoboy'&&eu?'#000':'var(--text)';
+      div.innerHTML=`<div style="width:28px;height:28px;border-radius:50%;background:${cor};display:grid;place-items:center;font-size:11px;color:#000;font-weight:700;flex-shrink:0">${m.nome[0].toUpperCase()}</div><div style="max-width:75%"><div style="font-size:10px;color:var(--muted);margin-bottom:2px;${eu?'text-align:right':''}">${m.nome} • ${m.hora}</div><div style="background:${eu?'var(--accent)':'var(--surface)'};color:${eu?'#000':'var(--text)'};padding:7px 11px;border-radius:10px;font-size:13px;word-break:break-word">${m.msg}</div></div>`;
+      c.appendChild(div); ultimoId=m.id;
+    });
+    scrollFim();
+  });
+}
+setInterval(carregar, 5000);
+</script>
+{% endblock %}

@@ -7,7 +7,7 @@
 
   <!-- Gerar novo convite -->
   <div class="col-12">
-    <div class="card p-4">
+    <div class="card-dark p-4">
       <h6 class="mb-3"><i class="fas fa-plus-circle me-2" style="color:var(--accent)"></i>Gerar novo link</h6>
       <form method="post" action="{{ url_for('novo_convite') }}" class="d-flex gap-2 flex-wrap">
         <input type="text" name="campanha" class="form-control" style="max-width:320px"
@@ -24,7 +24,7 @@
 
   <!-- Lista de convites -->
   <div class="col-12">
-    <div class="card p-0" style="overflow:hidden">
+    <div class="card-dark p-0" style="overflow:hidden">
       <div class="px-4 py-3 border-bottom" style="border-color:var(--border)!important">
         <span class="fw-600">Convites gerados</span>
         <span class="badge ms-2" style="background:var(--accent);color:#fff">{{ convites|length }}</span>

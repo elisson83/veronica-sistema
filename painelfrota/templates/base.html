@@ -147,6 +147,15 @@
       <i class="fas fa-users-gear"></i> Administradores
     </a>
     {% endif %}
+    <a href="{{ url_for('chat') }}" class="{% if request.endpoint=='chat' %}active{% endif %}">
+      <i class="fas fa-comments"></i> Chat
+    </a>
+    <a href="{{ url_for('links_cadastro') }}" class="{% if request.endpoint=='links_cadastro' %}active{% endif %}">
+      <i class="fas fa-link"></i> Links
+    </a>
+    <a href="{{ url_for('configuracoes') }}" class="{% if request.endpoint=='configuracoes' %}active{% endif %}">
+      <i class="fas fa-gear"></i> Configurações
+    </a>
   </nav>
   <div class="sidebar-footer">
     <div class="user-name">{{ current_user.nome }}</div>

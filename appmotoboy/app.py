@@ -21,6 +21,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_MOTOBOY', 'motoboy-secret-2025-change-me')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 init_seguranca(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'motoboy.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -33,6 +34,28 @@ PAINELGEST_URL = os.getenv('PAINELGEST_URL', 'http://localhost:5002')
 
 HORARIO_PICO    = [(11, 14), (18, 21)]
 HORARIO_NOTURNO = (22, 6)
+
+
+def _gerar_codigo_motoboy(valor=None):
+    """4 últimos dígitos de telefone/CPF ou 4 dígitos aleatórios."""
+    import random
+    digitos = ''.join(filter(str.isdigit, str(valor or '')))
+    if len(digitos) >= 4:
+        base = digitos[-4:]
+        candidato = base
+        sufixo = 1
+        while Motoboy.query.filter_by(codigo=candidato).first():
+            candidato = digitos[-3:] + str(sufixo)
+            sufixo += 1
+            if sufixo > 9:
+                break
+        if not Motoboy.query.filter_by(codigo=candidato).first():
+            return candidato
+    while True:
+        c = str(random.randint(1000, 9999))
+        if not Motoboy.query.filter_by(codigo=c).first():
+            return c
+
 
 # ─── MODELOS ─────────────────────────────────────────────────────────────────
 
@@ -221,7 +244,7 @@ def login():
               Motoboy.query.filter_by(username=email).first())
         if mb and mb.check_senha(senha):
             limpar_falhas(ip)
-            login_user(mb)
+            login_user(mb, remember=True)
             return redirect(url_for('dashboard'))
         bloqueou = registrar_falha(ip)
         if bloqueou:
@@ -238,6 +261,8 @@ def cadastrar():
         email   = request.form.get('email', '').strip().lower()
         senha   = request.form.get('senha', '')
         confirm = request.form.get('confirm', '')
+        telefone = request.form.get('telefone', '').strip()
+        cpf_cnpj = request.form.get('cpf_cnpj', '').strip()
         if not nome or not email or not senha:
             flash('Preencha todos os campos.', 'danger')
             return render_template('cadastrar.html')
@@ -255,11 +280,14 @@ def cadastrar():
         while Motoboy.query.filter_by(username=username).first():
             username = f"{base}{counter}"; counter += 1
         mb = Motoboy(nome=nome, username=username, email=email)
+        mb.telefone  = telefone or None
+        mb.cpf_cnpj  = cpf_cnpj or None
+        mb.codigo    = _gerar_codigo_motoboy(cpf_cnpj or telefone)
         mb.set_senha(senha)
         db.session.add(mb)
         db.session.commit()
-        login_user(mb)
-        flash(f'Bem-vindo(a), {nome}!', 'success')
+        login_user(mb, remember=True)
+        flash(f'Bem-vindo(a), {nome}! Seu código: {mb.codigo}', 'success')
         return redirect(url_for('dashboard'))
     return render_template('cadastrar.html')
 
@@ -800,6 +828,95 @@ def migrate_db():
             mb.set_senha('demo123')
             db.session.add(mb)
             db.session.commit()
+
+
+# ── Chat interno ─────────────────────────────────────────────────────────────
+
+class MensagemChat(db.Model):
+    id            = db.Column(db.Integer, primary_key=True)
+    painel_origem = db.Column(db.String(30), nullable=False)
+    usuario_nome  = db.Column(db.String(80), nullable=False)
+    mensagem      = db.Column(db.Text, nullable=False)
+    criado_em     = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, painel, nome, msg):
+        self.painel_origem = painel
+        self.usuario_nome  = nome
+        self.mensagem      = msg
+
+
+@app.route('/chat')
+@login_required
+def chat():
+    msgs = MensagemChat.query.order_by(MensagemChat.criado_em.desc()).limit(50).all()
+    msgs.reverse()
+    return render_template('chat.html', msgs=msgs, usuario_nome=current_user.nome, painel='motoboy')
+
+
+@app.route('/chat/enviar', methods=['POST'])
+@login_required
+def chat_enviar():
+    texto = request.json.get('mensagem', '').strip()
+    if not texto:
+        return jsonify({'ok': False}), 400
+    msg = MensagemChat('motoboy', current_user.nome, texto)
+    db.session.add(msg)
+    db.session.commit()
+    return jsonify({'ok': True, 'id': msg.id, 'criado_em': msg.criado_em.strftime('%H:%M')})
+
+
+@app.route('/chat/mensagens')
+@login_required
+def chat_mensagens():
+    desde = request.args.get('desde', 0, type=int)
+    msgs = MensagemChat.query.filter(MensagemChat.id > desde)\
+                             .order_by(MensagemChat.criado_em).limit(50).all()
+    return jsonify([{'id': m.id, 'painel': m.painel_origem, 'nome': m.usuario_nome,
+                     'msg': m.mensagem, 'hora': m.criado_em.strftime('%H:%M')} for m in msgs])
+
+
+@app.route('/configuracoes', methods=['GET', 'POST'])
+@login_required
+def configuracoes():
+    mb = current_user
+    if request.method == 'POST':
+        acao = request.form.get('acao', '')
+        if acao == 'trocar_senha':
+            atual = request.form.get('senha_atual', '')
+            nova  = request.form.get('senha_nova', '')
+            conf  = request.form.get('senha_conf', '')
+            if not mb.check_senha(atual):
+                flash('Senha atual incorreta.', 'danger')
+            elif len(nova) < 6:
+                flash('Nova senha deve ter pelo menos 6 caracteres.', 'danger')
+            elif nova != conf:
+                flash('As senhas não coincidem.', 'danger')
+            else:
+                mb.set_senha(nova)
+                db.session.commit()
+                flash('Senha alterada com sucesso!', 'success')
+        elif acao == 'excluir_perfil':
+            senha_conf = request.form.get('senha_excluir', '')
+            if not mb.check_senha(senha_conf):
+                flash('Senha incorreta.', 'danger')
+            else:
+                logout_user()
+                db.session.delete(mb)
+                db.session.commit()
+                flash('Perfil excluído.', 'info')
+                return redirect(url_for('login'))
+    return render_template('configuracoes.html', motoboy=mb)
+
+
+@app.route('/links')
+@login_required
+def links_cadastro():
+    base  = request.host_url.rstrip('/')
+    links = {
+        'restaurante': os.getenv('PAINELREST_URL', 'http://localhost:5006') + '/cadastrar',
+        'motoboy_ref': base + url_for('cadastrar'),
+    }
+    return render_template('links_cadastro.html', links=links, motoboy=current_user)
 
 
 if __name__ == '__main__':

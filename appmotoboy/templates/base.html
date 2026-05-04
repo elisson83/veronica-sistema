@@ -134,6 +134,12 @@
   <a href="{{ url_for('ranking') }}" class="{% if request.endpoint=='ranking' %}active{% endif %}">
     <i class="fas fa-trophy"></i>Ranking
   </a>
+  <a href="{{ url_for('chat') }}" class="{% if request.endpoint=='chat' %}active{% endif %}">
+    <i class="fas fa-comments"></i>Chat
+  </a>
+  <a href="{{ url_for('links_cadastro') }}" class="{% if request.endpoint=='links_cadastro' %}active{% endif %}">
+    <i class="fas fa-link"></i>Links
+  </a>
   <a href="{{ url_for('perfil') }}" class="{% if request.endpoint=='perfil' %}active{% endif %}">
     <i class="fas fa-user"></i>Perfil
   </a>

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Configurações{% endblock %}
+{% block topbar_title %}Configurações da Conta{% endblock %}
+{% block topbar_sub %}Gerencie sua senha e perfil{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
+
+  <!-- Trocar Senha -->
+  <div class="pg-card">
+    <div class="pg-card-header">
+      <span class="pg-card-title"><i class="fas fa-key me-2" style="color:#f59e0b"></i>Alterar Senha</span>
+    </div>
+    <div style="padding:20px">
+      <form method="POST">
+        <input type="hidden" name="acao" value="trocar_senha">
+        <div class="pg-form-group">
+          <label class="pg-label">Senha Atual</label>
+          <input type="password" name="senha_atual" class="pg-input" required placeholder="••••••••">
+        </div>
+        <div class="pg-form-group">
+          <label class="pg-label">Nova Senha</label>
+          <input type="password" name="senha_nova" class="pg-input" required placeholder="••••••••" minlength="6">
+        </div>
+        <div class="pg-form-group">
+          <label class="pg-label">Confirmar Nova Senha</label>
+          <input type="password" name="senha_conf" class="pg-input" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn-accent" style="width:100%">
+          <i class="fas fa-save me-1"></i> Salvar Nova Senha
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Exclusão de perfil -->
+  <div class="pg-card" style="border-color:rgba(239,68,68,.3)">
+    <div class="pg-card-header">
+      <span class="pg-card-title" style="color:#f87171"><i class="fas fa-user-slash me-2"></i>Excluir Perfil</span>
+    </div>
+    <div style="padding:20px">
+      <p style="font-size:13px;color:#94a3b8;margin-bottom:16px">
+        Esta ação é <strong style="color:#f87171">permanente e irreversível</strong>. Todos os dados serão removidos.
+      </p>
+      <form method="POST" onsubmit="return confirm('EXCLUIR permanentemente este perfil? Esta ação não pode ser desfeita.')">
+        <input type="hidden" name="acao" value="excluir_perfil">
+        <div class="pg-form-group">
+          <label class="pg-label">Confirme sua senha para excluir</label>
+          <input type="password" name="senha_excluir" class="pg-input" required placeholder="Digite sua senha atual"
+                 style="border-color:rgba(239,68,68,.3)">
+        </div>
+        <button type="submit" style="width:100%;padding:10px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+          <i class="fas fa-trash me-1"></i> Excluir Meu Perfil Permanentemente
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

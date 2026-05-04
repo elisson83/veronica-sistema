@@ -19,6 +19,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'painelrest2026super')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///painelrestaurante.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 db = SQLAlchemy(app)
 
 logging.basicConfig(level=logging.INFO)
@@ -60,10 +61,23 @@ FORMAS_PAGAMENTO = [
 # MODELS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _gerar_codigo_unico(modelo, campo='codigo'):
-    import random, string as _s
+def _gerar_codigo_unico(modelo, valor=None, campo='codigo'):
+    """Gera código único de 4 dígitos. Prefere os 4 últimos dígitos do CNPJ/telefone."""
+    import random
+    digitos = ''.join(filter(str.isdigit, str(valor or '')))
+    if len(digitos) >= 4:
+        base = digitos[-4:]
+        candidato = base
+        sufixo = 1
+        while modelo.query.filter_by(**{campo: candidato}).first():
+            candidato = digitos[-3:] + str(sufixo)
+            sufixo += 1
+            if sufixo > 9:
+                break
+        if not modelo.query.filter_by(**{campo: candidato}).first():
+            return candidato
     while True:
-        c = random.choice(_s.ascii_uppercase) + str(random.randint(100, 999))
+        c = str(random.randint(1000, 9999))
         if not modelo.query.filter_by(**{campo: c}).first():
             return c
 
@@ -97,13 +111,15 @@ class Restaurante(db.Model):
     session_token         = db.Column(db.String(64), nullable=True)
     criado_em             = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def __init__(self, nome, username, password, email=None, plano='basico'):
+    def __init__(self, nome, username, password, email=None, plano='basico', telefone=None, cnpj=None):
         self.nome = nome
         self.username = username
         self.password = generate_password_hash(password)
         self.email = email
         self.plano = plano
-        self.codigo = _gerar_codigo_unico(Restaurante)
+        self.telefone = telefone
+        valor_codigo = cnpj or telefone or ''
+        self.codigo = _gerar_codigo_unico(Restaurante, valor=valor_codigo)
 
     @property
     def formas_pagamento(self):
@@ -356,6 +372,23 @@ class MotoboyParceiro(db.Model):
     criado_em      = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+# ── Chat interno ─────────────────────────────────────────────────────────────
+
+class MensagemChat(db.Model):
+    id             = db.Column(db.Integer, primary_key=True)
+    painel_origem  = db.Column(db.String(30), nullable=False)
+    usuario_nome   = db.Column(db.String(80), nullable=False)
+    restaurante_id = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=True)
+    mensagem       = db.Column(db.Text, nullable=False)
+    criado_em      = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, painel_origem, usuario_nome, mensagem, restaurante_id=None):
+        self.painel_origem  = painel_origem
+        self.usuario_nome   = usuario_nome
+        self.mensagem       = mensagem
+        self.restaurante_id = restaurante_id
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -559,6 +592,7 @@ def login():
             tok = secrets.token_hex(16)
             rest.session_token = tok
             db.session.commit()
+            session.permanent = True
             session['restaurante']       = username
             session['restaurante_id']    = rest.id
             session['restaurante_token'] = tok
@@ -591,22 +625,25 @@ def cadastrar():
         confirm  = request.form.get('confirm', '')
         email    = request.form.get('email', '').strip().lower()
         plano    = request.form.get('plano', 'basico')
+        telefone = request.form.get('telefone', '').strip()
+        cnpj     = request.form.get('cnpj', '').strip()
 
         if not nome or not username or not password:
             flash('Preencha todos os campos obrigatórios.', 'danger')
-            return render_template('cadastrar.html', ref=ref)
+            return render_template('cadastrar.html', ref=ref, PLANOS=PLANOS)
         if password != confirm:
             flash('As senhas não coincidem.', 'danger')
-            return render_template('cadastrar.html', ref=ref)
+            return render_template('cadastrar.html', ref=ref, PLANOS=PLANOS)
         if len(password) < 6:
             flash('A senha deve ter pelo menos 6 caracteres.', 'danger')
-            return render_template('cadastrar.html', ref=ref)
+            return render_template('cadastrar.html', ref=ref, PLANOS=PLANOS)
         if Restaurante.query.filter_by(username=username).first():
             flash('Este nome de usuário já está em uso.', 'danger')
-            return render_template('cadastrar.html', ref=ref)
+            return render_template('cadastrar.html', ref=ref, PLANOS=PLANOS)
 
         rest = Restaurante(nome=nome, username=username, password=password,
-                           email=email or None, plano=plano)
+                           email=email or None, plano=plano,
+                           telefone=telefone or None, cnpj=cnpj or None)
         db.session.add(rest)
         db.session.commit()
 
@@ -1377,8 +1414,13 @@ def saida_confirmar():
 def vagas():
     rest = Restaurante.query.filter_by(username=session['restaurante']).first()
     if request.method == 'POST':
+        data_str = request.form.get('data_vaga', '')
+        try:
+            data_vaga = datetime.strptime(data_str, '%Y-%m-%d').date() if data_str else date.today()
+        except ValueError:
+            data_vaga = date.today()
         v = VagaPlantao(
-            restaurante_id=rest.id, data=date.today(),
+            restaurante_id=rest.id, data=data_vaga,
             vagas_total=int(request.form.get('vagas_total', 2)),
             horario_inicio=request.form.get('horario_inicio', '18:00'),
             horario_fim=request.form.get('horario_fim', '23:00'),
@@ -1387,11 +1429,33 @@ def vagas():
         )
         db.session.add(v)
         db.session.commit()
-        flash(f'Vaga aberta: {v.vagas_total} motoboy(s) para hoje!', 'success')
+
+        parceiros_ativos = MotoboyParceiro.query.filter_by(
+            restaurante_id=rest.id, ativo=True
+        ).filter(MotoboyParceiro.telefone != None).all()
+        msg_vaga = (
+            f"🏍️ *Vaga disponível — {rest.nome}*\n\n"
+            f"📅 Data: {data_vaga.strftime('%d/%m/%Y')}\n"
+            f"🕐 Horário: {v.horario_inicio} às {v.horario_fim}\n"
+            f"👥 Vagas: {v.vagas_total} motoboy(s)\n"
+            + (f"📝 {v.observacao}\n" if v.observacao else "")
+            + "\nResponda esta mensagem para confirmar presença!"
+        )
+        notif_ok = 0
+        for p in parceiros_ativos:
+            ok, _ = enviar_whatsapp(p.telefone, msg_vaga)
+            if ok:
+                notif_ok += 1
+
+        msg_flash = f'Vaga aberta: {v.vagas_total} motoboy(s) para {data_vaga.strftime("%d/%m/%Y")}!'
+        if parceiros_ativos:
+            msg_flash += f' Notificação enviada para {notif_ok}/{len(parceiros_ativos)} parceiro(s).'
+        flash(msg_flash, 'success')
         return redirect(url_for('vagas'))
     vagas_lista = VagaPlantao.query.filter_by(restaurante_id=rest.id)\
-                                   .order_by(VagaPlantao.criado_em.desc()).limit(10).all()
-    return render_template('vagas.html', restaurante=rest, vagas_hoje=vagas_lista)
+                                   .order_by(VagaPlantao.criado_em.desc()).limit(20).all()
+    return render_template('vagas.html', restaurante=rest, vagas_hoje=vagas_lista,
+                           hoje=date.today().isoformat())
 
 
 @app.route('/vagas/<int:vid>/fechar', methods=['POST'])
@@ -1666,6 +1730,98 @@ def mapa_salvar_pos():
     except (TypeError, ValueError):
         pass
     return jsonify({'ok': True})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CONFIGURAÇÕES — TROCA DE SENHA + EXCLUSÃO DE PERFIL
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/configuracoes', methods=['GET', 'POST'])
+@requer_login
+def configuracoes():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if request.method == 'POST':
+        acao = request.form.get('acao', '')
+        if acao == 'trocar_senha':
+            atual = request.form.get('senha_atual', '')
+            nova  = request.form.get('senha_nova', '')
+            conf  = request.form.get('senha_conf', '')
+            if not check_password_hash(rest.password, atual):
+                flash('Senha atual incorreta.', 'danger')
+            elif len(nova) < 6:
+                flash('Nova senha deve ter pelo menos 6 caracteres.', 'danger')
+            elif nova != conf:
+                flash('As senhas não coincidem.', 'danger')
+            else:
+                rest.password = generate_password_hash(nova)
+                db.session.commit()
+                flash('Senha alterada com sucesso!', 'success')
+        elif acao == 'excluir_perfil':
+            senha_conf = request.form.get('senha_excluir', '')
+            if not check_password_hash(rest.password, senha_conf):
+                flash('Senha incorreta. Exclusão cancelada.', 'danger')
+            else:
+                session.clear()
+                db.session.delete(rest)
+                db.session.commit()
+                flash('Perfil excluído permanentemente.', 'info')
+                return redirect(url_for('login'))
+    return render_template('configuracoes.html', restaurante=rest)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CHAT INTERNO
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/chat')
+@requer_login
+def chat():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    msgs = MensagemChat.query.order_by(MensagemChat.criado_em.desc()).limit(50).all()
+    msgs.reverse()
+    return render_template('chat.html', msgs=msgs, usuario_nome=rest.nome, painel='restaurante')
+
+
+@app.route('/chat/enviar', methods=['POST'])
+@requer_login
+def chat_enviar():
+    rest  = Restaurante.query.filter_by(username=session['restaurante']).first()
+    texto = request.json.get('mensagem', '').strip()
+    if not texto:
+        return jsonify({'ok': False}), 400
+    msg = MensagemChat('restaurante', rest.nome, texto, restaurante_id=rest.id)
+    db.session.add(msg)
+    db.session.commit()
+    return jsonify({'ok': True, 'id': msg.id, 'criado_em': msg.criado_em.strftime('%H:%M')})
+
+
+@app.route('/chat/mensagens')
+@requer_login
+def chat_mensagens():
+    desde = request.args.get('desde', 0, type=int)
+    msgs = MensagemChat.query.filter(MensagemChat.id > desde)\
+                             .order_by(MensagemChat.criado_em).limit(50).all()
+    return jsonify([{
+        'id': m.id, 'painel': m.painel_origem, 'nome': m.usuario_nome,
+        'msg': m.mensagem, 'hora': m.criado_em.strftime('%H:%M')
+    } for m in msgs])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# LINKS DE CADASTRO
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/links')
+@requer_login
+def links_cadastro():
+    rest  = Restaurante.query.filter_by(username=session['restaurante']).first()
+    base  = request.host_url.rstrip('/')
+    links = {
+        'motoboy': os.getenv('APPMOTOBOY_URL', 'http://localhost:5003') + '/cadastrar',
+        'frota':   os.getenv('PAINELFROTA_URL', 'http://localhost:5004') + '/cadastrar',
+        'restaurante_ref': base + url_for('cadastrar') + f'?ref={rest.codigo}',
+    }
+    return render_template('links_cadastro.html', restaurante=rest, links=links)
 
 
 # ══════════════════════════════════════════════════════════════════════════════

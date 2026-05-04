@@ -376,6 +376,18 @@
      class="nav-link-item {% if 'sub_admin' in request.endpoint %}active{% endif %}">
     <i class="fas fa-user-shield"></i> Sub-ADMs
   </a>
+  <a href="{{ url_for('chat_gestor') }}"
+     class="nav-link-item {% if request.endpoint == 'chat_gestor' %}active{% endif %}">
+    <i class="fas fa-comments"></i> Chat
+  </a>
+  <a href="{{ url_for('links_cadastro') }}"
+     class="nav-link-item {% if request.endpoint == 'links_cadastro' %}active{% endif %}">
+    <i class="fas fa-link"></i> Links
+  </a>
+  <a href="{{ url_for('configuracoes') }}"
+     class="nav-link-item {% if request.endpoint == 'configuracoes' %}active{% endif %}">
+    <i class="fas fa-gear"></i> Configurações
+  </a>
   <a href="{{ url_for('logout') }}" class="nav-link-item">
     <i class="fas fa-sign-out-alt"></i> Sair
   </a>

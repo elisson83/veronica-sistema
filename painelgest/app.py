@@ -26,6 +26,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'painelgest2024super')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///painelgest.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 db = SQLAlchemy(app)
 init_seguranca(app)
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
@@ -131,11 +132,16 @@ class Cliente(db.Model):
         self.telefone = telefone; self.email = email
         self.data_vencimento = data_vencimento
         if not self.codigo:
-            import random, string as _s
-            while True:
-                c = random.choice(_s.ascii_uppercase) + str(random.randint(100, 999))
-                if not Cliente.query.filter_by(codigo=c).first():
-                    self.codigo = c; break
+            import random
+            digitos = ''.join(filter(str.isdigit, str(telefone or '')))
+            candidato = digitos[-4:] if len(digitos) >= 4 else ''
+            if candidato and not Cliente.query.filter_by(codigo=candidato).first():
+                self.codigo = candidato
+            else:
+                while True:
+                    c = str(random.randint(1000, 9999))
+                    if not Cliente.query.filter_by(codigo=c).first():
+                        self.codigo = c; break
 
     @property
     def info_plano(self):
@@ -639,6 +645,23 @@ class Mesa(db.Model):
         return self.nome or f"Mesa {self.numero}"
 
 
+# ── Chat interno entre painéis ───────────────────────────────────────────────
+
+class MensagemChat(db.Model):
+    id             = db.Column(db.Integer, primary_key=True)
+    painel_origem  = db.Column(db.String(30), nullable=False)   # admin|restaurante|motoboy|super
+    usuario_nome   = db.Column(db.String(80), nullable=False)
+    restaurante_id = db.Column(db.Integer, db.ForeignKey('restaurante.id'), nullable=True)
+    mensagem       = db.Column(db.Text, nullable=False)
+    criado_em      = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, painel_origem, usuario_nome, mensagem, restaurante_id=None):
+        self.painel_origem  = painel_origem
+        self.usuario_nome   = usuario_nome
+        self.mensagem       = mensagem
+        self.restaurante_id = restaurante_id
+
+
 # ── Atendimento Inteligente ───────────────────────────────────────────────────
 
 class ClientePresente(db.Model):
@@ -978,6 +1001,7 @@ def login():
                 flash('Conta bloqueada. Entre em contato com o suporte.', 'danger')
                 return render_template('login.html')
             limpar_falhas(ip)
+            session.permanent = True
             session['administrador'] = admin.email
             return redirect(url_for('dashboard'))
         bloqueou = registrar_falha(ip)
@@ -1051,6 +1075,7 @@ def super_login():
         sa = SuperAdmin.query.filter_by(username=username).first()
         if sa and check_password_hash(sa.password, password):
             limpar_falhas(ip)
+            session.permanent = True
             session['super_admin'] = username
             return redirect(url_for('super_dashboard'))
         bloqueou = registrar_falha(ip)
@@ -1540,6 +1565,7 @@ def restaurante_login():
             tok = secrets.token_hex(16)
             restaurante.session_token = tok
             db.session.commit()
+            session.permanent = True
             session['restaurante']       = username
             session['restaurante_id']    = restaurante.id
             session['restaurante_token'] = tok
@@ -2173,6 +2199,7 @@ def dono_login():
         ).first()
         if dono and dono.check_senha(senha):
             limpar_falhas(ip)
+            session.permanent = True
             session['dono'] = dono.email
             _registrar_acesso(dono.email, 'dono')
             return redirect(url_for('dono_dashboard'))
@@ -2490,7 +2517,9 @@ NIVEIS_PERMISSAO = {
 @app.route('/sub_admins')
 @requer_login
 def sub_admins():
-    admin = Administrador.query.filter_by(username=session['administrador']).first()
+    _val  = session['administrador']
+    admin = (Administrador.query.filter_by(email=_val).first() or
+             Administrador.query.filter_by(username=_val).first())
     subs  = SubAdministrador.query.filter_by(admin_id=admin.id).all()
     return render_template('sub_admins.html', subs=subs, admin=admin,
                            niveis=NIVEIS_PERMISSAO)
@@ -2499,7 +2528,9 @@ def sub_admins():
 @app.route('/sub_admins/novo', methods=['GET', 'POST'])
 @requer_login
 def novo_sub_admin():
-    admin = Administrador.query.filter_by(username=session['administrador']).first()
+    _val  = session['administrador']
+    admin = (Administrador.query.filter_by(email=_val).first() or
+             Administrador.query.filter_by(username=_val).first())
     if SubAdministrador.query.filter_by(admin_id=admin.id).count() >= 3:
         flash('Limite de 3 sub-administradores atingido.', 'warning')
         return redirect(url_for('sub_admins'))
@@ -2526,7 +2557,9 @@ def novo_sub_admin():
 @app.route('/sub_admins/<int:id>/editar', methods=['GET', 'POST'])
 @requer_login
 def editar_sub_admin(id):
-    admin = Administrador.query.filter_by(username=session['administrador']).first()
+    _val  = session['administrador']
+    admin = (Administrador.query.filter_by(email=_val).first() or
+             Administrador.query.filter_by(username=_val).first())
     sub   = SubAdministrador.query.filter_by(id=id, admin_id=admin.id).first_or_404()
     if request.method == 'POST':
         sub.nome   = request.form.get('nome') or None
@@ -2544,7 +2577,9 @@ def editar_sub_admin(id):
 @app.route('/sub_admins/<int:id>/excluir')
 @requer_login
 def excluir_sub_admin(id):
-    admin = Administrador.query.filter_by(username=session['administrador']).first()
+    _val  = session['administrador']
+    admin = (Administrador.query.filter_by(email=_val).first() or
+             Administrador.query.filter_by(username=_val).first())
     sub   = SubAdministrador.query.filter_by(id=id, admin_id=admin.id).first_or_404()
     db.session.delete(sub)
     db.session.commit()
@@ -4095,6 +4130,7 @@ def migrate_db():
 
     # Novas tabelas — criadas automaticamente pelo db.create_all()
     # acesso_temporario, auditoria_acesso, token_reset_senha, mesa, cliente_presente, conta_mesa
+    # mensagem_chat
 
     conn.commit()
     conn.close()
@@ -4129,6 +4165,243 @@ def migrate_db():
 #
 # ══════════════════════════════════════════════════════════════════════════════
 
+# ══════════════════════════════════════════════════════════════════════════════
+# CONFIGURAÇÕES — TROCA DE SENHA + EXCLUSÃO DE PERFIL
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/configuracoes', methods=['GET', 'POST'])
+@requer_login
+def configuracoes():
+    _val  = session['administrador']
+    admin = (Administrador.query.filter_by(email=_val).first() or
+             Administrador.query.filter_by(username=_val).first())
+    if request.method == 'POST':
+        acao = request.form.get('acao', '')
+        if acao == 'trocar_senha':
+            atual = request.form.get('senha_atual', '')
+            nova  = request.form.get('senha_nova', '')
+            conf  = request.form.get('senha_conf', '')
+            if not check_password_hash(admin.password, atual):
+                flash('Senha atual incorreta.', 'danger')
+            elif len(nova) < 6:
+                flash('A nova senha deve ter pelo menos 6 caracteres.', 'danger')
+            elif nova != conf:
+                flash('As senhas não coincidem.', 'danger')
+            else:
+                admin.password = generate_password_hash(nova)
+                db.session.commit()
+                flash('Senha alterada com sucesso!', 'success')
+        elif acao == 'excluir_perfil':
+            senha_conf = request.form.get('senha_excluir', '')
+            if not check_password_hash(admin.password, senha_conf):
+                flash('Senha incorreta. Exclusão cancelada.', 'danger')
+            else:
+                session.pop('administrador', None)
+                db.session.delete(admin)
+                db.session.commit()
+                flash('Perfil excluído permanentemente.', 'info')
+                return redirect(url_for('login'))
+    return render_template('configuracoes.html', admin=admin)
+
+
+@app.route('/restaurante/configuracoes', methods=['GET', 'POST'])
+@requer_restaurante
+def restaurante_configuracoes():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    if request.method == 'POST':
+        acao = request.form.get('acao', '')
+        if acao == 'trocar_senha':
+            atual = request.form.get('senha_atual', '')
+            nova  = request.form.get('senha_nova', '')
+            conf  = request.form.get('senha_conf', '')
+            if not check_password_hash(rest.password, atual):
+                flash('Senha atual incorreta.', 'danger')
+            elif len(nova) < 6:
+                flash('Nova senha deve ter pelo menos 6 caracteres.', 'danger')
+            elif nova != conf:
+                flash('As senhas não coincidem.', 'danger')
+            else:
+                rest.password = generate_password_hash(nova)
+                db.session.commit()
+                flash('Senha alterada!', 'success')
+        elif acao == 'excluir_perfil':
+            senha_conf = request.form.get('senha_excluir', '')
+            if not check_password_hash(rest.password, senha_conf):
+                flash('Senha incorreta.', 'danger')
+            else:
+                session.pop('restaurante', None)
+                session.pop('restaurante_id', None)
+                session.pop('restaurante_token', None)
+                db.session.delete(rest)
+                db.session.commit()
+                flash('Perfil do restaurante excluído.', 'info')
+                return redirect(url_for('restaurante_login'))
+    return render_template('configuracoes.html', admin=rest, painel='restaurante')
+
+
+@app.route('/dono/configuracoes', methods=['GET', 'POST'])
+@requer_dono
+def dono_configuracoes():
+    dono = DonoDaEmpresa.query.filter(db.func.lower(DonoDaEmpresa.email) == session['dono']).first()
+    if request.method == 'POST':
+        acao = request.form.get('acao', '')
+        if acao == 'trocar_senha':
+            atual = request.form.get('senha_atual', '')
+            nova  = request.form.get('senha_nova', '')
+            conf  = request.form.get('senha_conf', '')
+            if not dono.check_senha(atual):
+                flash('Senha atual incorreta.', 'danger')
+            elif len(nova) < 6:
+                flash('Nova senha deve ter pelo menos 6 caracteres.', 'danger')
+            elif nova != conf:
+                flash('As senhas não coincidem.', 'danger')
+            else:
+                dono.senha_hash = generate_password_hash(nova)
+                db.session.commit()
+                flash('Senha alterada!', 'success')
+        elif acao == 'excluir_perfil':
+            senha_conf = request.form.get('senha_excluir', '')
+            if not dono.check_senha(senha_conf):
+                flash('Senha incorreta.', 'danger')
+            else:
+                session.pop('dono', None)
+                db.session.delete(dono)
+                db.session.commit()
+                flash('Perfil excluído.', 'info')
+                return redirect(url_for('dono_login'))
+    return render_template('configuracoes.html', admin=dono, painel='dono')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CHAT INTERNO
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/chat')
+@requer_login
+def chat_gestor():
+    _val  = session['administrador']
+    admin = (Administrador.query.filter_by(email=_val).first() or
+             Administrador.query.filter_by(username=_val).first())
+    msgs = MensagemChat.query.order_by(MensagemChat.criado_em.desc()).limit(50).all()
+    msgs.reverse()
+    return render_template('chat.html', msgs=msgs, usuario_nome=admin.username, painel='admin')
+
+
+@app.route('/chat/enviar', methods=['POST'])
+@requer_login
+def chat_enviar():
+    _val  = session['administrador']
+    admin = (Administrador.query.filter_by(email=_val).first() or
+             Administrador.query.filter_by(username=_val).first())
+    texto = request.json.get('mensagem', '').strip()
+    if not texto:
+        return jsonify({'ok': False}), 400
+    msg = MensagemChat('admin', admin.username, texto)
+    db.session.add(msg)
+    db.session.commit()
+    return jsonify({'ok': True, 'id': msg.id,
+                    'criado_em': msg.criado_em.strftime('%H:%M')})
+
+
+@app.route('/chat/mensagens')
+@requer_login
+def chat_mensagens():
+    desde = request.args.get('desde', 0, type=int)
+    msgs = MensagemChat.query.filter(MensagemChat.id > desde)\
+                             .order_by(MensagemChat.criado_em).limit(50).all()
+    return jsonify([{
+        'id': m.id, 'painel': m.painel_origem, 'nome': m.usuario_nome,
+        'msg': m.mensagem, 'hora': m.criado_em.strftime('%H:%M')
+    } for m in msgs])
+
+
+@app.route('/restaurante/chat/enviar', methods=['POST'])
+@requer_restaurante
+def restaurante_chat_enviar():
+    rest  = Restaurante.query.filter_by(username=session['restaurante']).first()
+    texto = request.json.get('mensagem', '').strip()
+    if not texto:
+        return jsonify({'ok': False}), 400
+    msg = MensagemChat('restaurante', rest.nome, texto, restaurante_id=rest.id)
+    db.session.add(msg)
+    db.session.commit()
+    return jsonify({'ok': True, 'id': msg.id,
+                    'criado_em': msg.criado_em.strftime('%H:%M')})
+
+
+@app.route('/restaurante/chat')
+@requer_restaurante
+def restaurante_chat():
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    msgs = MensagemChat.query.order_by(MensagemChat.criado_em.desc()).limit(50).all()
+    msgs.reverse()
+    return render_template('chat.html', msgs=msgs, usuario_nome=rest.nome, painel='restaurante')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# LINKS DE CADASTRO — botões copiar
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/links')
+@requer_login
+def links_cadastro():
+    base = request.host_url.rstrip('/')
+    _val = session['administrador']
+    admin = (Administrador.query.filter_by(email=_val).first() or
+             Administrador.query.filter_by(username=_val).first())
+    links = {
+        'gestor':      base + url_for('cadastrar'),
+        'restaurante': base + url_for('restaurante_cadastrar'),
+        'motoboy':     os.getenv('APPMOTOBOY_URL', 'http://localhost:5003') + '/cadastrar',
+        'frota':       os.getenv('PAINELFROTA_URL', 'http://localhost:5004') + '/cadastrar',
+    }
+    return render_template('links_cadastro.html', links=links, admin=admin)
+
+
+@app.route('/super/links')
+@requer_super
+def super_links_cadastro():
+    base = request.host_url.rstrip('/')
+    links = {
+        'gestor':      base + url_for('cadastrar'),
+        'restaurante': base + url_for('restaurante_cadastrar'),
+        'motoboy':     os.getenv('APPMOTOBOY_URL', 'http://localhost:5003') + '/cadastrar',
+        'frota':       os.getenv('PAINELFROTA_URL', 'http://localhost:5004') + '/cadastrar',
+    }
+    return render_template('links_cadastro.html', links=links, super_admin=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGAMENTO — PRIMEIRO MÊS GRÁTIS + FATURA AUTOMÁTICA
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _enviar_fatura_email(admin_email, admin_nome, plano_nome, preco, link_pix=None):
+    assunto = f'[PainelGest] Fatura do mês — Plano {plano_nome}'
+    pix_info = f'\n\nLink PIX: {link_pix}' if link_pix else ''
+    corpo = (
+        f'Olá, {admin_nome}!\n\n'
+        f'Seu período gratuito encerrou. A fatura do plano {plano_nome} é de R$ {preco:.2f}.'
+        f'{pix_info}\n\n'
+        f'Em caso de dúvidas, responda este e-mail.\n\nEquipe PainelGest'
+    )
+    return enviar_email_comprovante(admin_email, assunto, corpo)
+
+
+def verificar_faturas_automaticas():
+    """Scheduler diário: envia fatura no 2º mês após cadastro."""
+    with app.app_context():
+        hoje = date.today()
+        gestores = Administrador.query.filter_by(status='ativo').all()
+        for g in gestores:
+            if not g.email or not g.criado_em:
+                continue
+            dias = (hoje - g.criado_em.date()).days
+            if dias == 30:
+                plano_info = g.info_plano
+                _enviar_fatura_email(g.email, g.nome_empresa or g.username,
+                                     plano_info['nome'], plano_info['preco'])
+
+
 if __name__ == '__main__':
     with app.app_context():
         migrate_db()
@@ -4151,8 +4424,9 @@ if __name__ == '__main__':
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(processar_posts_agendados, 'interval', minutes=5, id='posts_scheduler')
+    scheduler.add_job(verificar_faturas_automaticas, 'cron', hour=8, minute=0, id='faturas_scheduler')
     scheduler.start()
-    print("Scheduler de posts iniciado (intervalo: 5 minutos)")
+    print("Scheduler de posts e faturas iniciado")
 
     try:
         app.run(debug=True, port=5002, use_reloader=False)

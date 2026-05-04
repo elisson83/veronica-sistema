@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Links de Cadastro{% endblock %}
+{% block page_title %}Links de Cadastro{% endblock %}
+{% block page_sub %}Compartilhe estes links para novos usuários se cadastrarem{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px">
+  {% for nome, url in links.items() %}
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">
+        {% if nome == 'motoboy' %}<i class="fas fa-motorcycle me-2" style="color:#10b981"></i>AppMotoboy
+        {% elif nome == 'frota' %}<i class="fas fa-truck-fast me-2" style="color:#8b5cf6"></i>PainelFrota
+        {% elif nome == 'restaurante_ref' %}<i class="fas fa-utensils me-2" style="color:var(--accent)"></i>Novo Restaurante (via você)
+        {% endif %}
+      </span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" value="{{ url }}" id="link-{{ loop.index }}"
+               class="form-control" style="font-size:11px;font-family:monospace;color:var(--muted)"
+               readonly onclick="this.select()">
+        <button onclick="copiar('link-{{ loop.index }}')" class="btn btn-primary btn-sm" style="flex-shrink:0">
+          <i class="fas fa-copy"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<div style="margin-top:16px;padding:12px 16px;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);border-radius:10px;font-size:12px;color:#fb923c;max-width:900px">
+  <i class="fas fa-info-circle me-2"></i> 1º mês gratuito para todos os novos cadastros.
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function copiar(id){
+  const el=document.getElementById(id); el.select(); document.execCommand('copy');
+  const btn=el.nextElementSibling;
+  btn.innerHTML='<i class="fas fa-check"></i>';
+  setTimeout(()=>btn.innerHTML='<i class="fas fa-copy"></i>',2000);
+}
+</script>
+{% endblock %}

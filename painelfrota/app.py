@@ -25,6 +25,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_FROTA', 'frota-secret-2025-change-me')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 init_seguranca(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'frota.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -330,7 +331,7 @@ def login():
                AdminFrota.query.filter_by(username=email).first())
         if adm and adm.check_senha(senha):
             limpar_falhas(ip)
-            login_user(adm)
+            login_user(adm, remember=True)
             return redirect(url_for('dashboard'))
         bloqueou = registrar_falha(ip)
         if bloqueou:
@@ -1138,7 +1139,7 @@ def resetar_senha_frota(token):
 def convites():
     lista = ConviteRestaurante.query.order_by(ConviteRestaurante.criado_em.desc()).all()
     base_url = request.host_url.rstrip('/')
-    return render_template('convites.html', convites=lista, base_url=base_url)
+    return render_template('convites.html', convites=lista, base_url=base_url, NIVEIS_ADM=NIVEIS_ADM)
 
 
 @app.route('/convites/novo', methods=['POST'])
@@ -1204,6 +1205,96 @@ def cadastro_via_convite(token):
         return render_template('cadastro_convite_ok.html', restaurante=rest)
 
     return render_template('cadastro_convite.html', convite=convite)
+
+
+# ── Chat interno ─────────────────────────────────────────────────────────────
+
+class MensagemChat(db.Model):
+    id            = db.Column(db.Integer, primary_key=True)
+    painel_origem = db.Column(db.String(30), nullable=False)
+    usuario_nome  = db.Column(db.String(80), nullable=False)
+    mensagem      = db.Column(db.Text, nullable=False)
+    criado_em     = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, painel, nome, msg):
+        self.painel_origem = painel
+        self.usuario_nome  = nome
+        self.mensagem      = msg
+
+
+@app.route('/chat')
+@login_required
+def chat():
+    msgs = MensagemChat.query.order_by(MensagemChat.criado_em.desc()).limit(50).all()
+    msgs.reverse()
+    return render_template('chat.html', msgs=msgs, usuario_nome=current_user.nome, painel='frota', NIVEIS_ADM=NIVEIS_ADM)
+
+
+@app.route('/chat/enviar', methods=['POST'])
+@login_required
+def chat_enviar():
+    texto = request.json.get('mensagem', '').strip()
+    if not texto:
+        return jsonify({'ok': False}), 400
+    msg = MensagemChat('frota', current_user.nome, texto)
+    db.session.add(msg)
+    db.session.commit()
+    return jsonify({'ok': True, 'id': msg.id, 'criado_em': msg.criado_em.strftime('%H:%M')})
+
+
+@app.route('/chat/mensagens')
+@login_required
+def chat_mensagens():
+    desde = request.args.get('desde', 0, type=int)
+    msgs = MensagemChat.query.filter(MensagemChat.id > desde)\
+                             .order_by(MensagemChat.criado_em).limit(50).all()
+    return jsonify([{'id': m.id, 'painel': m.painel_origem, 'nome': m.usuario_nome,
+                     'msg': m.mensagem, 'hora': m.criado_em.strftime('%H:%M')} for m in msgs])
+
+
+@app.route('/configuracoes', methods=['GET', 'POST'])
+@login_required
+def configuracoes():
+    if request.method == 'POST':
+        acao = request.form.get('acao', '')
+        if acao == 'trocar_senha':
+            atual = request.form.get('senha_atual', '')
+            nova  = request.form.get('senha_nova', '')
+            conf  = request.form.get('senha_conf', '')
+            if not current_user.check_senha(atual):
+                flash('Senha atual incorreta.', 'danger')
+            elif len(nova) < 6:
+                flash('Nova senha deve ter pelo menos 6 caracteres.', 'danger')
+            elif nova != conf:
+                flash('As senhas não coincidem.', 'danger')
+            else:
+                current_user.set_senha(nova)
+                db.session.commit()
+                flash('Senha alterada com sucesso!', 'success')
+        elif acao == 'excluir_perfil':
+            senha_conf = request.form.get('senha_excluir', '')
+            if not current_user.check_senha(senha_conf):
+                flash('Senha incorreta.', 'danger')
+            else:
+                from flask_login import logout_user
+                logout_user()
+                db.session.delete(current_user)
+                db.session.commit()
+                flash('Perfil excluído.', 'info')
+                return redirect(url_for('login'))
+    return render_template('configuracoes.html', NIVEIS_ADM=NIVEIS_ADM)
+
+
+@app.route('/links')
+@login_required
+def links_cadastro():
+    base = request.host_url.rstrip('/')
+    links = {
+        'motoboy':     os.getenv('APPMOTOBOY_URL', 'http://localhost:5003') + '/cadastrar',
+        'restaurante': os.getenv('PAINELREST_URL', 'http://localhost:5006') + '/cadastrar',
+        'frota':       base + url_for('cadastrar'),
+    }
+    return render_template('links_cadastro.html', links=links, NIVEIS_ADM=NIVEIS_ADM)
 
 
 # ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────

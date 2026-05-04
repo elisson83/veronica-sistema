@@ -298,6 +298,17 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/demo-login')
+def demo_login():
+    """Login automático como Demo — Super Admin visualiza AppMotoboy com acesso total."""
+    demo = Motoboy.query.filter_by(email='demo@painelgest.com').first()
+    if not demo:
+        flash('Conta demo não encontrada.', 'danger')
+        return redirect(url_for('login'))
+    login_user(demo, remember=False)
+    return redirect(url_for('dashboard'))
+
+
 # ─── REGISTRO VIA QR CODE ─────────────────────────────────────────────────────
 
 @app.route('/registrar/<token>', methods=['GET', 'POST'])
@@ -823,10 +834,15 @@ def migrate_db():
     conn.close()
 
     with app.app_context():
-        if not Motoboy.query.filter_by(username='demo').first():
-            mb = Motoboy(nome='Motoboy Demo', username='demo')
-            mb.set_senha('demo123')
-            db.session.add(mb)
+        demo = Motoboy.query.filter_by(email='demo@painelgest.com').first()
+        if not demo:
+            demo = Motoboy(nome='Motoboy Demo', username='demo', email='demo@painelgest.com')
+            demo.set_senha('demo2026')
+            demo.codigo = '0000'
+            db.session.add(demo)
+            db.session.commit()
+        else:
+            demo.set_senha('demo2026')
             db.session.commit()
 
 

@@ -110,6 +110,14 @@
   {% endfor %}
 {% endwith %}
 
+{% if current_user.is_authenticated and current_user.email == 'demo@painelgest.com' %}
+<div style="background:linear-gradient(90deg,rgba(16,185,129,.15),rgba(16,185,129,.05));border-bottom:1px solid rgba(16,185,129,.3);padding:7px 16px;display:flex;align-items:center;gap:8px;font-size:11px;color:#6ee7b7">
+  <i class="fas fa-eye"></i>
+  <span><strong>MODO DEMO</strong> — AppMotoboy com acesso total.</span>
+  <a href="{{ url_for('logout') }}" style="margin-left:auto;color:#6ee7b7;text-decoration:none"><i class="fas fa-sign-out-alt"></i></a>
+</div>
+{% endif %}
+
 <div class="content">
 {% block content %}{% endblock %}
 </div>

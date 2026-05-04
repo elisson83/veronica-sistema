@@ -60,6 +60,12 @@
   <div class="link-cadastrar">
     Não tem conta? <a href="{{ url_for('cadastrar') }}">Cadastrar restaurante →</a>
   </div>
+
+  <div style="margin-top:20px;border-top:1px solid rgba(255,255,255,.07);padding-top:16px">
+    <a href="{{ url_for('demo_login') }}" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);border-radius:8px;color:#fb923c;text-decoration:none;font-size:13px;font-weight:500;transition:background .15s" onmouseover="this.style.background='rgba(249,115,22,.15)'" onmouseout="this.style.background='rgba(249,115,22,.08)'">
+      <i class="fas fa-eye"></i> Visualizar como Demo (acesso total)
+    </a>
+  </div>
 </div>
 <script>
 function toggleSenha(id, btn) {

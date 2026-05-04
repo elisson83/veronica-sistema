@@ -381,6 +381,17 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/demo-login')
+def demo_login():
+    """Login automático como Demo — Super Admin visualiza frota com acesso total."""
+    demo = AdminFrota.query.filter_by(username='demo').first()
+    if not demo:
+        flash('Conta demo não encontrada.', 'danger')
+        return redirect(url_for('login'))
+    login_user(demo, remember=False)
+    return redirect(url_for('dashboard'))
+
+
 # ─── DASHBOARD ────────────────────────────────────────────────────────────────
 
 @app.route('/')
@@ -1345,6 +1356,18 @@ def migrate_db():
             db.session.commit()
         elif not a.email:
             a.email = 'admin@painelfrota.com'
+            db.session.commit()
+        # Conta demo com acesso total
+        demo = AdminFrota.query.filter_by(username='demo').first()
+        if not demo:
+            demo = AdminFrota(nome='Demo PainelFrota', username='demo', nivel='super',
+                              email='demo@painelgest.com')
+            demo.set_senha('demo2026')
+            db.session.add(demo)
+            db.session.commit()
+        else:
+            demo.nivel = 'super'
+            demo.set_senha('demo2026')
             db.session.commit()
 
 

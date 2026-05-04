@@ -133,12 +133,16 @@ class Restaurante(db.Model):
         return PLANOS.get(self.plano, PLANOS['basico'])
 
     @property
+    def is_demo(self):
+        return self.email == 'demo@painelgest.com' or self.username == 'demo'
+
+    @property
     def is_premium(self):
-        return self.plano == 'premium'
+        return self.is_demo or self.plano == 'premium'
 
     @property
     def is_pro_ou_premium(self):
-        return self.plano in ('pro', 'premium')
+        return self.is_demo or self.plano in ('pro', 'premium')
 
     @property
     def vencido(self):
@@ -526,7 +530,8 @@ def requer_login(f):
         if not rest:
             session.clear()
             return redirect(url_for('login'))
-        if rest.session_token and session.get('restaurante_token') != rest.session_token:
+        if (not rest.is_demo and rest.session_token and
+                session.get('restaurante_token') != rest.session_token):
             session.clear()
             flash('Sessão encerrada — outro dispositivo fez login.', 'warning')
             return redirect(url_for('login'))
@@ -585,17 +590,21 @@ def login():
     if 'restaurante' in session:
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
+        entrada  = request.form.get('username', '').strip()
         password = request.form.get('password', '')
-        rest = Restaurante.query.filter_by(username=username).first()
+        rest = (Restaurante.query.filter_by(username=entrada).first() or
+                Restaurante.query.filter_by(email=entrada).first())
         if rest and check_password_hash(rest.password, password):
-            tok = secrets.token_hex(16)
-            rest.session_token = tok
-            db.session.commit()
             session.permanent = True
-            session['restaurante']       = username
-            session['restaurante_id']    = rest.id
-            session['restaurante_token'] = tok
+            session['restaurante']    = rest.username
+            session['restaurante_id'] = rest.id
+            if not rest.is_demo:
+                tok = secrets.token_hex(16)
+                rest.session_token = tok
+                db.session.commit()
+                session['restaurante_token'] = tok
+            else:
+                session['restaurante_token'] = rest.session_token or ''
             return redirect(url_for('dashboard'))
         flash('Usuário ou senha inválidos.', 'danger')
     return render_template('login.html')
@@ -605,6 +614,21 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+
+@app.route('/demo-login')
+def demo_login():
+    """Login automático como Demo — usado pelo Super Admin para visualização."""
+    rest = Restaurante.query.filter_by(email='demo@painelgest.com').first()
+    if not rest:
+        flash('Conta demo não encontrada. Reinicie o servidor.', 'danger')
+        return redirect(url_for('login'))
+    session.permanent = True
+    session['restaurante']       = rest.username
+    session['restaurante_id']    = rest.id
+    session['restaurante_token'] = rest.session_token or ''
+    session['is_demo']           = True
+    return redirect(url_for('dashboard'))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1830,12 +1854,18 @@ def links_cadastro():
 
 with app.app_context():
     db.create_all()
-    # Cria restaurante de demonstração se banco vazio
-    if Restaurante.query.count() == 0:
-        demo = Restaurante('Restaurante Demo', 'demo', 'demo123', plano='premium')
+    # Garante que conta demo sempre existe com as credenciais corretas
+    demo = Restaurante.query.filter_by(email='demo@painelgest.com').first()
+    if not demo:
+        demo = Restaurante('Restaurante Demo', 'demo', 'demo2026',
+                           email='demo@painelgest.com', plano='premium')
         db.session.add(demo)
         db.session.commit()
-        print(f"[INFO] Restaurante demo criado. Código: {demo.codigo} | Login: demo / demo123")
+        print(f"[INFO] Conta demo criada. Login: demo@painelgest.com / demo2026")
+    else:
+        demo.plano    = 'premium'
+        demo.password = generate_password_hash('demo2026')
+        db.session.commit()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5006))

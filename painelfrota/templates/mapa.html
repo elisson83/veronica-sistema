@@ -73,6 +73,30 @@ window.addEventListener('DOMContentLoaded', function () {
   if (comGps.length > 0) {
     mapa.fitBounds(comGps.map(function (m) { return [m.lat, m.lng]; }), { padding: [40, 40] });
   }
+
+  // Marcador GPS do administrador
+  const iconeAdmin = L.divIcon({
+    html: '<div style="background:#06b6d4;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,.6);border:3px solid #fff"><i class="fas fa-user" style="color:#fff;font-size:12px"></i></div>',
+    iconSize: [32, 32], iconAnchor: [16, 16], className: '',
+  });
+  let adminMarker = null;
+
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(function (pos) {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      if (adminMarker) {
+        adminMarker.setLatLng([lat, lng]);
+      } else {
+        adminMarker = L.marker([lat, lng], { icon: iconeAdmin })
+          .addTo(mapa)
+          .bindPopup('<b>Você está aqui</b>');
+        if (comGps.length === 0) {
+          mapa.setView([lat, lng], 13);
+        }
+      }
+    }, null, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+  }
 });
 
 // Recarregar a cada 30 s

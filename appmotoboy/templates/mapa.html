@@ -18,10 +18,11 @@
     background: var(--card); border: 1px solid var(--border);
     color: var(--muted);
   }
-  #info-gps.on  { border-color: rgba(16,185,129,.4); color: #10b981; }
-  #info-gps.err { border-color: rgba(239,68,68,.4);  color: #ef4444; }
+  #info-gps.on  { border-color: rgba(16,185,129,.4);  color: #10b981; }
+  #info-gps.err { border-color: rgba(239,68,68,.4);   color: #ef4444; }
   .gps-dot {
-    width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0;
   }
   .gps-dot.on  { background: #10b981; animation: pulse 1.5s infinite; }
   .gps-dot.err { background: #ef4444; }
@@ -52,88 +53,100 @@ const nomeMotoboy = {{ motoboy.nome | tojson }};
 const posInicio = (latServidor && lngServidor) ? [latServidor, lngServidor] : [-23.55, -46.63];
 
 window.addEventListener('DOMContentLoaded', function () {
-const mapa = L.map('mapa').setView(posInicio, 15);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  maxZoom: 19,
-}).addTo(mapa);
-setTimeout(function () { mapa.invalidateSize(); }, 300);
+  const mapa = L.map('mapa').setView(posInicio, 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(mapa);
+  setTimeout(function () { mapa.invalidateSize(); }, 300);
 
-const icone = L.divIcon({
-  html: `<div style="background:#f59e0b;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.6);border:3px solid #fff">
-           <i class="fas fa-motorcycle" style="color:#000;font-size:16px"></i>
-         </div>`,
-  iconSize:[42,42], iconAnchor:[21,21], className:''
-});
+  const icone = L.divIcon({
+    html: '<div style="background:#f59e0b;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 14px rgba(0,0,0,.65);border:3px solid #fff"><i class="fas fa-motorcycle" style="color:#000;font-size:16px"></i></div>',
+    iconSize: [42, 42], iconAnchor: [21, 21], className: '',
+  });
 
-let marker = null;
-const dot  = document.getElementById('dot-gps');
-const txt  = document.getElementById('txt-gps');
-const info = document.getElementById('info-gps');
+  const dot  = document.getElementById('dot-gps');
+  const txt  = document.getElementById('txt-gps');
+  const info = document.getElementById('info-gps');
 
-// Se tiver posição do servidor, mostra imediatamente
-if (latServidor && lngServidor) {
-  mostrarPosicao(latServidor, lngServidor, false);
-}
+  let marker         = null;
+  let accuracyCircle = null;
+  let ultimoEnvio    = 0;
 
-// Pedir geolocalização automática ao abrir
-pedirGPS();
-
-function mostrarPosicao(lat, lng, preciso) {
-  mapa.setView([lat, lng], 16);
-  if (marker) {
-    marker.setLatLng([lat, lng]);
-  } else {
-    marker = L.marker([lat, lng], {icon: icone}).addTo(mapa)
-      .bindPopup(`<b>${nomeMotoboy}</b><br>Você está aqui`).openPopup();
+  // Exibe última posição do servidor imediatamente enquanto GPS carrega
+  if (latServidor && lngServidor) {
+    marker = L.marker([latServidor, lngServidor], { icon: icone })
+      .addTo(mapa)
+      .bindPopup('<b>' + nomeMotoboy + '</b><br>Última posição registrada');
+    txt.textContent = 'Última posição registrada — aguardando GPS do dispositivo...';
   }
 
-  if (preciso) {
+  function atualizar(lat, lng, accuracy) {
+    mapa.setView([lat, lng], 16);
+
+    // Atualiza ou cria marcador
+    if (marker) {
+      marker.setLatLng([lat, lng]);
+      marker.getPopup().setContent('<b>' + nomeMotoboy + '</b><br>Você está aqui');
+    } else {
+      marker = L.marker([lat, lng], { icon: icone })
+        .addTo(mapa)
+        .bindPopup('<b>' + nomeMotoboy + '</b><br>Você está aqui')
+        .openPopup();
+    }
+
+    // Círculo de precisão (raio em metros)
+    if (accuracy && accuracy < 500) {
+      if (accuracyCircle) {
+        accuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+      } else {
+        accuracyCircle = L.circle([lat, lng], {
+          radius: accuracy, color: '#f59e0b', weight: 1,
+          fillColor: '#f59e0b', fillOpacity: 0.07,
+        }).addTo(mapa);
+      }
+    }
+
     dot.className  = 'gps-dot on';
     info.className = 'info-gps on';
-    txt.textContent = 'GPS ativo — posição em tempo real';
-    // Enviar ao servidor
-    fetch('/atualizar_gps', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({lat, lng})
-    });
-  } else {
-    dot.className  = 'gps-dot';
-    info.className = 'info-gps';
-    txt.textContent = 'Última posição registrada (GPS do dispositivo não ativo)';
-  }
-}
+    txt.textContent = 'GPS ativo — atualizando em tempo real';
 
-function pedirGPS() {
-  txt.textContent = 'Obtendo localização GPS do dispositivo...';
-  dot.className = 'gps-dot';
-  info.className = 'info-gps';
+    // Envia ao servidor a cada 30 s (throttle para não sobrecarregar)
+    const agora = Date.now();
+    if (agora - ultimoEnvio >= 30000) {
+      ultimoEnvio = agora;
+      fetch('/atualizar_gps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: lat, lng: lng }),
+      });
+    }
+  }
+
+  function erroGPS() {
+    if (latServidor && lngServidor) {
+      txt.textContent = 'Usando última posição — permita o GPS para rastreamento em tempo real';
+    } else {
+      dot.className  = 'gps-dot err';
+      info.className = 'info-gps err';
+      txt.textContent = 'Permita o acesso à localização nas configurações do navegador';
+    }
+  }
 
   if (!navigator.geolocation) {
     dot.className  = 'gps-dot err';
     info.className = 'info-gps err';
     txt.textContent = 'GPS não suportado neste dispositivo';
-    return;
+  } else {
+    // watchPosition dispara automaticamente sempre que a posição muda
+    navigator.geolocation.watchPosition(
+      function (pos) {
+        atualizar(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+      },
+      erroGPS,
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
+    );
   }
-
-  navigator.geolocation.getCurrentPosition(
-    pos => mostrarPosicao(pos.coords.latitude, pos.coords.longitude, true),
-    err => {
-      if (latServidor && lngServidor) {
-        mostrarPosicao(latServidor, lngServidor, false);
-      } else {
-        dot.className  = 'gps-dot err';
-        info.className = 'info-gps err';
-        txt.textContent = 'Permita o acesso à localização nas configurações do navegador';
-      }
-    },
-    { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
-  );
-}
-
-// Atualizar a cada 30 segundos
-setInterval(pedirGPS, 30000);
 }); // DOMContentLoaded
 </script>
 {% endblock %}

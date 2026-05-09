@@ -3,7 +3,7 @@
 {% block page_title %}Mapa GPS — Motoboys Online{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
 <style>
   #mapa { width:100%; height:calc(100vh - 200px); min-height:400px; border-radius:12px; border:1px solid var(--border); }
   .motoboy-popup h6 { color:#8b5cf6; font-weight:700; margin-bottom:4px; }
@@ -32,12 +32,15 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
-const mapa = L.map('mapa').setView([-23.55, -46.63], 12);
+const mapa = L.map('mapa', { preferCanvas: true }).setView([-23.55, -46.63], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap'
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom: 19,
+  crossOrigin: true,
 }).addTo(mapa);
+setTimeout(() => mapa.invalidateSize(), 200);
 
 const icone = L.divIcon({
   html: '<i class="fas fa-motorcycle" style="color:#8b5cf6;font-size:24px;text-shadow:0 0 6px rgba(0,0,0,.8);"></i>',

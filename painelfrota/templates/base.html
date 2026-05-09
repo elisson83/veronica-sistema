@@ -100,12 +100,83 @@
   .nivel-financeiro   { background: #064e3b33; color: #6ee7b7; border: 1px solid #064e3b; }
   .nivel-operacional  { background: #1e3a5f33; color: #60a5fa; border: 1px solid #1e3a5f; }
   .nivel-visualizador { background: #29292933; color: #94a3b8; border: 1px solid #333; }
+
+  /* Hamburger — oculto em desktop */
+  .btn-hamburger {
+    display: none; background: none; border: none;
+    color: var(--text); font-size: 1.25rem; padding: 4px 8px;
+    cursor: pointer; line-height: 1;
+  }
+
+  /* Overlay do menu lateral no mobile */
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.55); z-index: 99;
+  }
+  .sidebar-overlay.sidebar-open { display: block; }
+
+  /* Responsivo mobile */
+  @media (max-width: 768px) {
+    .btn-hamburger { display: block; }
+
+    .sidebar {
+      transform: translateX(-100%);
+      transition: transform .25s ease;
+      z-index: 200;
+    }
+    .sidebar.sidebar-open { transform: translateX(0); }
+
+    .main { margin-left: 0 !important; }
+    .content { padding: 16px; }
+    .topbar { padding: 12px 16px; gap: 8px; }
+
+    /* Tabelas roláveis horizontalmente */
+    .card-dark { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-dark-custom { min-width: 540px; }
+
+    /* Botões com área de toque mínima */
+    .btn-sm { min-height: 44px; padding: 8px 12px !important; font-size: .85rem !important; }
+  }
+
+  /* ── Notificações (VNotif) ───────────────────────────────────────────────── */
+  #notif-container {
+    position: fixed; top: 16px; right: 16px; z-index: 9999;
+    display: flex; flex-direction: column; gap: 8px;
+    width: min(340px, calc(100vw - 32px)); pointer-events: none;
+  }
+  .vnotif-toast {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 14px; border-radius: 10px; font-size: .84rem;
+    backdrop-filter: blur(8px); pointer-events: all;
+    animation: vnotif-in .3s ease;
+    box-shadow: 0 4px 24px rgba(0,0,0,.55);
+  }
+  @keyframes vnotif-in {
+    from { opacity: 0; transform: translateX(60px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .vnotif-titulo { font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .vnotif-msg    { color: var(--muted); font-size: .77rem; line-height: 1.35; }
+  .vnotif-fechar {
+    background: none; border: none; color: var(--muted);
+    font-size: 1.2rem; cursor: pointer; padding: 0 2px;
+    line-height: 1; flex-shrink: 0; align-self: flex-start;
+  }
+  .vnotif-fechar:hover { color: var(--text); }
+  .btn-mudo {
+    background: none; border: none; color: var(--muted);
+    font-size: .9rem; padding: 5px 7px; cursor: pointer;
+    border-radius: 6px; transition: color .2s; line-height: 1;
+  }
+  .btn-mudo:hover { color: var(--text); }
 </style>
 {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-<aside class="sidebar">
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <i class="fas fa-truck-fast"></i> PainelFrota
   </div>
@@ -168,8 +239,14 @@
 
 <div class="main">
   <div class="topbar">
+    <button class="btn-hamburger" onclick="toggleSidebar()" aria-label="Abrir menu">
+      <i class="fas fa-bars"></i>
+    </button>
     <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
     <div class="d-flex align-items-center gap-3">
+      <button id="btn-mudo" class="btn-mudo" onclick="VNotif.toggleMudo()" title="Silenciar notificações" aria-label="Som das notificações">
+        <i class="fas fa-bell"></i>
+      </button>
       <span class="badge nivel-{{ current_user.nivel }}">{{ NIVEIS_ADM.get(current_user.nivel, current_user.nivel) }}</span>
     </div>
   </div>
@@ -194,7 +271,89 @@
   </div>
 </div>
 
+<div id="notif-container" aria-live="assertive" aria-atomic="false"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── VNotif — Sistema de Notificações com Som ─────────────────────────────
+const VNotif = (() => {
+  let mudo = localStorage.getItem('vnotif_mudo') === '1';
+  let ctx  = null;
+  const TIPOS = {
+    info:    { bg:'rgba(6,182,212,.15)',  borda:'#06b6d4', ic:'fa-bell',                 cor:'#06b6d4' },
+    success: { bg:'rgba(16,185,129,.15)', borda:'#10b981', ic:'fa-circle-check',         cor:'#10b981' },
+    warning: { bg:'rgba(245,158,11,.15)', borda:'#f59e0b', ic:'fa-triangle-exclamation', cor:'#f59e0b' },
+    danger:  { bg:'rgba(239,68,68,.15)',  borda:'#ef4444', ic:'fa-circle-xmark',         cor:'#ef4444' },
+  };
+  function beep(tipo) {
+    if (mudo) return;
+    try {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(tipo==='danger'?880:tipo==='warning'?660:520, ctx.currentTime);
+      g.gain.setValueAtTime(0.25, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+      osc.start(); osc.stop(ctx.currentTime + 0.55);
+    } catch(e) {}
+  }
+  function show(titulo, msg, tipo) {
+    tipo = tipo || 'info';
+    beep(tipo);
+    const c = TIPOS[tipo] || TIPOS.info;
+    const id = 'vn' + Date.now();
+    const box = document.getElementById('notif-container');
+    if (!box) return;
+    const el = document.createElement('div');
+    el.id = id; el.className = 'vnotif-toast';
+    el.style.cssText = `background:${c.bg};border:1px solid ${c.borda};`;
+    el.innerHTML = `
+      <i class="fas ${c.ic}" style="color:${c.cor};font-size:1rem;flex-shrink:0;margin-top:1px"></i>
+      <div class="flex-grow-1">
+        <div class="vnotif-titulo">${titulo}</div>
+        ${msg ? `<div class="vnotif-msg">${msg}</div>` : ''}
+      </div>
+      <button class="vnotif-fechar" onclick="document.getElementById('${id}').remove()" aria-label="Fechar">×</button>`;
+    box.appendChild(el);
+    setTimeout(() => { try { el.remove(); } catch(e){} }, 6000);
+  }
+  function toggleMudo() {
+    mudo = !mudo;
+    localStorage.setItem('vnotif_mudo', mudo ? '1' : '0');
+    const btn = document.getElementById('btn-mudo');
+    if (btn) {
+      btn.querySelector('i').className = mudo ? 'fas fa-bell-slash' : 'fas fa-bell';
+      btn.title = mudo ? 'Ativar som das notificações' : 'Silenciar notificações';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-mudo');
+    if (btn && mudo) {
+      btn.querySelector('i').className = 'fas fa-bell-slash';
+      btn.title = 'Ativar som das notificações';
+    }
+  });
+  return { show, beep, toggleMudo };
+})();
+
+// ── Sidebar mobile ────────────────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('sidebar-open');
+  document.getElementById('sidebarOverlay').classList.toggle('sidebar-open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('sidebar-open');
+  document.getElementById('sidebarOverlay').classList.remove('sidebar-open');
+}
+// Fecha sidebar ao clicar em link (mobile)
+document.querySelectorAll('.sidebar-nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeSidebar();
+  });
+});
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

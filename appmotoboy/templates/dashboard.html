@@ -179,6 +179,27 @@ async function aceitarEntrega(id) {
 
 {% if current_user.disponivel %}iniciarGPS();{% endif %}
 
+// Notificação de nova entrega (compara com contagem anterior salva)
+(function() {
+  const atual = {{ pendentes | length }};
+  const ant   = parseInt(localStorage.getItem('app_pend_cnt') || '-1', 10);
+  localStorage.setItem('app_pend_cnt', String(atual));
+  if (atual > 0 && ant >= 0 && atual > ant) {
+    setTimeout(() => VNotif.show(
+      'Nova entrega disponível!',
+      atual + (atual === 1 ? ' entrega aguardando aceitação' : ' entregas aguardando aceitação'),
+      'warning'
+    ), 600);
+  } else if (atual > 0 && ant < 0) {
+    // Primeira visita da sessão com entregas pendentes
+    setTimeout(() => VNotif.show(
+      'Entrega(s) pendente(s)',
+      atual + (atual === 1 ? ' entrega aguardando' : ' entregas aguardando'),
+      'info'
+    ), 800);
+  }
+})();
+
 // Recarregar a cada 20s para verificar novas entregas
 setTimeout(() => location.reload(), 20000);
 </script>

@@ -95,3 +95,33 @@
   </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+// Polling de novas entregas concluídas via /api/stats (a cada 45s)
+(function() {
+  let corrAnterior = -1;
+
+  function checarStats() {
+    fetch('/api/stats', { credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return;
+        const corrAtual = d.corridas_hoje || 0;
+        if (corrAnterior >= 0 && corrAtual > corrAnterior) {
+          const diff = corrAtual - corrAnterior;
+          VNotif.show(
+            'Entrega concluída!',
+            diff + (diff === 1 ? ' nova entrega' : ' novas entregas') + ' hoje (' + corrAtual + ' total)',
+            'success'
+          );
+        }
+        corrAnterior = corrAtual;
+      })
+      .catch(() => {});
+  }
+
+  setTimeout(() => { checarStats(); setInterval(checarStats, 45000); }, 2000);
+})();
+</script>
+{% endblock %}

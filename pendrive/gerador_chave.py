@@ -94,7 +94,25 @@ def gerar(pedir_emergencia: bool = True) -> dict:
 
 
 if __name__ == "__main__":
-    destino = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(".")
+    _args       = sys.argv[1:]
+    _so_emerg   = "--emergencia" in _args
+    _posicionais = [a for a in _args if not a.startswith("--")]
+
+    # Modo --emergencia: apenas configura/reconfigura a senha, sem gerar nova chave
+    if _so_emerg:
+        print("=" * 52)
+        print("  CONFIGURAR SENHA DE EMERGÊNCIA")
+        print("=" * 52)
+        try:
+            _senha = _pedir_senha_emergencia()
+            _salvar_emergencia(_senha)
+        except (KeyboardInterrupt, EOFError):
+            print("\n  [AV] Cancelado.")
+            sys.exit(1)
+        sys.exit(0)
+
+    # Modo normal: gera a chave do pen drive
+    destino = Path(_posicionais[0]) if _posicionais else Path(".")
     destino_arquivo = destino / CHAVE_FILENAME
 
     if destino_arquivo.exists():

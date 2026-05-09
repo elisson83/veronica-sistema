@@ -50,7 +50,7 @@ const latServidor = {{ (motoboy.lat_atual if motoboy.lat_atual else 'null') }};
 const lngServidor = {{ (motoboy.lng_atual if motoboy.lng_atual else 'null') }};
 const nomeMotoboy = {{ motoboy.nome | tojson }};
 
-const posInicio = (latServidor && lngServidor) ? [latServidor, lngServidor] : [-23.55, -46.63];
+const posInicio = (latServidor && lngServidor) ? [latServidor, lngServidor] : [-27.5954, -48.5480];
 
 window.addEventListener('DOMContentLoaded', function () {
   const mapa = L.map('mapa').setView(posInicio, 15);

@@ -173,7 +173,7 @@ const motoboysDados = {{ motoboys | tojson }};
 // Inicializar mapa
 const posInicio = (dadosServidor.lat && dadosServidor.lng)
   ? [dadosServidor.lat, dadosServidor.lng]
-  : [-23.55, -46.63];
+  : [-27.5954, -48.5480];
 
 const mapa = L.map('mapa').setView(posInicio, 14);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

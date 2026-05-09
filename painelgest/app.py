@@ -10,12 +10,12 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), encoding='utf-8-sig')
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca
+from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca, validar_upload
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response, abort
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, date
@@ -1643,6 +1643,9 @@ def nova_categoria():
 @requer_restaurante
 def editar_categoria(id):
     cat = Categoria.query.get_or_404(id)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if cat.restaurante_id != rest.id:
+        abort(403)
     if request.method == 'POST':
         cat.nome     = request.form['nome']
         cat.descricao= request.form.get('descricao') or None
@@ -1659,6 +1662,9 @@ def editar_categoria(id):
 @requer_restaurante
 def excluir_categoria(id):
     cat = Categoria.query.get_or_404(id)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if cat.restaurante_id != rest.id:
+        abort(403)
     db.session.delete(cat)
     db.session.commit()
     flash('Categoria excluída.', 'success')
@@ -1692,7 +1698,9 @@ def novo_item():
 @requer_restaurante
 def editar_item(id):
     item = ItemCardapio.query.get_or_404(id)
-    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first()
+    restaurante = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if item.categoria.restaurante_id != restaurante.id:
+        abort(403)
     categorias  = Categoria.query.filter_by(restaurante_id=restaurante.id, ativo=True).all()
     if request.method == 'POST':
         item.categoria_id = int(request.form['categoria_id'])
@@ -1712,6 +1720,9 @@ def editar_item(id):
 @requer_restaurante
 def excluir_item(id):
     item = ItemCardapio.query.get_or_404(id)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if item.categoria.restaurante_id != rest.id:
+        abort(403)
     db.session.delete(item)
     db.session.commit()
     flash('Item removido.', 'success')
@@ -1722,6 +1733,9 @@ def excluir_item(id):
 @requer_restaurante
 def toggle_item(id):
     item = ItemCardapio.query.get_or_404(id)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if item.categoria.restaurante_id != rest.id:
+        abort(403)
     item.disponivel = not item.disponivel
     db.session.commit()
     status = 'disponível' if item.disponivel else 'indisponível'
@@ -1752,9 +1766,13 @@ def restaurante_upload():
         return redirect(url_for('restaurante_dashboard'))
     from pathlib import Path
     imagem = request.files['imagem']
-    upload_dir = Path('static/uploads')
+    ok, resultado = validar_upload(imagem)
+    if not ok:
+        flash(resultado, 'danger')
+        return redirect(url_for('restaurante_dashboard'))
+    upload_dir = Path(app.root_path) / 'static' / 'uploads'
     upload_dir.mkdir(parents=True, exist_ok=True)
-    imagem.save(str(upload_dir / imagem.filename))
+    imagem.save(str(upload_dir / resultado))
     flash('Imagem enviada!', 'success')
     return redirect(url_for('restaurante_dashboard'))
 
@@ -1813,10 +1831,14 @@ def agendar_post():
     if 'imagem' in request.files and request.files['imagem'].filename:
         from pathlib import Path
         imagem = request.files['imagem']
+        ok, resultado = validar_upload(imagem)
+        if not ok:
+            flash(resultado, 'danger')
+            return redirect(url_for('agendamentos'))
         upload_dir = Path(app.root_path) / 'static' / 'uploads'
         upload_dir.mkdir(parents=True, exist_ok=True)
         ts = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        filename = f"post_{perfil_id}_{ts}_{imagem.filename}"
+        filename = f"post_{perfil_id}_{ts}_{resultado}"
         full_path = upload_dir / filename
         imagem.save(str(full_path))
         imagem_path = str(full_path)
@@ -2750,9 +2772,13 @@ def editar_perfil_restaurante():
         if 'logo' in request.files and request.files['logo'].filename:
             from pathlib import Path
             logo = request.files['logo']
+            ok, resultado = validar_upload(logo)
+            if not ok:
+                flash(resultado, 'danger')
+                return redirect(url_for('editar_perfil_restaurante'))
             upload_dir = Path(app.root_path) / 'static' / 'uploads'
             upload_dir.mkdir(parents=True, exist_ok=True)
-            ext = logo.filename.rsplit('.', 1)[-1].lower()
+            ext = resultado.rsplit('.', 1)[-1].lower()
             filename = f"logo_{restaurante.id}.{ext}"
             logo.save(str(upload_dir / filename))
             restaurante.logo_path = f"uploads/{filename}"

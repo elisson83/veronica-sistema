@@ -7,7 +7,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request, jso
 
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca, rate_limit
+from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca, rate_limit, validar_upload
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -654,9 +654,7 @@ def api_motoboys_disponiveis():
 def api_motoboys_todos():
     mbs = Motoboy.query.filter_by(ativo=True).all()
     return jsonify([{
-        'id': mb.id, 'nome': mb.nome, 'telefone': mb.telefone,
-        'email': mb.email, 'cpf_cnpj': mb.cpf_cnpj, 'tipo_doc': mb.tipo_doc,
-        'chave_pix': mb.chave_pix, 'disponivel': mb.disponivel,
+        'id': mb.id, 'nome': mb.nome, 'disponivel': mb.disponivel,
     } for mb in mbs])
 
 
@@ -666,8 +664,6 @@ def api_motoboy_detalhe(mid):
     mb = Motoboy.query.get_or_404(mid)
     return jsonify({
         'id': mb.id, 'nome': mb.nome, 'telefone': mb.telefone,
-        'email': mb.email, 'cpf_cnpj': mb.cpf_cnpj, 'tipo_doc': mb.tipo_doc,
-        'chave_pix': mb.chave_pix,
     })
 
 

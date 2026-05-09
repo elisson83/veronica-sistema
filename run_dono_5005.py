@@ -30,8 +30,9 @@ with app.app_context():
 print('=' * 50)
 print('  PAINEL DO DONO — porta 5005')
 print('  http://localhost:5005/dono/login')
-print('  Login: admin@email.com  / admin@2024')
-print('  Login: dono@email.com   / dono@2024')
+print('  Login: admin@email.com  (senha definida na primeira execucao)')
+print('  Login: dono@email.com   (senha definida na primeira execucao)')
+print('  ATENCAO: Troque as senhas apos o primeiro acesso!')
 print('=' * 50)
 
 if __name__ == '__main__':

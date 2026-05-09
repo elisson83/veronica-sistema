@@ -85,3 +85,37 @@ def aplicar_headers(response):
 def init_seguranca(app):
     """Registra o after_request de headers em qualquer app Flask."""
     app.after_request(aplicar_headers)
+
+
+# ── Upload seguro ─────────────────────────────────────────────────────────────
+from werkzeug.utils import secure_filename as _secure_filename
+
+UPLOAD_TIPOS_IMAGEM = frozenset(['image/jpeg', 'image/png'])
+UPLOAD_MAX_BYTES    = 5 * 1024 * 1024  # 5 MB
+
+_MAGIC = {
+    b'\xff\xd8\xff':           'image/jpeg',
+    b'\x89PNG\r\n\x1a\n':     'image/png',
+}
+
+
+def validar_upload(file_storage, tipos=UPLOAD_TIPOS_IMAGEM, max_bytes=UPLOAD_MAX_BYTES):
+    """
+    Valida tipo MIME por magic bytes e tamanho máximo.
+    Retorna (True, nome_seguro) ou (False, mensagem_erro).
+    Nunca confia na extensão ou no Content-Type declarado pelo browser.
+    """
+    if not file_storage or not file_storage.filename:
+        return False, 'Nenhum arquivo enviado.'
+    header = file_storage.stream.read(8)
+    file_storage.stream.seek(0)
+    mime = next((m for sig, m in _MAGIC.items() if header[:len(sig)] == sig), None)
+    if mime not in tipos:
+        return False, 'Tipo de arquivo não permitido. Envie apenas JPG ou PNG.'
+    file_storage.stream.seek(0, 2)
+    size = file_storage.stream.tell()
+    file_storage.stream.seek(0)
+    if size > max_bytes:
+        return False, f'Arquivo muito grande. Máximo {max_bytes // 1024 // 1024} MB.'
+    nome = _secure_filename(file_storage.filename) or 'upload.jpg'
+    return True, nome

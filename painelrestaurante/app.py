@@ -1,4 +1,5 @@
 import os
+import sys
 import io
 import json
 import math
@@ -8,8 +9,11 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), encoding='utf-8-sig')
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from modules.seguranca_web import init_seguranca, validar_upload
+
 from flask import (Flask, render_template, request, redirect, url_for,
-                   flash, session, jsonify, make_response, send_file)
+                   flash, session, jsonify, make_response, send_file, abort)
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, date
@@ -21,6 +25,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///painelrestaurante.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 db = SQLAlchemy(app)
+init_seguranca(app)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -842,7 +847,10 @@ def nova_categoria():
 @app.route('/cardapio/categoria/<int:id>/editar', methods=['GET', 'POST'])
 @requer_login
 def editar_categoria(id):
-    cat = Categoria.query.get_or_404(id)
+    cat  = Categoria.query.get_or_404(id)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if cat.restaurante_id != rest.id:
+        abort(403)
     if request.method == 'POST':
         cat.nome      = request.form['nome']
         cat.descricao = request.form.get('descricao') or None
@@ -858,7 +866,10 @@ def editar_categoria(id):
 @app.route('/cardapio/categoria/<int:id>/excluir')
 @requer_login
 def excluir_categoria(id):
-    cat = Categoria.query.get_or_404(id)
+    cat  = Categoria.query.get_or_404(id)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if cat.restaurante_id != rest.id:
+        abort(403)
     db.session.delete(cat)
     db.session.commit()
     flash('Categoria excluída.', 'success')
@@ -892,7 +903,9 @@ def novo_item():
 @requer_login
 def editar_item(id):
     item = ItemCardapio.query.get_or_404(id)
-    rest = Restaurante.query.filter_by(username=session['restaurante']).first()
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if item.categoria.restaurante_id != rest.id:
+        abort(403)
     cats = Categoria.query.filter_by(restaurante_id=rest.id, ativo=True).all()
     if request.method == 'POST':
         item.categoria_id = int(request.form['categoria_id'])
@@ -912,6 +925,9 @@ def editar_item(id):
 @requer_login
 def excluir_item(id):
     item = ItemCardapio.query.get_or_404(id)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if item.categoria.restaurante_id != rest.id:
+        abort(403)
     db.session.delete(item)
     db.session.commit()
     flash('Item removido.', 'success')
@@ -922,6 +938,9 @@ def excluir_item(id):
 @requer_login
 def toggle_item(id):
     item = ItemCardapio.query.get_or_404(id)
+    rest = Restaurante.query.filter_by(username=session['restaurante']).first_or_404()
+    if item.categoria.restaurante_id != rest.id:
+        abort(403)
     item.disponivel = not item.disponivel
     db.session.commit()
     return redirect(url_for('cardapio'))
@@ -945,9 +964,13 @@ def upload():
         return redirect(url_for('dashboard'))
     from pathlib import Path
     imagem = request.files['imagem']
+    ok, resultado = validar_upload(imagem)
+    if not ok:
+        flash(resultado, 'danger')
+        return redirect(url_for('dashboard'))
     upload_dir = Path(app.root_path) / 'static' / 'uploads'
     upload_dir.mkdir(parents=True, exist_ok=True)
-    imagem.save(str(upload_dir / imagem.filename))
+    imagem.save(str(upload_dir / resultado))
     flash('Imagem enviada!', 'success')
     return redirect(url_for('dashboard'))
 
@@ -1092,9 +1115,13 @@ def perfil():
         if 'logo' in request.files and request.files['logo'].filename:
             from pathlib import Path
             logo = request.files['logo']
+            ok, resultado = validar_upload(logo)
+            if not ok:
+                flash(resultado, 'danger')
+                return redirect(url_for('perfil'))
             upload_dir = Path(app.root_path) / 'static' / 'uploads'
             upload_dir.mkdir(parents=True, exist_ok=True)
-            ext = logo.filename.rsplit('.', 1)[-1].lower()
+            ext = resultado.rsplit('.', 1)[-1].lower()
             filename = f"logo_{rest.id}.{ext}"
             logo.save(str(upload_dir / filename))
             rest.logo_path = f"uploads/{filename}"

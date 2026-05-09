@@ -1,19 +1,14 @@
 import os
 import sys
 import io
-import math
-import json
 import secrets
-import smtplib
 import requests
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, make_response, send_file
 
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca
+from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca, rate_limit
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -985,6 +980,7 @@ def relatorios():
 # ─── QR CODE — API PÚBLICA ────────────────────────────────────────────────────
 
 @app.route('/api/qr/<token>/info')
+@rate_limit(max_req=60, janela=60)
 def api_qr_info(token):
     r = RestauranteConectado.query.filter_by(token_qr=token).first()
     if not r:
@@ -1043,6 +1039,7 @@ def confirmar_conexao_gestor(token):
 
 
 @app.route('/api/motoboy_token/<token>')
+@rate_limit(max_req=60, janela=60)
 def api_motoboy_token(token):
     """AppMotoboy consulta dados do motoboy pelo token_app."""
     mb = MotoboyFrota.query.filter_by(token_app=token, ativo=True).first()
@@ -1058,6 +1055,7 @@ def api_motoboy_token(token):
 
 
 @app.route('/api/stats')
+@rate_limit(max_req=30, janela=60)
 def api_stats():
     """Super Admin consulta estatísticas desta frota."""
     from datetime import date as _date
@@ -1380,6 +1378,6 @@ if __name__ == '__main__':
     scheduler.add_job(fechamento_automatico, 'cron', hour=0, minute=5, id='fechamento_diario')
     scheduler.start()
     try:
-        app.run(port=5004, debug=True, use_reloader=False)
+        app.run(host='0.0.0.0', port=5004, debug=False, use_reloader=False)
     finally:
         scheduler.shutdown()

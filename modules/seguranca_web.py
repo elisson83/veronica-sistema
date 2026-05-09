@@ -78,6 +78,7 @@ def aplicar_headers(response):
         "img-src 'self' data: https: blob:; "
         "connect-src 'self' https:;"
     )
+    h['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     return response
 
 

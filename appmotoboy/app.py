@@ -2,15 +2,12 @@ import os
 import sys
 import math
 import secrets
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
 
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca
+from modules.seguranca_web import registrar_falha, ip_bloqueado, limpar_falhas, get_ip, init_seguranca, rate_limit
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -643,6 +640,7 @@ def mapa_motoboy():
 
 
 @app.route('/api/motoboys_disponiveis')
+@rate_limit(max_req=60, janela=60)
 def api_motoboys_disponiveis():
     mbs = Motoboy.query.filter_by(disponivel=True, ativo=True).all()
     return jsonify([{
@@ -652,6 +650,7 @@ def api_motoboys_disponiveis():
 
 
 @app.route('/api/motoboys')
+@rate_limit(max_req=60, janela=60)
 def api_motoboys_todos():
     mbs = Motoboy.query.filter_by(ativo=True).all()
     return jsonify([{
@@ -662,6 +661,7 @@ def api_motoboys_todos():
 
 
 @app.route('/api/motoboy/<int:mid>')
+@rate_limit(max_req=60, janela=60)
 def api_motoboy_detalhe(mid):
     mb = Motoboy.query.get_or_404(mid)
     return jsonify({
@@ -672,6 +672,7 @@ def api_motoboy_detalhe(mid):
 
 
 @app.route('/api/entregas/<int:mid>')
+@rate_limit(max_req=60, janela=60)
 def api_entregas_motoboy(mid):
     inicio_str = request.args.get('inicio')
     fim_str    = request.args.get('fim')
@@ -695,6 +696,7 @@ def api_entregas_motoboy(mid):
 
 
 @app.route('/api/nova_entrega', methods=['POST'])
+@rate_limit(max_req=30, janela=60)
 def api_nova_entrega():
     """Cria entrega com rota inteligente: máx 2 simultâneas, 15s para aceitar."""
     data = request.get_json()
@@ -941,6 +943,6 @@ if __name__ == '__main__':
     scheduler.add_job(expirar_entregas_pendentes, 'interval', seconds=15, id='expirar_job')
     scheduler.start()
     try:
-        app.run(port=5003, debug=True, use_reloader=False)
+        app.run(host='0.0.0.0', port=5003, debug=False, use_reloader=False)
     finally:
         scheduler.shutdown()

@@ -4429,6 +4429,6 @@ if __name__ == '__main__':
     print("Scheduler de posts e faturas iniciado")
 
     try:
-        app.run(debug=True, port=5002, use_reloader=False)
+        app.run(host='0.0.0.0', debug=False, port=5002, use_reloader=False)
     finally:
         scheduler.shutdown()

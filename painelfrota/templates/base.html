@@ -117,7 +117,7 @@
 
   /* Responsivo mobile */
   @media (max-width: 768px) {
-    .btn-hamburger { display: block; }
+    .btn-hamburger { display: block; min-width: 44px; min-height: 44px; }
 
     .sidebar {
       transform: translateX(-100%);
@@ -128,7 +128,15 @@
 
     .main { margin-left: 0 !important; }
     .content { padding: 16px; }
-    .topbar { padding: 12px 16px; gap: 8px; }
+
+    /* Topbar acima do overlay para o hambúrguer sempre ser acessível */
+    .topbar { padding: 12px 16px; gap: 8px; z-index: 105; }
+
+    /* Espaçamento de cards */
+    .card-dark { margin-bottom: 12px; }
+    .stat-card { padding: 14px 16px; }
+    .stat-card .val { font-size: 1.4rem; }
+    .row.g-3 { --bs-gutter-y: 10px; }
 
     /* Tabelas roláveis horizontalmente */
     .card-dark { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -136,6 +144,9 @@
 
     /* Botões com área de toque mínima */
     .btn-sm { min-height: 44px; padding: 8px 12px !important; font-size: .85rem !important; }
+
+    /* Botões de ação nas linhas de tabela — mais espaçados */
+    td .btn { margin-bottom: 2px; }
   }
 
   /* ── Notificações (VNotif) ───────────────────────────────────────────────── */

@@ -1,149 +1,275 @@
 {% extends 'base.html' %}
 {% block title %}Início — AppMotoboy{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* ── Botão GPS principal ──────────────────────────────────────────── */
+  .btn-gps {
+    width: 100%; min-height: 80px;
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 20px; border-radius: 20px; border: 2px solid transparent;
+    cursor: pointer; font-family: inherit; text-align: left;
+    transition: all .3s; -webkit-tap-highlight-color: transparent;
+  }
+  .btn-gps.on {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+    border-color: #10b981;
+    box-shadow: 0 6px 28px rgba(16,185,129,.25);
+  }
+  .btn-gps.off {
+    background: var(--card); border-color: var(--border);
+  }
+  .btn-gps:disabled { opacity: .55; cursor: default; }
+
+  .gps-icone {
+    width: 52px; height: 52px; border-radius: 15px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+  }
+  .btn-gps.on  .gps-icone { background: rgba(16,185,129,.2);  color: #10b981; }
+  .btn-gps.off .gps-icone { background: rgba(100,116,139,.12); color: #64748b; }
+
+  .gps-label { font-size: 1.15rem; font-weight: 800; letter-spacing: .02em; }
+  .btn-gps.on  .gps-label { color: #10b981; }
+  .btn-gps.off .gps-label { color: #94a3b8; }
+  .gps-hint { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+
+  .gps-pulse {
+    width: 13px; height: 13px; border-radius: 50%; margin-left: auto; flex-shrink: 0; transition: all .3s;
+  }
+  .btn-gps.on  .gps-pulse { background: #10b981; box-shadow: 0 0 10px #10b981; animation: pulsar 1.5s infinite; }
+  .btn-gps.off .gps-pulse { background: #334155; }
+  @keyframes pulsar { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.75)} }
+
+  /* ── Cards de stat ────────────────────────────────────────────────── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .scard {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px 14px; text-align: center;
+  }
+  .scard .sv { font-size: 2rem; font-weight: 800; line-height: 1; }
+  .scard .sl { font-size: .7rem; color: var(--muted); margin-top: 5px; text-transform: uppercase; letter-spacing: .05em; }
+  .scard.ganhos { border-color: rgba(245,158,11,.3); background: rgba(245,158,11,.05); }
+  .scard.ganhos .sv { color: #f59e0b; }
+  .scard.entregues .sv { color: #10b981; }
+
+  /* ── Card de entrega pendente ─────────────────────────────────────── */
+  .pend-card {
+    background: var(--card);
+    border: 1px solid rgba(245,158,11,.45);
+    border-radius: 16px; padding: 18px; margin-bottom: 10px;
+  }
+  .pend-valor { font-size: 1.15rem; font-weight: 800; color: #f59e0b; }
+  .btn-aceitar {
+    min-height: 56px; min-width: 120px;
+    border: none; border-radius: 12px;
+    background: #10b981; color: #fff;
+    font-size: .95rem; font-weight: 700;
+    cursor: pointer; padding: 12px 20px;
+    transition: background .15s; -webkit-tap-highlight-color: transparent;
+  }
+  .btn-aceitar:active { background: #059669; }
+  .btn-aceitar:disabled { opacity: .5; cursor: default; }
+
+  /* ── Banners informativos ─────────────────────────────────────────── */
+  .banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 16px; border-radius: 13px;
+    font-size: .85rem; font-weight: 600;
+    text-decoration: none; margin-bottom: 10px;
+  }
+  .banner.pico  { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3); color: #fbbf24; }
+  .banner.vagas { background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.3); color: #6ee7b7; }
+
+  /* ── Turno ativo ──────────────────────────────────────────────────── */
+  .turno-card {
+    background: rgba(16,185,129,.07);
+    border: 1px solid rgba(16,185,129,.25);
+    border-radius: 14px; padding: 14px 18px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .turno-h { font-size: 1.5rem; font-weight: 800; color: #10b981; }
+  .turno-l { font-size: .75rem; color: var(--muted); }
+
+  .sec-label {
+    font-size: .75rem; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .07em; margin: 16px 0 8px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
-<!-- Alerta de horário de pico -->
 {% if pico_agora %}
-<div class="d-flex align-items-center gap-2 mb-3 p-3" style="background:#2d241622;border:1px solid #f59e0b33;border-radius:10px;">
-  <i class="fas fa-fire text-warning"></i>
-  <span style="font-size:.85rem; color:#fbbf24; font-weight:600;">Horário de Pico — Taxa adicional ativa!</span>
+<div class="banner pico">
+  <i class="fas fa-fire"></i>
+  <span>Horário de Pico — Taxa adicional ativa!</span>
 </div>
 {% endif %}
 
-<!-- Alerta de vagas disponíveis -->
 {% if vagas_count > 0 %}
-<a href="{{ url_for('vagas') }}" style="text-decoration:none;">
-  <div class="d-flex align-items-center justify-content-between mb-3 p-3" style="background:#064e3b22;border:1px solid #10b98133;border-radius:10px;">
-    <div class="d-flex align-items-center gap-2">
-      <i class="fas fa-calendar-check text-success"></i>
-      <span style="font-size:.85rem; color:#6ee7b7; font-weight:600;">{{ vagas_count }} vaga{{ 's' if vagas_count != 1 }} de plantão abertas hoje!</span>
-    </div>
-    <i class="fas fa-arrow-right" style="color:#6ee7b7;font-size:.8rem;"></i>
-  </div>
+<a href="{{ url_for('vagas') }}" class="banner vagas">
+  <i class="fas fa-calendar-check"></i>
+  <span>{{ vagas_count }} vaga{{ 's' if vagas_count != 1 }} de plantão hoje!</span>
+  <i class="fas fa-chevron-right ms-auto" style="font-size:.75rem;"></i>
 </a>
 {% endif %}
 
-<!-- Toggle GPS -->
-<button class="gps-toggle {% if current_user.disponivel %}on{% else %}off{% endif %} mb-4" id="btnGPS" onclick="toggleGPS()">
-  <i class="fa-solid {% if current_user.disponivel %}fa-location-dot{% else %}fa-location-crosshairs{% endif %} me-2" id="iconGPS"></i>
-  <span id="textoGPS">{% if current_user.disponivel %}DISPONÍVEL — Clique para ficar Offline{% else %}OFFLINE — Clique para ficar Disponível{% endif %}</span>
+<!-- Botão principal GPS -->
+<button class="btn-gps {% if current_user.disponivel %}on{% else %}off{% endif %} mb-3"
+        id="btnGPS" onclick="toggleGPS()">
+  <div class="gps-icone">
+    <i class="fa-solid {% if current_user.disponivel %}fa-location-dot{% else %}fa-location-crosshairs{% endif %}"
+       id="iconGPS"></i>
+  </div>
+  <div>
+    <div class="gps-label" id="labelGPS">
+      {% if current_user.disponivel %}DISPONÍVEL{% else %}OFFLINE{% endif %}
+    </div>
+    <div class="gps-hint" id="hintGPS">
+      {% if current_user.disponivel %}Toque para ficar offline{% else %}Toque para ficar disponível{% endif %}
+    </div>
+  </div>
+  <div class="gps-pulse"></div>
 </button>
 
 <!-- Stats do dia -->
-<h5 class="section-title">Hoje — {{ hoje.strftime('%d/%m/%Y') }}</h5>
-<div class="row g-2 mb-3">
-  <div class="col-4">
-    <div class="card-dark stat-card">
-      <div class="val text-success">{{ entregues_hoje|length }}</div>
-      <div class="lbl">Entregues</div>
-    </div>
+<div class="stats-grid mb-3">
+  <div class="scard ganhos">
+    <div class="sv">R$ {{ '%.0f'|format(ganhos_hoje) }}</div>
+    <div class="sl">Ganhos hoje</div>
   </div>
-  <div class="col-4">
-    <div class="card-dark stat-card">
-      <div class="val">{{ entregas_hoje|length }}</div>
-      <div class="lbl">Total</div>
-    </div>
-  </div>
-  <div class="col-4">
-    <div class="card-dark stat-card">
-      <div class="val text-warning">R$ {{ '%.0f'|format(ganhos_hoje) }}</div>
-      <div class="lbl">Ganhos</div>
-    </div>
+  <div class="scard entregues">
+    <div class="sv">{{ entregues_hoje|length }}</div>
+    <div class="sl">Entregues hoje</div>
   </div>
 </div>
 
-<!-- Pendentes -->
+<!-- Turno ativo -->
+{% if current_user.disponivel and turno_ativo %}
+<div class="turno-card mb-3">
+  <i class="fas fa-clock" style="color:#10b981;font-size:1.3rem;"></i>
+  <div>
+    <div class="turno-l">Turno ativo</div>
+    <div class="turno-h">{{ turno_ativo.duracao_horas }}h</div>
+    <div class="turno-l">desde {{ turno_ativo.inicio.strftime('%H:%M') }}</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Entregas pendentes -->
 {% if pendentes %}
-<h5 class="section-title"><i class="fa-solid fa-bell me-1 text-warning"></i>Entregas Pendentes ({{ pendentes|length }})</h5>
+<div class="sec-label">
+  <i class="fas fa-bell text-warning me-1"></i>
+  Aguardando você ({{ pendentes|length }})
+</div>
+
 {% for e in pendentes %}
-<div class="card-dark mb-2" id="entrega-{{ e.id }}">
-  <div class="d-flex justify-content-between align-items-start mb-2">
-    <div>
-      <div class="fw-bold">{{ e.cliente_nome or 'Cliente' }}</div>
-      <div class="text-muted" style="font-size:.8rem;"><i class="fas fa-map-marker-alt me-1"></i>{{ e.cliente_endereco }}</div>
+<div class="pend-card" id="entrega-{{ e.id }}">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div class="flex-grow-1 me-2">
+      <div class="fw-bold" style="font-size:.98rem;">{{ e.cliente_nome or 'Cliente' }}</div>
+      <div class="text-muted mt-1" style="font-size:.8rem;">
+        <i class="fas fa-map-marker-alt me-1 text-danger"></i>{{ e.cliente_endereco }}
+      </div>
+      {% if e.restaurante_nome %}
+      <div class="text-muted mt-1" style="font-size:.78rem;">
+        <i class="fas fa-store me-1"></i>{{ e.restaurante_nome }}
+      </div>
+      {% endif %}
+      {% if e.codigo_ifood %}
+      <div class="mt-1" style="font-size:.78rem;">
+        <i class="fab fa-apple me-1 text-danger"></i>iFood: <strong>{{ e.codigo_ifood }}</strong>
+      </div>
+      {% endif %}
     </div>
-    <div class="text-end">
-      <span class="badge badge-pendente">Pendente</span>
+    <div class="text-end flex-shrink-0">
       {% if e.segundos_para_expirar is not none %}
-      <div id="timer-{{ e.id }}" style="font-size:.85rem; font-weight:700; color:#ef4444; margin-top:2px;">
+      <div id="timer-{{ e.id }}" style="font-size:.9rem;font-weight:800;color:#ef4444;">
         ⏱ {{ e.segundos_para_expirar }}s
       </div>
       {% endif %}
     </div>
   </div>
-  {% if e.restaurante_nome %}<div style="font-size:.8rem;" class="mb-1 text-muted"><i class="fas fa-store me-1"></i>{{ e.restaurante_nome }}</div>{% endif %}
-  {% if e.codigo_ifood %}<div style="font-size:.8rem;" class="mb-1"><i class="fab fa-apple me-1 text-danger"></i>iFood: <strong>{{ e.codigo_ifood }}</strong></div>{% endif %}
-  <div class="d-flex justify-content-between align-items-center mt-2">
-    <span class="text-warning fw-bold">+ R$ {{ '%.2f'|format(e.valor_total_taxa) }}</span>
-    <div class="d-flex gap-2">
-      <button class="btn btn-sm btn-success-custom" onclick="aceitarEntrega({{ e.id }})">Aceitar</button>
+
+  <div class="d-flex align-items-center justify-content-between">
+    <div>
+      <span class="pend-valor">+R$ {{ '%.2f'|format(e.valor_total_taxa) }}</span>
+      {% if e.adicional_chuva > 0 %}
+        <span class="badge bg-info text-dark ms-1" style="font-size:.68rem;"><i class="fas fa-cloud-rain me-1"></i>Chuva</span>
+      {% endif %}
+      {% if e.adicional_pico > 0 %}
+        <span class="badge bg-warning text-dark ms-1" style="font-size:.68rem;"><i class="fas fa-fire me-1"></i>Pico</span>
+      {% endif %}
     </div>
+    <button class="btn-aceitar" onclick="aceitarEntrega({{ e.id }})">
+      <i class="fas fa-check me-1"></i>Aceitar
+    </button>
   </div>
 </div>
 {% endfor %}
+
 {% else %}
-<div class="card-dark text-center py-4 text-muted">
-  <i class="fas fa-check-circle fa-2x mb-2 text-success"></i><br>
-  Nenhuma entrega pendente
+<div style="text-align:center; padding:36px 16px; color:var(--muted);">
+  <i class="fas fa-check-circle fa-2x mb-3" style="color:#10b981;opacity:.5;display:block;"></i>
+  <div style="font-size:.9rem;">Nenhuma entrega pendente</div>
+  <div style="font-size:.78rem; margin-top:4px; opacity:.7;">Você receberá um alerta quando chegar</div>
 </div>
 {% endif %}
 
-<!-- Turno -->
-{% if current_user.disponivel and turno_ativo %}
-<h5 class="section-title">Turno Ativo</h5>
-<div class="card-dark text-center">
-  <div style="font-size:1.4rem; font-weight:700; color:#10b981;">{{ turno_ativo.duracao_horas }}h</div>
-  <div style="font-size:.8rem; color:#64748b;">desde {{ turno_ativo.inicio.strftime('%H:%M') }}</div>
-</div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
-let watchId = null, gpsInterval = null;
+let gpsInterval = null;
 
 async function toggleGPS() {
   const btn = document.getElementById('btnGPS');
   btn.disabled = true;
-  const r = await fetch('/toggle_disponivel', { method: 'POST' });
-  const d = await r.json();
+  try {
+    const r = await fetch('/toggle_disponivel', { method: 'POST' });
+    const d = await r.json();
+    if (d.disponivel) {
+      btn.className = 'btn-gps on mb-3';
+      document.getElementById('labelGPS').textContent = 'DISPONÍVEL';
+      document.getElementById('hintGPS').textContent  = 'Toque para ficar offline';
+      document.getElementById('iconGPS').className    = 'fa-solid fa-location-dot';
+      document.getElementById('badge-disp').className = 'disponivel-badge on';
+      document.getElementById('badge-disp').innerHTML = '<i class="fa-solid fa-circle-dot me-1"></i>Disponível';
+      iniciarGPS();
+    } else {
+      btn.className = 'btn-gps off mb-3';
+      document.getElementById('labelGPS').textContent = 'OFFLINE';
+      document.getElementById('hintGPS').textContent  = 'Toque para ficar disponível';
+      document.getElementById('iconGPS').className    = 'fa-solid fa-location-crosshairs';
+      document.getElementById('badge-disp').className = 'disponivel-badge off';
+      document.getElementById('badge-disp').innerHTML = '<i class="fa-regular fa-circle me-1"></i>Offline';
+      if (gpsInterval) clearInterval(gpsInterval);
+    }
+  } catch(e) {}
   btn.disabled = false;
-  if (d.disponivel) {
-    btn.className = 'gps-toggle on mb-4';
-    document.getElementById('textoGPS').textContent = 'DISPONÍVEL — Clique para ficar Offline';
-    document.getElementById('iconGPS').className = 'fa-solid fa-location-dot me-2';
-    document.getElementById('badge-disp').className = 'disponivel-badge on';
-    document.getElementById('badge-disp').innerHTML = '<i class="fa-solid fa-circle-dot me-1"></i>Disponível';
-    iniciarGPS();
-  } else {
-    btn.className = 'gps-toggle off mb-4';
-    document.getElementById('textoGPS').textContent = 'OFFLINE — Clique para ficar Disponível';
-    document.getElementById('iconGPS').className = 'fa-solid fa-location-crosshairs me-2';
-    document.getElementById('badge-disp').className = 'disponivel-badge off';
-    document.getElementById('badge-disp').innerHTML = '<i class="fa-regular fa-circle me-1"></i>Offline';
-    if (gpsInterval) clearInterval(gpsInterval);
-  }
 }
 
 function enviarGPS() {
   if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(pos => {
-    fetch('/atualizar_gps', {
+  navigator.geolocation.getCurrentPosition(
+    pos => fetch('/atualizar_gps', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-    });
-  }, null, { enableHighAccuracy: true, timeout: 5000 });
+    }),
+    null,
+    { enableHighAccuracy: true, timeout: 5000 }
+  );
 }
 
 function iniciarGPS() {
   enviarGPS();
-  // GPS a cada 30 segundos
   gpsInterval = setInterval(enviarGPS, 30000);
 }
 
 async function aceitarEntrega(id) {
+  const btn = document.querySelector(`#entrega-${id} .btn-aceitar`);
+  if (btn) btn.disabled = true;
   const r = await fetch(`/entregas/${id}/aceitar`, { method: 'POST' });
   const d = await r.json();
   if (d.ok) {
@@ -152,12 +278,13 @@ async function aceitarEntrega(id) {
     alert('⏱ Tempo esgotado! Esta entrega expirou.');
     location.reload();
   }
+  if (btn) btn.disabled = false;
 }
 
-// Contadores regressivos para entregas pendentes com expira_em
+// Contadores regressivos
 {% for e in pendentes %}
 {% if e.segundos_para_expirar is not none %}
-(function() {
+(function () {
   let seg = {{ e.segundos_para_expirar }};
   const el = document.getElementById('timer-{{ e.id }}');
   if (!el) return;
@@ -167,10 +294,11 @@ async function aceitarEntrega(id) {
       clearInterval(iv);
       el.textContent = '⏱ Expirado';
       el.style.color = '#64748b';
-      document.getElementById('entrega-{{ e.id }}')?.querySelector('button')?.setAttribute('disabled','');
+      const btn = document.querySelector('#entrega-{{ e.id }} .btn-aceitar');
+      if (btn) btn.disabled = true;
     } else {
       el.textContent = `⏱ ${seg}s`;
-      el.style.color = seg <= 5 ? '#ef4444' : '#fbbf24';
+      el.style.color = seg <= 10 ? '#ef4444' : '#fbbf24';
     }
   }, 1000);
 })();
@@ -179,8 +307,8 @@ async function aceitarEntrega(id) {
 
 {% if current_user.disponivel %}iniciarGPS();{% endif %}
 
-// Notificação de nova entrega (compara com contagem anterior salva)
-(function() {
+// Notificação quando chegam novas entregas
+(function () {
   const atual = {{ pendentes | length }};
   const ant   = parseInt(localStorage.getItem('app_pend_cnt') || '-1', 10);
   localStorage.setItem('app_pend_cnt', String(atual));
@@ -191,16 +319,15 @@ async function aceitarEntrega(id) {
       'warning'
     ), 600);
   } else if (atual > 0 && ant < 0) {
-    // Primeira visita da sessão com entregas pendentes
     setTimeout(() => VNotif.show(
-      'Entrega(s) pendente(s)',
+      'Entrega pendente',
       atual + (atual === 1 ? ' entrega aguardando' : ' entregas aguardando'),
       'info'
     ), 800);
   }
 })();
 
-// Recarregar a cada 20s para verificar novas entregas
+// Recarregar a cada 20 s para checar novas entregas
 setTimeout(() => location.reload(), 20000);
 </script>
 {% endblock %}

@@ -71,9 +71,10 @@ def aplicar_headers(response):
     h['Content-Security-Policy']  = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://maps.googleapis.com; "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+        "https://unpkg.com https://maps.googleapis.com; "
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
-        "https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+        "https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
         "img-src 'self' data: https: blob:; "
         "connect-src 'self' https:;"

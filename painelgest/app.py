@@ -1813,9 +1813,9 @@ def novo_restaurante():
 @app.route('/agendamentos')
 @requer_login
 def agendamentos():
-    posts = PostAgendado.query.order_by(PostAgendado.data_postagem.desc()).all()
-    perfis_instagram = PerfilRedeSocial.query.filter_by(rede='instagram').all()
-    return render_template('agendamentos.html', posts=posts, perfis=perfis_instagram, now=datetime.now())
+    posts  = PostAgendado.query.order_by(PostAgendado.data_postagem.desc()).all()
+    perfis = PerfilRedeSocial.query.order_by(PerfilRedeSocial.rede, PerfilRedeSocial.nome).all()
+    return render_template('agendamentos.html', posts=posts, perfis=perfis, now=datetime.now())
 
 
 @app.route('/agendar_post', methods=['POST'])

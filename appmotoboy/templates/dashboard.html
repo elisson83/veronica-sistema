@@ -327,7 +327,29 @@ async function aceitarEntrega(id) {
   }
 })();
 
-// Recarregar a cada 20 s para checar novas entregas
-setTimeout(() => location.reload(), 20000);
+// ── Notificação rápida a cada 5 s (sem recarregar a página) ──────────────────
+let _ultimaContagem = {{ pendentes | length }};
+setInterval(async function () {
+  try {
+    const r = await fetch('/api/poll_pendentes');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.count > _ultimaContagem) {
+      VNotif.show(
+        'Nova corrida disponível!',
+        d.count + ' entrega' + (d.count !== 1 ? 's' : '') + ' aguardando — aceite agora!',
+        'danger'
+      );
+    }
+    if (d.count !== _ultimaContagem) {
+      _ultimaContagem = d.count;
+      // Recarrega apenas para atualizar os cards da tela
+      location.reload();
+    }
+  } catch (e) {}
+}, 5000);
+
+// Fallback: reload completo a cada 25 s caso o poll falhe
+setTimeout(() => location.reload(), 25000);
 </script>
 {% endblock %}

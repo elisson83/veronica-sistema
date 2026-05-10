@@ -16,7 +16,10 @@
       <div class="d-flex gap-2">
         <input type="text" value="{{ url }}" id="link-{{ loop.index }}"
                class="form-control form-control-sm" style="font-family:monospace;font-size:11px"
-               readonly onclick="this.select()">
+               readonly onclick="this.select()"
+               {% if nome == 'motoboy' %}data-porta="5003" data-path="/cadastrar"
+               {% elif nome == 'restaurante' %}data-porta="5006" data-path="/cadastrar"
+               {% elif nome == 'frota' %}data-porta="5004" data-path="/cadastrar"{% endif %}>
         <button onclick="copiar('link-{{ loop.index }}')" class="btn btn-accent btn-sm flex-shrink-0">
           <i class="fas fa-copy"></i>
         </button>
@@ -38,5 +41,13 @@ function copiar(id){
   btn.innerHTML='<i class="fas fa-check"></i>';
   setTimeout(()=>btn.innerHTML='<i class="fas fa-copy"></i>',2000);
 }
+
+(function () {
+  const h = window.location.hostname;
+  const proto = window.location.protocol;
+  document.querySelectorAll('input[data-porta]').forEach(function (el) {
+    el.value = proto + '//' + h + ':' + el.dataset.porta + (el.dataset.path || '');
+  });
+})();
 </script>
 {% endblock %}

@@ -133,6 +133,7 @@ class EntregaFrota(db.Model):
     ganho_frota      = db.Column(db.Float, default=1.0)
     distancia_km     = db.Column(db.Float)
     observacao       = db.Column(db.Text)
+    app_entrega_id   = db.Column(db.Integer)           # ID correspondente no AppMotoboy
     criado_em        = db.Column(db.DateTime, default=datetime.utcnow)
     entregue_em      = db.Column(db.DateTime)
     motoboy          = db.relationship('MotoboyFrota', backref='entregas', foreign_keys=[motoboy_id])
@@ -177,6 +178,8 @@ class RestauranteConectado(db.Model):
     telefone        = db.Column(db.String(20))
     endereco        = db.Column(db.String(200))
     taxa_padrao     = db.Column(db.Float, default=5.0)
+    lat             = db.Column(db.Float)               # GPS do restaurante para despacho por proximidade
+    lng             = db.Column(db.Float)
     ativo           = db.Column(db.Boolean, default=True)
     conectado_em    = db.Column(db.DateTime, default=datetime.utcnow)
     ultima_entrega  = db.Column(db.DateTime)
@@ -202,7 +205,152 @@ class ConviteRestaurante(db.Model):
     criador       = db.relationship('AdminFrota', foreign_keys=[criado_por])
 
 
+class DespachoFila(db.Model):
+    """Rastreia o processo de despacho automático de uma entrega."""
+    id               = db.Column(db.Integer, primary_key=True)
+    entrega_id       = db.Column(db.Integer, db.ForeignKey('entrega_frota.id'), unique=True)
+    app_entrega_id   = db.Column(db.Integer)           # ID no AppMotoboy
+    candidatos       = db.Column(db.Text, default='[]')  # JSON: lista de app_motoboy_ids ordenados
+    proximo_idx      = db.Column(db.Integer, default=0)
+    status           = db.Column(db.String(20), default='aguardando')  # aguardando|aceito|esgotado
+    rest_lat         = db.Column(db.Float)
+    rest_lng         = db.Column(db.Float)
+    ultima_tentativa = db.Column(db.DateTime, default=datetime.utcnow)
+    criado_em        = db.Column(db.DateTime, default=datetime.utcnow)
+    entrega          = db.relationship('EntregaFrota', backref=db.backref('despacho', uselist=False))
+
+
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+import json as _json
+import math as _math
+
+
+def _haversine(lat1, lng1, lat2, lng2):
+    R = 6371
+    dlat = _math.radians(lat2 - lat1)
+    dlng = _math.radians(lng2 - lng1)
+    a = _math.sin(dlat/2)**2 + _math.cos(_math.radians(lat1)) * _math.cos(_math.radians(lat2)) * _math.sin(dlng/2)**2
+    return R * 2 * _math.asin(_math.sqrt(a))
+
+
+def _despachar_para_motoboy_app(entrega_frota, app_mb_id):
+    """Envia entrega ao AppMotoboy para o motoboy com app_mb_id. Retorna app_entrega_id ou None."""
+    try:
+        payload = {
+            'motoboy_id':       app_mb_id,
+            'restaurante_nome': entrega_frota.restaurante_nome or '',
+            'cliente_nome':     entrega_frota.cliente_nome or '',
+            'cliente_endereco': entrega_frota.cliente_endereco or '',
+            'codigo_ifood':     entrega_frota.codigo_ifood or '',
+            'origem':           entrega_frota.origem or 'direto',
+            'valor_pedido':     entrega_frota.valor_pedido or 0,
+            'taxa_entrega':     entrega_frota.taxa_base or 5.0,
+            'adicional_chuva':  entrega_frota.adicional_chuva or 0,
+            'adicional_pico':   entrega_frota.adicional_pico or 0,
+            'adicional_noturno':entrega_frota.adicional_noturno or 0,
+            'valor_total_taxa': entrega_frota.valor_total_taxa or 5.0,
+            'distancia_km':     entrega_frota.distancia_km,
+            'observacao':       entrega_frota.observacao or '',
+            'expira_segundos':  30,
+        }
+        r = requests.post(f'{MOTOBOY_API}/api/nova_entrega', json=payload, timeout=5)
+        if r.ok:
+            return r.json().get('id')
+    except Exception:
+        pass
+    return None
+
+
+def _selecionar_candidatos(rest_lat, rest_lng):
+    """Retorna lista de app_motoboy_ids disponíveis ordenados por proximidade (ou FIFO)."""
+    try:
+        r = requests.get(f'{MOTOBOY_API}/api/motoboys_disponiveis', timeout=5)
+        if not r.ok:
+            return []
+        mbs = r.json()
+    except Exception:
+        return []
+
+    if rest_lat and rest_lng:
+        def dist_key(mb):
+            if mb.get('lat') and mb.get('lng'):
+                return _haversine(rest_lat, rest_lng, mb['lat'], mb['lng'])
+            return 9999
+        mbs.sort(key=dist_key)
+    return [mb['id'] for mb in mbs]
+
+
+def _iniciar_despacho(entrega_frota, rest_lat=None, rest_lng=None):
+    """Inicia despacho automático: seleciona candidatos e tenta o primeiro."""
+    candidatos = _selecionar_candidatos(rest_lat, rest_lng)
+    if not candidatos:
+        return False
+
+    app_id = candidatos[0]
+    app_entrega_id = _despachar_para_motoboy_app(entrega_frota, app_id)
+
+    fila = DespachoFila(
+        entrega_id       = entrega_frota.id,
+        app_entrega_id   = app_entrega_id,
+        candidatos       = _json.dumps(candidatos),
+        proximo_idx      = 1,
+        status           = 'aguardando',
+        rest_lat         = rest_lat,
+        rest_lng         = rest_lng,
+        ultima_tentativa = datetime.utcnow(),
+    )
+    db.session.add(fila)
+    if app_entrega_id:
+        entrega_frota.app_entrega_id = app_entrega_id
+    db.session.commit()
+    return True
+
+
+def _redespachar_pendentes():
+    """APScheduler: tenta próximo motoboy se o atual não aceitou em 30s."""
+    with app.app_context():
+        agora     = datetime.utcnow()
+        limite    = agora - timedelta(seconds=30)
+        pendentes = DespachoFila.query.filter(
+            DespachoFila.status == 'aguardando',
+            DespachoFila.ultima_tentativa < limite,
+        ).all()
+
+        for fila in pendentes:
+            # Verificar status no AppMotoboy
+            aceito = False
+            if fila.app_entrega_id:
+                try:
+                    r = requests.get(f'{MOTOBOY_API}/api/entrega_status/{fila.app_entrega_id}', timeout=3)
+                    if r.ok and r.json().get('status') in ('aceita', 'retirada', 'entregue'):
+                        aceito = True
+                except Exception:
+                    pass
+
+            if aceito:
+                fila.status = 'aceito'
+                db.session.commit()
+                continue
+
+            # Tentar próximo candidato
+            candidatos = _json.loads(fila.candidatos or '[]')
+            if fila.proximo_idx >= len(candidatos):
+                fila.status = 'esgotado'
+                db.session.commit()
+                continue
+
+            entrega = fila.entrega
+            if entrega:
+                next_app_id      = candidatos[fila.proximo_idx]
+                novo_app_eid     = _despachar_para_motoboy_app(entrega, next_app_id)
+                fila.app_entrega_id   = novo_app_eid
+                fila.proximo_idx     += 1
+                fila.ultima_tentativa = agora
+                if novo_app_eid:
+                    entrega.app_entrega_id = novo_app_eid
+            db.session.commit()
+
 
 def calcular_adicionais(hora=None, chuva=False, feriado=False):
     hora = hora if hora is not None else datetime.now().hour
@@ -489,7 +637,9 @@ def motoboy_qr(mid):
     if not mb.token_app:
         mb.token_app = secrets.token_hex(16)
         db.session.commit()
-    url_reg = f"http://localhost:5003/registrar/{mb.token_app}"
+    from urllib.parse import urlparse
+    base_h  = f"{urlparse(request.host_url).scheme}://{urlparse(request.host_url).hostname}"
+    url_reg = os.getenv('APPMOTOBOY_URL', base_h + ':5003') + f"/registrar/{mb.token_app}"
     return render_template('motoboy_qr.html', motoboy=mb, url_reg=url_reg, NIVEIS_ADM=NIVEIS_ADM)
 
 
@@ -500,7 +650,9 @@ def motoboy_qr_png(mid):
     if not mb.token_app:
         mb.token_app = secrets.token_hex(16)
         db.session.commit()
-    url_reg = f"http://localhost:5003/registrar/{mb.token_app}"
+    from urllib.parse import urlparse
+    base_h  = f"{urlparse(request.host_url).scheme}://{urlparse(request.host_url).hostname}"
+    url_reg = os.getenv('APPMOTOBOY_URL', base_h + ':5003') + f"/registrar/{mb.token_app}"
     buf = gerar_qr_bytes(url_reg)
     if not buf:
         return 'QR indisponível', 503
@@ -606,8 +758,10 @@ def nova_entrega():
     ad_c, ad_p, ad_n, ad_f = calcular_adicionais()
 
     if request.method == 'POST':
-        mb_id     = int(request.form['motoboy_id'])
-        mb        = MotoboyFrota.query.get(mb_id)
+        mb_id_raw = request.form.get('motoboy_id', '')
+        auto      = (mb_id_raw == 'auto')
+        mb_id     = None if auto else (int(mb_id_raw) if mb_id_raw else None)
+        mb        = MotoboyFrota.query.get(mb_id) if mb_id else None
         rest_id   = request.form.get('restaurante_id') or None
         taxa_base = float(request.form.get('taxa_base', mb.taxa_entrega if mb else 5.0))
         ad_chuva  = float(request.form.get('adicional_chuva', 0))
@@ -640,12 +794,27 @@ def nova_entrega():
         )
         db.session.add(e)
         # Atualizar último uso do restaurante
+        rest_lat = rest_lng = None
         if rest_id:
             rest = RestauranteConectado.query.get(int(rest_id))
             if rest:
                 rest.ultima_entrega = datetime.utcnow()
+                rest_lat, rest_lng = rest.lat, rest.lng
         db.session.commit()
-        flash(f'Entrega criada! Taxa R$ {total:.2f} → motoboy R$ {ganho_mb:.2f} / frota R$ {ganho_fr:.2f}', 'success')
+
+        # ── Despacho automático ──────────────────────────────────────────────
+        auto = (request.form.get('motoboy_id') == 'auto')
+        if auto:
+            _iniciar_despacho(e, rest_lat, rest_lng)
+            flash(f'Despacho automático iniciado! R$ {total:.2f} → procurando motoboy mais próximo.', 'success')
+        else:
+            # Notifica motoboy selecionado via AppMotoboy API
+            if mb and mb.motoboy_app_id:
+                app_eid = _despachar_para_motoboy_app(e, mb.motoboy_app_id)
+                if app_eid:
+                    e.app_entrega_id = app_eid
+                    db.session.commit()
+            flash(f'Entrega criada! Taxa R$ {total:.2f} → motoboy R$ {ganho_mb:.2f} / frota R$ {ganho_fr:.2f}', 'success')
         return redirect(url_for('listar_entregas'))
 
     return render_template('nova_entrega.html',
@@ -1297,11 +1466,13 @@ def configuracoes():
 @app.route('/links')
 @login_required
 def links_cadastro():
-    base = request.host_url.rstrip('/')
+    from urllib.parse import urlparse
+    parsed = urlparse(request.host_url)
+    base_h = f"{parsed.scheme}://{parsed.hostname}"
     links = {
-        'motoboy':     os.getenv('APPMOTOBOY_URL', 'http://localhost:5003') + '/cadastrar',
-        'restaurante': os.getenv('PAINELREST_URL', 'http://localhost:5006') + '/cadastrar',
-        'frota':       base + url_for('cadastrar'),
+        'motoboy':     os.getenv('APPMOTOBOY_URL',  base_h + ':5003') + '/cadastrar',
+        'restaurante': os.getenv('PAINELREST_URL',   base_h + ':5006') + '/cadastrar',
+        'frota':       os.getenv('PAINELFROTA_URL',  base_h + ':5004') + '/cadastrar',
     }
     return render_template('links_cadastro.html', links=links, NIVEIS_ADM=NIVEIS_ADM)
 
@@ -1338,9 +1509,12 @@ def migrate_db():
     add_col('motoboy_frota', 'valor_diaria',       'FLOAT DEFAULT 0.0')
     add_col('motoboy_frota', 'token_app',          'VARCHAR(64)')
     add_col('motoboy_frota', 'codigo',             'VARCHAR(4)')
-    add_col('entrega_frota', 'restaurante_id',     'INTEGER')
-    add_col('pagamento_motoboy', 'chave_pix_dest', 'VARCHAR(100)')
-    add_col('pagamento_motoboy', 'automatico',     'BOOLEAN DEFAULT 0')
+    add_col('entrega_frota',         'restaurante_id',   'INTEGER')
+    add_col('entrega_frota',         'app_entrega_id',   'INTEGER')
+    add_col('restaurante_conectado', 'lat',              'FLOAT')
+    add_col('restaurante_conectado', 'lng',              'FLOAT')
+    add_col('pagamento_motoboy',     'chave_pix_dest',   'VARCHAR(100)')
+    add_col('pagamento_motoboy',     'automatico',       'BOOLEAN DEFAULT 0')
     conn.commit()
     conn.close()
 
@@ -1374,8 +1548,8 @@ if __name__ == '__main__':
     import logging
     logging.getLogger('apscheduler').setLevel(logging.WARNING)
     scheduler = BackgroundScheduler()
-    # Fechamento automático todo dia à meia-noite
-    scheduler.add_job(fechamento_automatico, 'cron', hour=0, minute=5, id='fechamento_diario')
+    scheduler.add_job(fechamento_automatico,   'cron',     hour=0, minute=5, id='fechamento_diario')
+    scheduler.add_job(_redespachar_pendentes,  'interval', seconds=30,       id='redespachar_job')
     scheduler.start()
     try:
         app.run(host='0.0.0.0', port=5004, debug=False, use_reloader=False)

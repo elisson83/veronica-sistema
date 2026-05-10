@@ -667,6 +667,41 @@ def api_motoboy_detalhe(mid):
     })
 
 
+@app.route('/api/poll_pendentes')
+@login_required
+@rate_limit(max_req=120, janela=60)
+def api_poll_pendentes():
+    """AJAX rápido: retorna entregas pendentes sem recarregar a página."""
+    agora = datetime.utcnow()
+    pendentes = Entrega.query.filter(
+        Entrega.motoboy_id == current_user.id,
+        Entrega.status == 'pendente',
+        Entrega.expira_em > agora,
+    ).all()
+    return jsonify({
+        'count': len(pendentes),
+        'disponivel': current_user.disponivel,
+        'ganhos_hoje': current_user.saldo_dia,
+        'entregas': [{
+            'id': e.id,
+            'cliente_nome': e.cliente_nome or 'Cliente',
+            'cliente_endereco': e.cliente_endereco,
+            'restaurante_nome': e.restaurante_nome,
+            'codigo_ifood': e.codigo_ifood,
+            'valor_total_taxa': e.valor_total_taxa,
+            'segundos_para_expirar': e.segundos_para_expirar,
+        } for e in pendentes],
+    })
+
+
+@app.route('/api/entrega_status/<int:eid>')
+@rate_limit(max_req=120, janela=60)
+def api_entrega_status(eid):
+    """Status de uma entrega específica — usado pelo PainelFrota para re-despacho."""
+    e = Entrega.query.get_or_404(eid)
+    return jsonify({'id': e.id, 'status': e.status, 'motoboy_id': e.motoboy_id})
+
+
 @app.route('/api/entregas/<int:mid>')
 @rate_limit(max_req=60, janela=60)
 def api_entregas_motoboy(mid):
@@ -925,10 +960,12 @@ def configuracoes():
 @app.route('/links')
 @login_required
 def links_cadastro():
-    base  = request.host_url.rstrip('/')
+    from urllib.parse import urlparse
+    parsed   = urlparse(request.host_url)
+    base_h   = f"{parsed.scheme}://{parsed.hostname}"
     links = {
-        'restaurante': os.getenv('PAINELREST_URL', 'http://localhost:5006') + '/cadastrar',
-        'motoboy_ref': base + url_for('cadastrar'),
+        'restaurante': os.getenv('PAINELREST_URL',  base_h + ':5006') + '/cadastrar',
+        'motoboy_ref': os.getenv('APPMOTOBOY_URL',  base_h + ':5003') + url_for('cadastrar'),
     }
     return render_template('links_cadastro.html', links=links, motoboy=current_user)
 

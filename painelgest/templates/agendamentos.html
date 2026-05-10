@@ -172,47 +172,92 @@
 
 <!-- Modal: Novo agendamento -->
 <div class="pg-modal-backdrop" id="modal-novo">
-  <div class="pg-modal" style="width:500px">
-    <h5><i class="fab fa-instagram me-2" style="color:#E1306C"></i>Agendar Post no Instagram</h5>
+  <div class="pg-modal" style="width:600px;max-width:98vw">
+    <h5><i class="fas fa-calendar-plus me-2" style="color:#8b5cf6"></i>Agendar Post</h5>
     <form method="POST" action="{{ url_for('agendar_post') }}" enctype="multipart/form-data">
 
       <div class="form-group">
-        <label class="pg-label">Perfil Instagram *</label>
-        <select name="perfil_id" class="pg-select" required>
-          <option value="">Selecione um perfil…</option>
+        <label class="pg-label">Rede Social e Perfil *</label>
+        <select name="perfil_id" class="pg-select" required onchange="atualizarRedeModal(this)">
+          <option value="">— Selecione —</option>
+          {% set icones = {'instagram':'fab fa-instagram','facebook':'fab fa-facebook','tiktok':'fab fa-tiktok','youtube':'fab fa-youtube','whatsapp':'fab fa-whatsapp','pinterest':'fab fa-pinterest'} %}
+          {% set cores  = {'instagram':'#E1306C','facebook':'#1877F2','tiktok':'#69C9D0','youtube':'#FF0000','whatsapp':'#25D366','pinterest':'#E60023'} %}
           {% for p in perfis %}
-          <option value="{{ p.id }}">{{ p.nome }} ({{ p.login }})</option>
+          <option value="{{ p.id }}"
+                  data-rede="{{ p.rede }}"
+                  data-cor="{{ cores.get(p.rede, '#8b5cf6') }}"
+                  data-icone="{{ icones.get(p.rede, 'fas fa-share-alt') }}">
+            [{{ p.rede | upper }}] {{ p.nome }} — {{ p.login }}
+          </option>
           {% endfor %}
         </select>
+        <div id="rede-badge" style="margin-top:6px;display:none;">
+          <span id="rede-badge-inner" style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600"></span>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label class="pg-label">Imagem do Post *</label>
-        <input type="file" name="imagem" class="pg-input" accept="image/*" required>
-        <small style="color:var(--muted);font-size:11px;display:block;margin-top:4px">
-          JPG ou PNG. Instagram exige imagem para posts no feed.
-        </small>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <!-- Coluna esquerda: inputs -->
+        <div>
+          <div class="form-group">
+            <label class="pg-label">Imagem do Post</label>
+            <input type="file" name="imagem" class="pg-input" accept="image/jpeg,image/png"
+                   onchange="previewImagem(this)" id="inp-imagem">
+            <small style="color:var(--muted);font-size:11px;display:block;margin-top:4px">JPG ou PNG. Máx 5 MB.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="pg-label">Legenda / Descrição</label>
+            <textarea name="legenda" class="pg-textarea" rows="4" id="inp-legenda"
+                      placeholder="Texto do post, hashtags, descrição…"
+                      oninput="atualizarPreview()"></textarea>
+            <small id="char-count" style="color:var(--muted);font-size:11px">0 caracteres</small>
+          </div>
+
+          <div class="form-group">
+            <label class="pg-label">Data e hora de postagem *</label>
+            <input type="datetime-local" name="data_postagem" class="pg-input" required
+                   min="{{ now.strftime('%Y-%m-%dT%H:%M') if now else '' }}">
+          </div>
+        </div>
+
+        <!-- Coluna direita: preview -->
+        <div>
+          <label class="pg-label">Preview</label>
+          <div id="post-preview" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface2);">
+            <!-- Header do perfil no preview -->
+            <div style="padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)">
+              <div style="width:32px;height:32px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center">
+                <i id="prev-icone" class="fas fa-share-alt" style="color:#fff;font-size:14px"></i>
+              </div>
+              <div>
+                <div id="prev-nome" style="font-size:12px;font-weight:700;color:var(--text)">Perfil</div>
+                <div id="prev-rede" style="font-size:10px;color:var(--muted)">rede social</div>
+              </div>
+            </div>
+            <!-- Imagem -->
+            <div style="background:#111;min-height:120px;display:flex;align-items:center;justify-content:center;position:relative">
+              <img id="prev-img" src="" alt="" style="width:100%;max-height:200px;object-fit:cover;display:none">
+              <div id="prev-img-placeholder" style="color:var(--muted);font-size:28px;opacity:.3">
+                <i class="fas fa-image"></i>
+              </div>
+            </div>
+            <!-- Legenda -->
+            <div style="padding:10px 12px">
+              <p id="prev-legenda" style="font-size:12px;color:var(--text);margin:0;white-space:pre-wrap;max-height:80px;overflow:hidden"></p>
+              <p style="font-size:11px;color:var(--muted);margin:6px 0 0">Agendado</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label class="pg-label">Legenda</label>
-        <textarea name="legenda" class="pg-textarea" rows="3"
-                  placeholder="Texto do post, hashtags…"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label class="pg-label">Data e hora de postagem *</label>
-        <input type="datetime-local" name="data_postagem" class="pg-input" required
-               min="{{ now.strftime('%Y-%m-%dT%H:%M') if now else '' }}">
-      </div>
-
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
         <button type="button" class="btn-ghost"
                 onclick="document.getElementById('modal-novo').classList.remove('open')">
           Cancelar
         </button>
         <button type="submit" class="btn-accent">
-          <i class="fas fa-calendar-plus"></i> Agendar
+          <i class="fas fa-calendar-plus"></i> Agendar Post
         </button>
       </div>
     </form>
@@ -226,5 +271,45 @@
 document.getElementById('modal-novo').addEventListener('click', function(e) {
   if (e.target === this) this.classList.remove('open');
 });
+
+function atualizarRedeModal(sel) {
+  const opt   = sel.options[sel.selectedIndex];
+  const badge = document.getElementById('rede-badge');
+  const inner = document.getElementById('rede-badge-inner');
+  if (!opt.value) { badge.style.display = 'none'; return; }
+  const cor    = opt.dataset.cor    || '#8b5cf6';
+  const icone  = opt.dataset.icone  || 'fas fa-share-alt';
+  const nome   = opt.text.split(' — ')[0].replace(/^\[.*?\] /, '').trim();
+  const rede   = (opt.dataset.rede  || '').toLowerCase();
+  inner.style.background = cor + '22';
+  inner.style.color      = cor;
+  inner.style.border     = `1px solid ${cor}44`;
+  inner.innerHTML        = `<i class="${icone}"></i>${opt.text}`;
+  badge.style.display    = 'block';
+  document.getElementById('prev-icone').className = icone;
+  document.getElementById('prev-icone').style.color = '#fff';
+  document.getElementById('prev-nome').textContent  = nome;
+  document.getElementById('prev-rede').textContent  = rede;
+}
+
+function previewImagem(input) {
+  const img  = document.getElementById('prev-img');
+  const ph   = document.getElementById('prev-img-placeholder');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      img.src          = e.target.result;
+      img.style.display = 'block';
+      ph.style.display  = 'none';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function atualizarPreview() {
+  const leg = document.getElementById('inp-legenda').value;
+  document.getElementById('prev-legenda').textContent = leg;
+  document.getElementById('char-count').textContent   = leg.length + ' caracteres';
+}
 </script>
 {% endblock %}

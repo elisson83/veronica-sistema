@@ -9,8 +9,11 @@
   <div class="row g-3 mb-4">
     <div class="col-md-7">
       <label class="form-label">Motoboy *</label>
-      <select name="motoboy_id" class="form-select" id="selMotoboy" required onchange="atualizarTaxa()">
+      <select name="motoboy_id" class="form-select" id="selMotoboy" onchange="atualizarTaxa()">
         <option value="">— Selecione —</option>
+        <option value="auto" data-taxa="0" data-perc="20" style="color:#10b981;font-weight:700">
+          ⚡ Auto-Despacho (mais próximo disponível)
+        </option>
         {% for mb in motoboys %}
         <option value="{{ mb.id }}" data-taxa="{{ mb.taxa_entrega }}" data-perc="{{ mb.percentual_frota }}">
           {{ mb.nome }} — R$ {{ '%.2f'|format(mb.taxa_entrega) }}

@@ -4371,15 +4371,18 @@ def restaurante_chat():
 @app.route('/links')
 @requer_login
 def links_cadastro():
-    base = request.host_url.rstrip('/')
-    _val = session['administrador']
-    admin = (Administrador.query.filter_by(email=_val).first() or
-             Administrador.query.filter_by(username=_val).first())
+    from urllib.parse import urlparse
+    parsed = urlparse(request.host_url)
+    base_h = f"{parsed.scheme}://{parsed.hostname}"
+    base   = request.host_url.rstrip('/')
+    _val   = session['administrador']
+    admin  = (Administrador.query.filter_by(email=_val).first() or
+              Administrador.query.filter_by(username=_val).first())
     links = {
         'gestor':      base + url_for('cadastrar'),
-        'restaurante': base + url_for('restaurante_cadastrar'),
-        'motoboy':     os.getenv('APPMOTOBOY_URL', 'http://localhost:5003') + '/cadastrar',
-        'frota':       os.getenv('PAINELFROTA_URL', 'http://localhost:5004') + '/cadastrar',
+        'restaurante': os.getenv('PAINELREST_URL',  base_h + ':5006') + '/cadastrar',
+        'motoboy':     os.getenv('APPMOTOBOY_URL',  base_h + ':5003') + '/cadastrar',
+        'frota':       os.getenv('PAINELFROTA_URL', base_h + ':5004') + '/cadastrar',
     }
     return render_template('links_cadastro.html', links=links, admin=admin)
 
@@ -4387,12 +4390,15 @@ def links_cadastro():
 @app.route('/super/links')
 @requer_super
 def super_links_cadastro():
-    base = request.host_url.rstrip('/')
+    from urllib.parse import urlparse
+    parsed = urlparse(request.host_url)
+    base_h = f"{parsed.scheme}://{parsed.hostname}"
+    base   = request.host_url.rstrip('/')
     links = {
         'gestor':      base + url_for('cadastrar'),
-        'restaurante': base + url_for('restaurante_cadastrar'),
-        'motoboy':     os.getenv('APPMOTOBOY_URL', 'http://localhost:5003') + '/cadastrar',
-        'frota':       os.getenv('PAINELFROTA_URL', 'http://localhost:5004') + '/cadastrar',
+        'restaurante': os.getenv('PAINELREST_URL',  base_h + ':5006') + '/cadastrar',
+        'motoboy':     os.getenv('APPMOTOBOY_URL',  base_h + ':5003') + '/cadastrar',
+        'frota':       os.getenv('PAINELFROTA_URL', base_h + ':5004') + '/cadastrar',
     }
     return render_template('links_cadastro.html', links=links, super_admin=True)
 

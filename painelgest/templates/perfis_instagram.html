@@ -3,7 +3,7 @@
 {% block topbar_title %}Perfis Instagram{% endblock %}
 {% block topbar_sub %}Gerenciar perfis agendados{% endblock %}
 {% block topbar_actions %}
-  <a href="{{ url_for('cadastrar_perfil_instagram') }}" class="btn-accent">
+  <a href="{{ url_for('cadastrar_rede_social', rede='instagram') }}" class="btn-accent">
     <i class="fas fa-plus"></i> Novo Perfil
   </a>
 {% endblock %}
@@ -34,10 +34,10 @@
         </td>
         <td>
           <div style="display:flex;gap:6px">
-            <a href="{{ url_for('editar_perfil_instagram', id=perfil.id) }}" class="icon-btn ib-edit" title="Editar">
+            <a href="{{ url_for('editar_rede_social', id=perfil.id) }}" class="icon-btn ib-edit" title="Editar">
               <i class="fas fa-pen"></i>
             </a>
-            <a href="{{ url_for('excluir_perfil_instagram', id=perfil.id) }}" class="icon-btn ib-delete" title="Excluir"
+            <a href="{{ url_for('excluir_rede_social', id=perfil.id) }}" class="icon-btn ib-delete" title="Excluir"
                onclick="return confirm('Excluir o perfil {{ perfil.nome }}?')">
               <i class="fas fa-trash"></i>
             </a>

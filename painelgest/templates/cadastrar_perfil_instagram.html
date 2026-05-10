@@ -13,7 +13,7 @@
       <span class="pg-card-title"><i class="fab fa-instagram me-2" style="color:#818cf8"></i>Cadastrar Perfil</span>
     </div>
     <div class="pg-card-body">
-      <form method="POST" action="{{ url_for('cadastrar_perfil_instagram') }}">
+      <form method="POST" action="{{ url_for('cadastrar_rede_social', rede='instagram') }}">
         <div class="form-group">
           <label class="pg-label">Nome *</label>
           <input type="text" name="nome" class="pg-input" placeholder="Ex: Loja Principal" required>

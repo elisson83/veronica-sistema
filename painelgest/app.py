@@ -3422,6 +3422,79 @@ def super_auditoria():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ROTAS — FINANGLASS (Analytics do app móvel)
+# ══════════════════════════════════════════════════════════════════════════════
+
+_finanglass_cache: dict = {'dados': None, 'atualizado_em': None}
+_FINANGLASS_TTL = 300  # 5 minutos
+
+
+def _buscar_metricas_finanglass():
+    """Busca métricas do FinanGlass via Supabase REST API com cache de 5 min."""
+    agora = datetime.utcnow()
+    if (
+        _finanglass_cache['dados'] is not None
+        and _finanglass_cache['atualizado_em'] is not None
+        and (agora - _finanglass_cache['atualizado_em']).total_seconds() < _FINANGLASS_TTL
+    ):
+        return _finanglass_cache['dados']
+
+    supabase_url = os.environ.get('FINANGLASS_SUPABASE_URL', '')
+    service_key  = os.environ.get('FINANGLASS_SERVICE_ROLE_KEY', '')
+
+    if not supabase_url or not service_key:
+        return {'erro': 'Credenciais do Supabase não configuradas.', 'resumo': [], 'ativos': []}
+
+    headers = {
+        'apikey': service_key,
+        'Authorization': f'Bearer {service_key}',
+        'Content-Type': 'application/json',
+    }
+
+    dados = {'resumo': [], 'ativos': [], 'erro': None}
+
+    try:
+        import urllib.request, json as _json
+        # Resumo por tipo
+        req_resumo = urllib.request.Request(
+            f'{supabase_url}/rest/v1/resumo_metricas?select=*',
+            headers=headers,
+        )
+        with urllib.request.urlopen(req_resumo, timeout=8) as resp:
+            dados['resumo'] = _json.loads(resp.read().decode())
+
+        # Usuários ativos diários
+        req_ativos = urllib.request.Request(
+            f'{supabase_url}/rest/v1/usuarios_ativos_diarios?select=*&limit=30',
+            headers=headers,
+        )
+        with urllib.request.urlopen(req_ativos, timeout=8) as resp:
+            dados['ativos'] = _json.loads(resp.read().decode())
+
+    except Exception as exc:
+        dados['erro'] = str(exc)
+
+    _finanglass_cache['dados'] = dados
+    _finanglass_cache['atualizado_em'] = datetime.utcnow()
+    return dados
+
+
+@app.route('/super/finanglass')
+@requer_super
+def super_finanglass():
+    metricas = _buscar_metricas_finanglass()
+    atualizado_em = (
+        _finanglass_cache['atualizado_em'].strftime('%d/%m/%Y %H:%M:%S UTC')
+        if _finanglass_cache['atualizado_em'] else '—'
+    )
+    return render_template(
+        'super_finanglass.html',
+        metricas=metricas,
+        atualizado_em=atualizado_em,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ROTAS — ESQUECI SENHA (Feature 2)
 # ══════════════════════════════════════════════════════════════════════════════
 

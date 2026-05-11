@@ -1,0 +1,88 @@
+{% extends "super_base.html" %}
+{% block title %}FinanGlass Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fas fa-mobile-screen-button"></i> FinanGlass — Analytics</h1>
+  <p class="page-subtitle">Métricas em tempo real do app móvel · Última atualização: <strong>{{ atualizado_em }}</strong></p>
+</div>
+
+{% if metricas.erro %}
+<div class="alert alert-danger">
+  <i class="fas fa-triangle-exclamation"></i>
+  <strong>Erro ao buscar dados:</strong> {{ metricas.erro }}
+</div>
+{% endif %}
+
+<!-- Resumo por tipo de evento -->
+<div class="section-header">
+  <h2 class="section-title">Eventos por Tipo</h2>
+</div>
+
+{% if metricas.resumo %}
+<div class="stats-grid">
+  {% for row in metricas.resumo %}
+  <div class="stat-card">
+    <div class="stat-icon">
+      {% if row.tipo == 'sessao_ativa' %}<i class="fas fa-circle-user"></i>
+      {% elif row.tipo == 'cadastro' %}<i class="fas fa-user-plus"></i>
+      {% elif row.tipo in ['upgrade_pro', 'upgrade_premium'] %}<i class="fas fa-arrow-up"></i>
+      {% elif row.tipo == 'downgrade' %}<i class="fas fa-arrow-down"></i>
+      {% elif row.tipo == 'owner_ativado' %}<i class="fas fa-crown"></i>
+      {% else %}<i class="fas fa-chart-simple"></i>{% endif %}
+    </div>
+    <div class="stat-body">
+      <div class="stat-label">{{ row.tipo | replace('_', ' ') | title }}</div>
+      <div class="stat-value">{{ row.total }}</div>
+      <div class="stat-sub">
+        24h: <strong>{{ row.ultimas_24h }}</strong> &nbsp;·&nbsp;
+        7d: <strong>{{ row.ultimos_7d }}</strong>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty-state">Nenhum evento registrado ainda.</p>
+{% endif %}
+
+<!-- Usuários ativos por dia -->
+<div class="section-header" style="margin-top:2rem">
+  <h2 class="section-title">Usuários Ativos por Dia (últimos 30 dias)</h2>
+</div>
+
+{% if metricas.ativos %}
+<div class="card table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Usuários Únicos</th>
+        <th>Barra</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set max_val = metricas.ativos | map(attribute='usuarios_unicos') | max | default(1) %}
+      {% for row in metricas.ativos %}
+      <tr>
+        <td>{{ row.dia }}</td>
+        <td><strong>{{ row.usuarios_unicos }}</strong></td>
+        <td style="width:40%">
+          <div style="background:#1e3a5f;border-radius:4px;height:12px;overflow:hidden">
+            <div style="background:#00BFFF;height:100%;width:{{ ((row.usuarios_unicos / max_val) * 100) | int }}%;border-radius:4px"></div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty-state">Nenhum dado de sessão disponível.</p>
+{% endif %}
+
+<!-- Auto-refresh a cada 5 minutos -->
+<script>
+  setTimeout(function () { window.location.reload(); }, 300000);
+</script>
+{% endblock %}

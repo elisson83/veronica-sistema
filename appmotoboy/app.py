@@ -3,7 +3,7 @@ import sys
 import math
 import secrets
 from dotenv import load_dotenv
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, send_from_directory
 
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -968,6 +968,12 @@ def links_cadastro():
         'motoboy_ref': os.getenv('APPMOTOBOY_URL',  base_h + ':5003') + url_for('cadastrar'),
     }
     return render_template('links_cadastro.html', links=links, motoboy=current_user)
+
+
+@app.route('/sw.js')
+def service_worker():
+    return send_from_directory(app.static_folder, 'sw.js',
+                               mimetype='application/javascript')
 
 
 if __name__ == '__main__':

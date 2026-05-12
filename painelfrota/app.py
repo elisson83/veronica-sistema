@@ -4,7 +4,7 @@ import io
 import secrets
 import requests
 from dotenv import load_dotenv
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, make_response, send_file
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, make_response, send_file, send_from_directory
 
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -1541,6 +1541,12 @@ def migrate_db():
             demo.nivel = 'super'
             demo.set_senha('demo2026')
             db.session.commit()
+
+
+@app.route('/sw.js')
+def service_worker():
+    return send_from_directory(app.static_folder, 'sw.js',
+                               mimetype='application/javascript')
 
 
 if __name__ == '__main__':

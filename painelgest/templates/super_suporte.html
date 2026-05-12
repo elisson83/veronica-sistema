@@ -1,0 +1,111 @@
+{% extends "super_base.html" %}
+{% block title %}Suporte FinanGlass{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fas fa-headset"></i> Suporte FinanGlass</h1>
+  <p class="page-subtitle">Tickets enviados pelos usuários do app</p>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}" style="margin-bottom:1rem">
+      <i class="fas fa-{{ 'check-circle' if category == 'success' else 'triangle-exclamation' }}"></i>
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endwith %}
+
+{% if erro %}
+<div class="alert alert-danger">
+  <i class="fas fa-triangle-exclamation"></i>
+  <strong>Erro:</strong> {{ erro }}
+</div>
+{% endif %}
+
+<!-- Resumo -->
+<div class="stats-grid" style="margin-bottom:1.5rem">
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-ticket"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Total de tickets</div>
+      <div class="stat-value">{{ total }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="color:#f59e0b"><i class="fas fa-clock"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Aguardando resposta</div>
+      <div class="stat-value" style="color:#f59e0b">{{ abertos }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="color:#10b981"><i class="fas fa-circle-check"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Respondidos</div>
+      <div class="stat-value" style="color:#10b981">{{ respondidos }}</div>
+    </div>
+  </div>
+</div>
+
+{% if not tickets %}
+<div class="card" style="padding:2rem;text-align:center;color:#64748b">
+  <i class="fas fa-inbox" style="font-size:2rem;margin-bottom:.5rem"></i>
+  <p>Nenhum ticket registrado ainda.</p>
+</div>
+{% else %}
+<div style="display:flex;flex-direction:column;gap:1rem">
+  {% for t in tickets %}
+  <div class="card" style="padding:0;overflow:hidden;border-left:4px solid
+      {% if t.status == 'respondido' %}#10b981{% elif t.status == 'fechado' %}#64748b{% else %}#f59e0b{% endif %}">
+    <!-- Cabeçalho do ticket -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px 10px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div>
+        <span style="font-weight:600;color:#e2e8f0;font-size:.9rem">{{ t.email }}</span>
+        <span style="margin-left:12px;font-size:.75rem;color:#64748b">{{ t.criado_em[:16].replace('T',' ') if t.criado_em else '—' }}</span>
+      </div>
+      <span style="font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:20px;
+        {% if t.status == 'respondido' %}background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.4)
+        {% elif t.status == 'fechado' %}background:rgba(100,116,139,.15);color:#94a3b8;border:1px solid rgba(100,116,139,.4)
+        {% else %}background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.4){% endif %}">
+        {{ 'Respondido' if t.status == 'respondido' else ('Fechado' if t.status == 'fechado' else 'Aguardando') }}
+      </span>
+    </div>
+
+    <!-- Mensagem do usuário -->
+    <div style="padding:12px 16px;color:#cbd5e1;font-size:.875rem;line-height:1.6;white-space:pre-wrap">{{ t.mensagem }}</div>
+
+    <!-- Resposta existente -->
+    {% if t.resposta %}
+    <div style="margin:0 16px 12px;background:rgba(16,185,129,.07);border-left:3px solid #10b981;border-radius:6px;padding:10px 12px">
+      <div style="font-size:.72rem;color:#10b981;font-weight:600;margin-bottom:4px">Resposta da equipe · {{ t.respondido_em[:16].replace('T',' ') if t.respondido_em else '' }}</div>
+      <div style="font-size:.875rem;color:#e2e8f0;line-height:1.6;white-space:pre-wrap">{{ t.resposta }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Formulário de resposta -->
+    <details style="margin:0 16px 14px">
+      <summary style="cursor:pointer;font-size:.8rem;color:#00bfff;font-weight:600;list-style:none;padding:4px 0">
+        <i class="fas fa-reply" style="margin-right:6px"></i>
+        {{ 'Editar resposta' if t.resposta else 'Responder' }}
+      </summary>
+      <form method="POST" action="{{ url_for('super_suporte_responder', ticket_id=t.id) }}" style="margin-top:10px">
+        <textarea name="resposta" rows="4" placeholder="Digite sua resposta ao usuário..."
+          style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;padding:10px 12px;font-size:.875rem;resize:vertical;font-family:inherit">{{ t.resposta or '' }}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <select name="status" style="background:#1c1c2e;color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 10px;font-size:.8rem">
+            <option value="respondido" {{ 'selected' if t.status == 'respondido' }}>Marcar como Respondido</option>
+            <option value="fechado"    {{ 'selected' if t.status == 'fechado' }}>Marcar como Fechado</option>
+            <option value="aberto"     {{ 'selected' if t.status == 'aberto' }}>Manter Aberto</option>
+          </select>
+          <button type="submit" style="background:#00bfff;color:#000;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:.8rem;cursor:pointer">
+            <i class="fas fa-paper-plane"></i> Enviar
+          </button>
+        </div>
+      </form>
+    </details>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

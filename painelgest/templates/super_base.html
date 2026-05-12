@@ -274,6 +274,10 @@
      class="nav-link-item {% if request.endpoint == 'super_finanglass' %}active{% endif %}">
     <i class="fas fa-mobile-screen-button"></i> Analytics do App
   </a>
+  <a href="{{ url_for('super_suporte') }}"
+     class="nav-link-item {% if request.endpoint == 'super_suporte' %}active{% endif %}">
+    <i class="fas fa-headset"></i> Suporte Tickets
+  </a>
 
   <div class="nav-group-label">Sistema</div>
   <a href="{{ url_for('login') }}" class="nav-link-item">

@@ -3479,6 +3479,97 @@ def _buscar_metricas_finanglass():
     return dados
 
 
+@app.route('/super/suporte')
+@requer_super
+def super_suporte():
+    import requests as _req, json as _json
+    supabase_url = os.environ.get('FINANGLASS_SUPABASE_URL', '')
+    service_key  = os.environ.get('FINANGLASS_SERVICE_ROLE_KEY', '')
+    tickets = []
+    erro = None
+
+    if supabase_url and service_key:
+        try:
+            headers = {
+                'apikey': service_key,
+                'Authorization': f'Bearer {service_key}',
+                'Content-Type': 'application/json',
+            }
+            r = _req.get(
+                f'{supabase_url}/rest/v1/suporte_tickets'
+                '?select=id,email,mensagem,status,resposta,respondido_em,criado_em'
+                '&order=criado_em.desc&limit=200',
+                headers=headers,
+                timeout=8,
+            )
+            if r.ok:
+                tickets = r.json()
+            else:
+                erro = f'Supabase retornou {r.status_code}'
+        except Exception as exc:
+            erro = str(exc)
+    else:
+        erro = 'Credenciais Supabase não configuradas (FINANGLASS_SUPABASE_URL / FINANGLASS_SERVICE_ROLE_KEY).'
+
+    abertos    = sum(1 for t in tickets if t.get('status') == 'aberto')
+    respondidos = sum(1 for t in tickets if t.get('status') == 'respondido')
+    return render_template(
+        'super_suporte.html',
+        tickets=tickets,
+        abertos=abertos,
+        respondidos=respondidos,
+        total=len(tickets),
+        erro=erro,
+    )
+
+
+@app.route('/super/suporte/<int:ticket_id>/responder', methods=['POST'])
+@requer_super
+def super_suporte_responder(ticket_id):
+    import requests as _req
+    resposta   = request.form.get('resposta', '').strip()
+    novo_status = request.form.get('status', 'respondido')
+
+    if not resposta:
+        flash('A resposta não pode ser vazia.', 'danger')
+        return redirect(url_for('super_suporte'))
+
+    supabase_url = os.environ.get('FINANGLASS_SUPABASE_URL', '')
+    service_key  = os.environ.get('FINANGLASS_SERVICE_ROLE_KEY', '')
+
+    if not supabase_url or not service_key:
+        flash('Credenciais Supabase não configuradas.', 'danger')
+        return redirect(url_for('super_suporte'))
+
+    headers = {
+        'apikey': service_key,
+        'Authorization': f'Bearer {service_key}',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+    }
+    import json as _json, datetime as _dt2
+    payload = {
+        'resposta': resposta,
+        'status': novo_status,
+        'respondido_em': _dt2.datetime.utcnow().isoformat() + 'Z',
+    }
+    try:
+        r = _req.patch(
+            f'{supabase_url}/rest/v1/suporte_tickets?id=eq.{ticket_id}',
+            headers=headers,
+            data=_json.dumps(payload),
+            timeout=8,
+        )
+        if r.ok:
+            flash('Resposta enviada com sucesso.', 'success')
+        else:
+            flash(f'Erro ao responder: {r.status_code} — {r.text}', 'danger')
+    except Exception as exc:
+        flash(f'Erro de conexão: {exc}', 'danger')
+
+    return redirect(url_for('super_suporte'))
+
+
 @app.route('/super/finanglass')
 @requer_super
 def super_finanglass():

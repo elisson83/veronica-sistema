@@ -3570,6 +3570,59 @@ def super_suporte_responder(ticket_id):
     return redirect(url_for('super_suporte'))
 
 
+@app.route('/super/finanglass/usuarios')
+@requer_super
+def super_finanglass_usuarios():
+    import requests as _req
+    supabase_url = os.environ.get('FINANGLASS_SUPABASE_URL', '')
+    service_key  = os.environ.get('FINANGLASS_SERVICE_ROLE_KEY', '')
+    usuarios = []
+    planos   = {}
+    erro     = None
+
+    if supabase_url and service_key:
+        headers = {
+            'apikey': service_key,
+            'Authorization': f'Bearer {service_key}',
+            'Content-Type': 'application/json',
+        }
+        try:
+            # Usuários via Auth Admin API
+            r = _req.get(
+                f'{supabase_url}/auth/v1/admin/users?per_page=1000',
+                headers=headers,
+                timeout=10,
+            )
+            if r.ok:
+                usuarios = r.json().get('users', [])
+            else:
+                erro = f'Auth API retornou {r.status_code}: {r.text[:200]}'
+
+            # Planos dos usuários
+            r2 = _req.get(
+                f'{supabase_url}/rest/v1/user_plans'
+                '?select=user_id,plano,status,valido_ate,atualizado_em',
+                headers=headers,
+                timeout=8,
+            )
+            if r2.ok:
+                for p in r2.json():
+                    planos[p['user_id']] = p
+
+        except Exception as exc:
+            erro = str(exc)
+    else:
+        erro = 'Credenciais não configuradas (FINANGLASS_SUPABASE_URL / FINANGLASS_SERVICE_ROLE_KEY).'
+
+    return render_template(
+        'super_finanglass_usuarios.html',
+        usuarios=usuarios,
+        planos=planos,
+        total=len(usuarios),
+        erro=erro,
+    )
+
+
 @app.route('/super/finanglass')
 @requer_super
 def super_finanglass():

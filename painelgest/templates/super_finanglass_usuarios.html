@@ -1,0 +1,140 @@
+{% extends 'super_base.html' %}
+{% block title %}Usuários FinanGlass — Super Admin{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-1"><i class="fas fa-users me-2 text-info"></i>Usuários FinanGlass</h1>
+    <p class="text-muted mb-0">{{ total }} usuário(s) cadastrado(s)</p>
+  </div>
+  <a href="{{ url_for('super_finanglass') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="fas fa-chart-bar me-1"></i>Analytics
+  </a>
+</div>
+
+{% if erro %}
+<div class="alert alert-danger">
+  <i class="fas fa-exclamation-triangle me-2"></i>{{ erro }}
+</div>
+{% endif %}
+
+<!-- Stats rápidos -->
+{% set total_pro = namespace(v=0) %}
+{% set total_premium = namespace(v=0) %}
+{% set total_gratuito = namespace(v=0) %}
+{% for u in usuarios %}
+  {% set p = planos.get(u.id, {}) %}
+  {% if p.get('plano') == 'pro' %}{% set total_pro.v = total_pro.v + 1 %}
+  {% elif p.get('plano') == 'premium' %}{% set total_premium.v = total_premium.v + 1 %}
+  {% else %}{% set total_gratuito.v = total_gratuito.v + 1 %}{% endif %}
+{% endfor %}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card bg-surface border-0 text-center p-3">
+      <div class="h2 mb-0 fw-bold text-info">{{ total }}</div>
+      <small class="text-muted">Total</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bg-surface border-0 text-center p-3">
+      <div class="h2 mb-0 fw-bold" style="color:#FFD700">{{ total_premium.v }}</div>
+      <small class="text-muted">💎 Premium</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bg-surface border-0 text-center p-3">
+      <div class="h2 mb-0 fw-bold text-primary">{{ total_pro.v }}</div>
+      <small class="text-muted">⭐ Pro</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bg-surface border-0 text-center p-3">
+      <div class="h2 mb-0 fw-bold text-secondary">{{ total_gratuito.v }}</div>
+      <small class="text-muted">🆓 Gratuito</small>
+    </div>
+  </div>
+</div>
+
+<!-- Busca -->
+<div class="mb-3">
+  <input type="text" id="busca" class="form-control bg-surface border-secondary text-light"
+         placeholder="🔍 Buscar por e-mail..." oninput="filtrar()">
+</div>
+
+<!-- Tabela -->
+<div class="card border-0 bg-surface">
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0" id="tabela-usuarios">
+      <thead>
+        <tr>
+          <th>E-mail</th>
+          <th>Plano</th>
+          <th>Status</th>
+          <th>Válido até</th>
+          <th>Cadastro</th>
+          <th>Último login</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        {% set p = planos.get(u.id, {}) %}
+        {% set plano_nome = p.get('plano', 'gratuito') %}
+        {% set status_plano = p.get('status', '—') %}
+
+        <tr>
+          <td class="text-light">{{ u.email or '—' }}</td>
+          <td>
+            {% if plano_nome == 'premium' %}
+              <span class="badge" style="background:#FFD70033;color:#FFD700;border:1px solid #FFD70055">💎 Premium</span>
+            {% elif plano_nome == 'pro' %}
+              <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25">⭐ Pro</span>
+            {% else %}
+              <span class="badge bg-secondary bg-opacity-25 text-secondary">🆓 Gratuito</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if status_plano == 'active' %}
+              <span class="badge bg-success bg-opacity-25 text-success">✓ Ativo</span>
+            {% elif status_plano == 'expired' %}
+              <span class="badge bg-danger bg-opacity-25 text-danger">Expirado</span>
+            {% elif status_plano == 'cancelled' %}
+              <span class="badge bg-warning bg-opacity-25 text-warning">Cancelado</span>
+            {% else %}
+              <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">
+            {% if p.get('valido_ate') %}
+              {{ p['valido_ate'][:10] }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-muted small">
+            {% if u.created_at %}{{ u.created_at[:10] }}{% else %}—{% endif %}
+          </td>
+          <td class="text-muted small">
+            {% if u.last_sign_in_at %}{{ u.last_sign_in_at[:10] }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Nenhum usuário encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function filtrar() {
+  const q = document.getElementById('busca').value.toLowerCase();
+  document.querySelectorAll('#tabela-usuarios tbody tr').forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
+
+<style>
+.bg-surface { background: var(--surface2) !important; }
+.card { border-radius: 16px; }
+</style>
+{% endblock %}

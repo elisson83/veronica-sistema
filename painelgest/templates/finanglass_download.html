@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinanGlass — Baixar Aplicativo</title>
+  <meta name="description" content="Controle suas finanças com inteligência. Baixe o FinanGlass para Android.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #050514;
+      --surface:   #0D0D2B;
+      --surface2:  #12123A;
+      --green:     #00E676;
+      --green-dim: #00C853;
+      --accent:    #6C63FF;
+      --text:      #E8E8FF;
+      --muted:     #8888AA;
+      --border:    rgba(108,99,255,.25);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── hero ── */
+    .hero {
+      width: 100%;
+      max-width: 640px;
+      padding: 60px 24px 40px;
+      text-align: center;
+    }
+
+    .logo-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 96px; height: 96px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, var(--accent) 0%, #3B82F6 100%);
+      margin-bottom: 24px;
+      box-shadow: 0 8px 40px rgba(108,99,255,.45);
+    }
+
+    .logo-wrap svg { width: 52px; height: 52px; }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #fff 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      margin-top: 10px;
+      font-size: 1.05rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ── card ── */
+    .card {
+      width: 100%;
+      max-width: 580px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px 32px;
+      margin: 0 24px 32px;
+    }
+
+    /* ── download button ── */
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 18px 24px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-dim) 100%);
+      color: #000;
+      font-size: 1.15rem;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 4px 28px rgba(0,230,118,.35);
+      transition: transform .15s, box-shadow .15s;
+    }
+
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 36px rgba(0,230,118,.5);
+    }
+
+    .btn-download:active { transform: scale(.97); }
+
+    .btn-download svg { flex-shrink: 0; }
+
+    /* ── version badge ── */
+    .version-badge {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: rgba(0,230,118,.1);
+      border: 1px solid rgba(0,230,118,.3);
+      color: var(--green);
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .5px;
+    }
+
+    /* ── qr section ── */
+    .qr-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    .qr-label {
+      font-size: .85rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .qr-frame {
+      padding: 12px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+
+    .qr-frame img { display: block; border-radius: 8px; }
+
+    .qr-hint {
+      margin-top: 12px;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    /* ── features ── */
+    .features {
+      width: 100%;
+      max-width: 580px;
+      padding: 0 24px;
+      margin-bottom: 32px;
+    }
+
+    .features h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .feat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 480px) { .feat-grid { grid-template-columns: 1fr; } }
+
+    .feat-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .feat-icon {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .feat-text { font-size: .9rem; color: var(--text); line-height: 1.35; }
+
+    /* ── install steps ── */
+    .steps {
+      width: 100%;
+      max-width: 580px;
+      padding: 0 24px;
+      margin-bottom: 48px;
+    }
+
+    .steps h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .step-body { padding-top: 4px; }
+    .step-title { font-size: .95rem; font-weight: 600; color: var(--text); }
+    .step-desc  { font-size: .83rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+    /* ── footer ── */
+    footer {
+      width: 100%;
+      padding: 20px 24px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      font-size: .8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ HERO ══ -->
+  <section class="hero">
+    <div class="logo-wrap">
+      <!-- Glass / chart icon -->
+      <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="28" width="8" height="18" rx="3" fill="rgba(255,255,255,.6)"/>
+        <rect x="22" y="18" width="8" height="28" rx="3" fill="rgba(255,255,255,.8)"/>
+        <rect x="38" y="8"  width="8" height="38" rx="3" fill="#fff"/>
+        <path d="M8 10 L20 6 L32 14 L46 4" stroke="rgba(255,255,255,.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1>FinanGlass</h1>
+    <p class="tagline">Controle financeiro inteligente na palma da sua mão.<br>Metas, investimentos e planejamento em um só lugar.</p>
+  </section>
+
+  <!-- ══ DOWNLOAD CARD ══ -->
+  <div class="card">
+    <a href="{{ apk_url }}" class="btn-download" target="_blank" rel="noopener">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3v13m0 0l-4-4m4 4l4-4" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 17v1a3 3 0 003 3h10a3 3 0 003-3v-1" stroke="#000" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      Baixar para Android (.apk)
+    </a>
+    <div style="text-align:center">
+      <span class="version-badge">Android · Versão Atual</span>
+    </div>
+
+    <!-- QR code -->
+    <div class="qr-section">
+      <p class="qr-label">Ou escaneie com a câmera</p>
+      <div class="qr-frame">
+        <img
+          src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ page_url | urlencode }}&bgcolor=ffffff&color=000000&format=png"
+          alt="QR Code para download do FinanGlass"
+          width="180" height="180"
+        >
+      </div>
+      <p class="qr-hint">Aponte a câmera do celular para o código acima</p>
+    </div>
+  </div>
+
+  <!-- ══ FEATURES ══ -->
+  <section class="features">
+    <h2>O que você encontra no app</h2>
+    <div class="feat-grid">
+      <div class="feat-item">
+        <span class="feat-icon">📊</span>
+        <span class="feat-text">Dashboard com visão geral das suas finanças</span>
+      </div>
+      <div class="feat-item">
+        <span class="feat-icon">🎯</span>
+        <span class="feat-text">Metas financeiras com acompanhamento em tempo real</span>
+      </div>
+      <div class="feat-item">
+        <span class="feat-icon">💸</span>
+        <span class="feat-text">Pagamento PIX integrado, rápido e seguro</span>
+      </div>
+      <div class="feat-item">
+        <span class="feat-icon">🔐</span>
+        <span class="feat-text">Login com biometria e autenticação segura</span>
+      </div>
+      <div class="feat-item">
+        <span class="feat-icon">📈</span>
+        <span class="feat-text">Relatórios e análises detalhadas por período</span>
+      </div>
+      <div class="feat-item">
+        <span class="feat-icon">🔔</span>
+        <span class="feat-text">Notificações inteligentes para não perder nada</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ INSTALL STEPS ══ -->
+  <section class="steps">
+    <h2>Como instalar</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Baixe o arquivo APK</div>
+        <div class="step-desc">Toque no botão verde acima ou escaneie o QR code para baixar o instalador.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Permita fontes desconhecidas</div>
+        <div class="step-desc">Acesse <strong>Configurações → Segurança → Instalar apps desconhecidos</strong> e habilite para o seu navegador ou gerenciador de arquivos.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Abra o arquivo baixado</div>
+        <div class="step-desc">Encontre o APK na pasta de Downloads e toque para iniciar a instalação.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Crie sua conta e comece</div>
+        <div class="step-desc">Cadastre-se gratuitamente e comece a organizar suas finanças agora mesmo.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    &copy; {{ 2025 }} FinanGlass · Todos os direitos reservados
+  </footer>
+
+</body>
+</html>

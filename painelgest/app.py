@@ -982,6 +982,16 @@ def index():
     return redirect(url_for('login'))
 
 
+# ── Página pública de download do FinanGlass ──────────────────────────────────
+APK_URL  = 'https://expo.dev/accounts/elisson83/projects/FinanGlass/builds/d6a6d2a1-dca8-469f-b4d9-58e23980574b'
+PAGE_URL = 'http://177.7.50.92/finanglass'
+
+@app.route('/finanglass')
+def finanglass_download():
+    return render_template('finanglass_download.html', apk_url=APK_URL, page_url=PAGE_URL)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'administrador' in session:
@@ -4649,6 +4659,15 @@ def verificar_faturas_automaticas():
                 plano_info = g.info_plano
                 _enviar_fatura_email(g.email, g.nome_empresa or g.username,
                                      plano_info['nome'], plano_info['preco'])
+
+
+# ── FinanGlass public download page ──────────────────────────────────────────
+APK_URL  = 'https://expo.dev/accounts/elisson83/projects/FinanGlass/builds/d6a6d2a1-dca8-469f-b4d9-58e23980574b'
+PAGE_URL = 'http://177.7.50.92/finanglass'
+
+@app.route('/finanglass')
+def finanglass_download():
+    return render_template('finanglass_download.html', apk_url=APK_URL, page_url=PAGE_URL)
 
 
 if __name__ == '__main__':

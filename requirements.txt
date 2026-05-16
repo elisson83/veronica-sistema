@@ -20,3 +20,7 @@ flask
 flask-cors
 openai
 schedule
+gtts
+langdetect
+python-binance
+cryptography

@@ -50,3 +50,8 @@ env/
 # ── Temporários Windows ───────────────────────────────────────────────────────
 Thumbs.db
 desktop.ini
+data/api_integrations.key
+data/api_integrations.db
+data/translation_sessions.json
+assets/voice_inputs/
+assets/voice_replies/

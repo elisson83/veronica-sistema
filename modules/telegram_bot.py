@@ -27,6 +27,8 @@ from modules.gerenciador_chaves import get_status_chaves, salvar_chave, get_chav
 from modules.auto_update import get_status_sistema, verificar_atualizacao, aplicar_atualizacao, reiniciar_veronica, instalar_dependencias
 from modules.marketing import criar_post_otimizado, criar_calendario_editorial, criar_estrategia_completa, criar_copy_vendas, analisar_concorrente, get_tendencias, listar_posts
 from modules.visao_geradora import gerar_imagem, gerar_logo, gerar_banner_post, gerar_capa_ebook, gerar_imagem_inteligente, transformar_foto_anime
+from modules.voice_translation import get_translation_session, set_translation_mode, set_target_language, translate_audio
+from modules.api_integrations import add_api, list_apis, remove_api
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
@@ -95,8 +97,8 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     int_id = update.message.from_user.id
     admin_cmds = ""
     if is_autorizado(int_id):
-        admin_cmds = "\n/trocarsenha /versenha /licenca /status\n/ialocal /ialocalstatus /modelos\n/lembrar /memorias /esquecertudo\n/verdescrever /veragir /analisarimagem\n/mkpost /mkcalendario /mkestrategia /mkcopy /mkconcorrente /mktendencias /mkposts\n/infopc /processos /abrirprograma /fecharprograma /screenshot\n/desligarpc /reiniciarpc /executar\n/vertela /lertela /mouse /mover /clicar /digitar /tecla /atalho /scroll\n/tarefa /ebook /analisarvideo /post /script\n/kalistatus /kaliligar /kalidesligar /kalicomando /scanrede /inforede /relatorio"
-    await update.message.reply_text(f"Comandos da Veronica:\n/plano /estudar /conhecimentos\n/pesquisar /noticias /codigo\n/mercado /cotacao /indicadores\n/corrigir /evolucao /nivel /perfil /limpar{admin_cmds}\n\nOu me faca qualquer pergunta!")
+        admin_cmds = "\n/trocarsenha /versenha /licenca /status\n/addapi /apis /removeapi\n/ialocal /ialocalstatus /modelos\n/lembrar /memorias /esquecertudo\n/verdescrever /veragir /analisarimagem\n/mkpost /mkcalendario /mkestrategia /mkcopy /mkconcorrente /mktendencias /mkposts\n/infopc /processos /abrirprograma /fecharprograma /screenshot\n/desligarpc /reiniciarpc /executar\n/vertela /lertela /mouse /mover /clicar /digitar /tecla /atalho /scroll\n/tarefa /ebook /analisarvideo /post /script\n/kalistatus /kaliligar /kalidesligar /kalicomando /scanrede /inforede /relatorio"
+    await update.message.reply_text(f"Comandos da Veronica:\n/plano /estudar /conhecimentos\n/pesquisar /noticias /codigo\n/mercado /cotacao /indicadores\n/traduzir /parar /idioma\n/corrigir /evolucao /nivel /perfil /limpar{admin_cmds}\n\nOu me faca qualquer pergunta!")
 
 async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_autorizado(update.message.from_user.id):
@@ -741,6 +743,119 @@ async def licenca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await update.message.reply_text(get_info_licenca())
 
+
+async def traduzir_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await verificar_acesso(update):
+        return
+    user_id = str(update.message.from_user.id)
+    session = set_translation_mode(user_id, True)
+    await update.message.reply_text(
+        f"Modo traducao ao vivo ativado. Envie mensagens de voz e eu traduzo para {session['target_lang']}.\n"
+        "Use /idioma en ou /idioma pt para trocar o destino. Use /parar para desativar."
+    )
+
+
+async def parar_traducao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await verificar_acesso(update):
+        return
+    user_id = str(update.message.from_user.id)
+    set_translation_mode(user_id, False)
+    await update.message.reply_text("Modo traducao ao vivo desativado.")
+
+
+async def idioma_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await verificar_acesso(update):
+        return
+    if not context.args:
+        session = get_translation_session(str(update.message.from_user.id))
+        await update.message.reply_text(f"Idioma destino atual: {session['target_lang']}\nUse: /idioma en ou /idioma pt")
+        return
+    try:
+        session = set_target_language(str(update.message.from_user.id), context.args[0])
+        await update.message.reply_text(f"Idioma destino atualizado para {session['target_lang']}.")
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+
+
+async def addapi_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if len(context.args) < 2:
+        await update.message.reply_text("Use: /addapi nome CHAVE_SECRETA\nSuportadas: Binance, CoinGecko, OpenWeather, NewsAPI")
+        return
+    nome = context.args[0]
+    segredo = " ".join(context.args[1:]).strip()
+    await update.message.reply_text(f"Integrando API {nome}...")
+    loop = asyncio.get_event_loop()
+    try:
+        resposta = await loop.run_in_executor(None, lambda: add_api(nome, segredo))
+    except Exception as exc:
+        resposta = f"Erro ao integrar API {nome}: {exc}"
+    await update.message.reply_text(resposta)
+
+
+async def apis_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    loop = asyncio.get_event_loop()
+    resposta = await loop.run_in_executor(None, list_apis)
+    await update.message.reply_text(resposta)
+
+
+async def removeapi_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_autorizado(update.message.from_user.id):
+        await update.message.reply_text("Apenas o administrador!")
+        return
+    if not context.args:
+        await update.message.reply_text("Use: /removeapi nome")
+        return
+    nome = context.args[0]
+    loop = asyncio.get_event_loop()
+    resposta = await loop.run_in_executor(None, lambda: remove_api(nome))
+    await update.message.reply_text(resposta)
+
+
+async def responder_voz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.message.from_user.id)
+    int_id = update.message.from_user.id
+    if not is_autorizado(int_id) and not usuario_liberado(user_id):
+        aguardando_senha[user_id] = True
+        await update.message.reply_text("Acesso Restrito! Digite a senha antes de usar voz:")
+        return
+
+    session = get_translation_session(user_id)
+    if not session.get("enabled"):
+        await update.message.reply_text("Recebi seu audio. Use /traduzir para ativar traducao ao vivo.")
+        return
+
+    await update.message.reply_text("Transcrevendo e traduzindo o audio...")
+    voz = update.message.voice or update.message.audio
+    arquivo = await voz.get_file()
+    from pathlib import Path
+    pasta = Path("assets") / "voice_inputs"
+    pasta.mkdir(parents=True, exist_ok=True)
+    extensao = "ogg" if update.message.voice else "mp3"
+    caminho = pasta / f"voz_{voz.file_unique_id}.{extensao}"
+    await arquivo.download_to_drive(str(caminho))
+
+    loop = asyncio.get_event_loop()
+    try:
+        resultado = await loop.run_in_executor(None, lambda: translate_audio(str(caminho), session.get("target_lang", "pt")))
+    except Exception as exc:
+        await update.message.reply_text(f"Nao consegui processar o audio: {exc}")
+        return
+
+    texto = (
+        f"Idioma detectado: {resultado['detected_lang']}\n"
+        f"Destino: {resultado['target_lang']}\n\n"
+        f"Transcricao:\n{resultado['original'][:1200]}\n\n"
+        f"Traducao:\n{resultado['translated'][:1800]}"
+    )
+    await update.message.reply_text(texto)
+    with open(resultado["audio_reply"], "rb") as audio:
+        await update.message.reply_audio(audio=audio, caption="Traducao em audio")
 async def responder_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
     int_id = update.message.from_user.id
@@ -1275,6 +1390,12 @@ def iniciar_bot():
     app.add_handler(CommandHandler("inforede", info_rede_cmd))
     app.add_handler(CommandHandler("relatorio", relatorio_cmd))
     app.add_handler(CommandHandler("licenca", licenca_cmd))
+    app.add_handler(CommandHandler("traduzir", traduzir_cmd))
+    app.add_handler(CommandHandler("parar", parar_traducao_cmd))
+    app.add_handler(CommandHandler("idioma", idioma_cmd))
+    app.add_handler(CommandHandler("addapi", addapi_cmd))
+    app.add_handler(CommandHandler("apis", apis_cmd))
+    app.add_handler(CommandHandler("removeapi", removeapi_cmd))
     app.add_handler(CommandHandler("chaves", chaves_cmd))
     app.add_handler(CommandHandler("todaschaves", todas_chaves_cmd))
     app.add_handler(CommandHandler("adicionarchave", adicionarchave_cmd))
@@ -1292,6 +1413,7 @@ def iniciar_bot():
     app.add_handler(CommandHandler("meustveets", twitter_tweets_cmd))
     app.add_handler(CommandHandler("tweetar", twitter_postar_cmd))
     app.add_handler(CommandHandler("mktweet", twitter_mkpost_cmd))
+    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, responder_voz))
     app.add_handler(MessageHandler(filters.PHOTO, responder_foto))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_mensagem))
     print("Veronica esta online!")
